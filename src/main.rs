@@ -5,6 +5,7 @@ use crate::db::migrate;
 
 mod config;
 mod db;
+mod entity;
 
 #[tokio::main]
 async fn main() {
