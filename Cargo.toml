@@ -1,0 +1,40 @@
+[package]
+name = "yoin"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+members = [".", "migration"]
+
+[workspace.dependencies]
+migration = { path = "migration" }
+dotenvy = "0.15.7"
+sea-orm = "2.0.0-rc"
+sea-orm-migration = { version = "2.0.0-rc" }
+tokio = "1.48.0"
+serde = "1.0.228"
+envy = "0.4.2"
+
+[dependencies]
+migration.workspace = true
+dotenvy.workspace = true
+serde = { workspace = true, features = ["derive"] }
+envy.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = [
+  "env-filter",
+  "local-time",
+] }
+
+[features]
+sqlite = ["migration/sqlite"]
+mysql = ["migration/mysql"]
+postgres = ["migration/postgres"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+opt-level = "z"
