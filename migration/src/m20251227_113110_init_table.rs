@@ -1,14 +1,12 @@
-use sea_orm_migration::{
-  prelude::*,
-  schema::*,
-  sea_orm::{DeriveActiveEnum, EnumIter},
-};
+use sea_orm_migration::{prelude::*, schema::*};
+
+use crate::enums::{CommentStatus, UserRole};
 
 #[derive(Iden)]
 enum Users {
   Table,
   Id,
-  NickName,
+  Nickname,
   Password,
   Email,
   Avatar,
@@ -19,7 +17,7 @@ enum Users {
 }
 
 #[derive(Iden)]
-pub(crate) enum Sites {
+enum Sites {
   Table,
   Id,
   Name,
@@ -52,17 +50,6 @@ enum Comments {
   DeletedAt,
 }
 
-#[derive(Debug, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
-enum CommentStatus {
-  #[sea_orm(string_value = "pending")]
-  Pending,
-  #[sea_orm(string_value = "approved")]
-  Approved,
-  #[sea_orm(string_value = "spam")]
-  Spam,
-}
-
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -75,11 +62,11 @@ impl MigrationTrait for Migration {
           .table(Users::Table)
           .if_not_exists()
           .col(pk_auto(Users::Id))
-          .col(string(Users::NickName))
+          .col(string(Users::Nickname))
           .col(string(Users::Password))
           .col(string(Users::Email).unique_key())
           .col(string(Users::Avatar))
-          .col(string(Users::Role))
+          .col(string(Users::Role).default(UserRole::Normal))
           .col(string(Users::Url))
           .col(date_time(Users::CreatedAt))
           .col(date_time(Users::UpdatedAt))

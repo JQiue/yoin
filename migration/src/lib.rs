@@ -1,5 +1,6 @@
 pub use sea_orm_migration::prelude::*;
 
+pub mod enums;
 mod m20251227_113110_init_table;
 
 pub struct Migrator;

@@ -14,18 +14,21 @@ sea-orm-migration = { version = "2.0.0-rc" }
 tokio = "1.48.0"
 serde = "1.0.228"
 envy = "0.4.2"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.22"
 
 [dependencies]
 migration.workspace = true
 dotenvy.workspace = true
-serde = { workspace = true, features = ["derive"] }
 envy.workspace = true
+serde = { workspace = true, features = ["derive"] }
 tokio = { workspace = true, features = ["macros", "rt"] }
-tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = [
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = [
   "env-filter",
   "local-time",
 ] }
+sea-orm.workspace = true
 
 [features]
 sqlite = ["migration/sqlite"]
