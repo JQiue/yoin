@@ -16,8 +16,11 @@ serde = "1.0.228"
 envy = "0.4.2"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
+axum = "0.8.8"
+serde_json = "1.0.148"
 
 [dependencies]
+tower-http = { version = "0.6.8", features = ["trace"] }
 migration.workspace = true
 dotenvy.workspace = true
 envy.workspace = true
@@ -29,6 +32,8 @@ tracing-subscriber = { workspace = true, features = [
   "local-time",
 ] }
 sea-orm.workspace = true
+axum.workspace = true
+serde_json.workspace = true
 
 [features]
 sqlite = ["migration/sqlite"]
