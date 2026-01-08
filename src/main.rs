@@ -5,24 +5,29 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{config::Config, db::migrate};
+use crate::{
+  config::Config,
+  db::migrate,
+  error::{AppError, ToAppError},
+};
 
 mod config;
 mod db;
 mod entity;
+mod error;
 
 #[derive(Clone)]
 struct AppState {}
 
 #[tokio::main]
-async fn main() -> Result<(), std::io::Error> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   init_log();
-  let config = Config::from_env().unwrap();
-  let conn = migrate(&config.database_url).await.unwrap();
+  let config = Config::from_env()?;
+  let conn = migrate(&config.database_url).await?;
   let addr = format!("{}:{}", config.host, config.port);
   let state = AppState {};
   info!("listening on http://{}", addr);
-  app(&addr, router(state)).await;
+  axum::serve(TcpListener::bind(addr).await?, router(state)).await?;
   Ok(())
 }
 
@@ -34,12 +39,6 @@ fn init_log() {
     )
     .with(tracing_subscriber::fmt::layer().with_target(false))
     .init();
-}
-
-async fn app(addr: &str, router: Router) {
-  axum::serve(TcpListener::bind(addr).await.unwrap(), router)
-    .await
-    .unwrap();
 }
 
 fn router(state: AppState) -> Router {
