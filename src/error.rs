@@ -6,6 +6,8 @@ use axum::{
 use serde_json::json;
 use thiserror::Error;
 
+use crate::response::ApiResponse;
+
 #[derive(Debug, Error)]
 pub enum AppError {
   #[error("{msg}")]
@@ -22,25 +24,42 @@ pub enum AppError {
 
 #[derive(Debug)]
 pub enum ClientErrorKind {
-  BadRequest,   // 400
-  Unauthorized, // 401
-  Forbidden,    // 403
-  NotFound,     // 404
-  Conflict,     // 409
-  RateLimited,  // 429
+  BadRequest(i32),   // 400
+  Unauthorized(i32), // 401
+  Forbidden(i32),    // 403
+  NotFound(i32),     // 404
+  Conflict(i32),     // 409
+  RateLimited(i32),  // 429
+}
+
+impl ClientErrorKind {
+  pub const USER_MODULE: i32 = 100_000;
+  pub const AUTH_MODULE: i32 = 200_000;
+
+  pub fn invalid_credentials() -> Self {
+    Self::Unauthorized(Self::AUTH_MODULE + 401)
+  }
+
+  pub fn user_not_found() -> Self {
+    Self::NotFound(Self::USER_MODULE + 404)
+  }
+
+  pub fn user_already_exists() -> Self {
+    Self::Conflict(Self::USER_MODULE + 409)
+  }
 }
 
 impl AppError {
-  pub fn not_found(msg: &'static str) -> Self {
+  pub fn user_not_found(msg: &'static str) -> Self {
     Self::Client {
-      kind: ClientErrorKind::NotFound,
+      kind: ClientErrorKind::user_not_found(),
       msg,
     }
   }
 
-  pub fn conflict(msg: &'static str) -> Self {
+  pub fn user_already_exists(msg: &'static str) -> Self {
     Self::Client {
-      kind: ClientErrorKind::Conflict,
+      kind: ClientErrorKind::user_already_exists(),
       msg,
     }
   }
@@ -48,24 +67,30 @@ impl AppError {
 
 impl IntoResponse for AppError {
   fn into_response(self) -> Response {
-    let (status_code, msg) = match self {
+    let (status_code, business_code, msg) = match self {
       AppError::Client { kind, msg } => {
-        let status_code = match kind {
-          ClientErrorKind::BadRequest => StatusCode::BAD_REQUEST,
-          ClientErrorKind::Unauthorized => StatusCode::UNAUTHORIZED,
-          ClientErrorKind::Forbidden => StatusCode::FORBIDDEN,
-          ClientErrorKind::NotFound => StatusCode::NOT_FOUND,
-          ClientErrorKind::Conflict => StatusCode::CONFLICT,
-          ClientErrorKind::RateLimited => StatusCode::TOO_MANY_REQUESTS,
+        let (status_code, biz_code) = match kind {
+          ClientErrorKind::BadRequest(code) => (StatusCode::BAD_REQUEST, code),
+          ClientErrorKind::Unauthorized(code) => (StatusCode::UNAUTHORIZED, code),
+          ClientErrorKind::Forbidden(code) => (StatusCode::FORBIDDEN, code),
+          ClientErrorKind::NotFound(code) => (StatusCode::NOT_FOUND, code),
+          ClientErrorKind::Conflict(code) => (StatusCode::CONFLICT, code),
+          ClientErrorKind::RateLimited(code) => (StatusCode::TOO_MANY_REQUESTS, code),
         };
-        (status_code, msg)
+        (status_code, biz_code, msg)
       }
       AppError::Internal { .. } => (
         StatusCode::INTERNAL_SERVER_ERROR,
+        500_000,
         "An internal server error occurred",
       ),
     };
-    (status_code, Json(json!({ "error": { "msg": msg } }))).into_response()
+    let resp = ApiResponse::<()> {
+      code: business_code,
+      msg: msg.to_string(),
+      data: None,
+    };
+    (status_code, Json(resp)).into_response()
   }
 }
 

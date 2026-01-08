@@ -9,12 +9,14 @@ use crate::{
   config::Config,
   db::migrate,
   error::{AppError, ToAppError},
+  response::ApiResponse,
 };
 
 mod config;
 mod db;
 mod entity;
 mod error;
+mod response;
 
 #[derive(Clone)]
 struct AppState {}
@@ -48,8 +50,6 @@ fn router(state: AppState) -> Router {
     .with_state(state)
 }
 
-async fn health_check() -> impl IntoResponse {
-  Json(json!({
-    "status": "ok"
-  }))
+async fn health_check() -> Result<ApiResponse<()>, AppError> {
+  Ok(ApiResponse::success(()))
 }
