@@ -13,7 +13,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 use crate::{
   config::Config,
   db::migrate,
-  handler::{health_check, register},
+  handler::{health_check, login, register},
   middleware::Auth,
 };
 
@@ -62,7 +62,8 @@ fn init_tracing() {
 fn create_router(state: AppState) -> Router {
   let public_routes = Router::new()
     .route("/health", get(health_check))
-    .route("/auth/register", post(register));
+    .route("/auth/register", post(register))
+    .route("/auth/login", post(login));
 
   let private_routes =
     Router::new().route_layer(from_extractor_with_state::<Auth, AppState>(state.clone()));

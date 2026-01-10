@@ -1,5 +1,5 @@
 use helpers::{
-  hash::argon2,
+  hash::{argon2, verify_argon2},
   jwt,
   time::utc_now,
   uuid::{Alphabet, nanoid},
@@ -10,7 +10,7 @@ use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection};
 use crate::{
   entity::{prelude::Users, users},
   error::{AppError, ToAppError},
-  handler::RegisterResponse,
+  handler::{LoginResponse, RegisterResponse},
   helper::generate_avatar,
   repo::UserRepo,
 };
@@ -58,6 +58,34 @@ pub async fn create_user(
     avatar: new_user.avatar,
     nickname: new_user.nickname,
     url: new_user.url,
+    token,
+  })
+}
+
+pub async fn get_token(
+  email: String,
+  password: String,
+  conn: &DatabaseConnection,
+  jwt_key: &str,
+) -> Result<LoginResponse, AppError> {
+  let user = Users::get_user_by_email(&email, conn)
+    .await
+    .with_op("get_user_by_email")?
+    .ok_or(AppError::user_not_found("User not found".to_string()))?;
+
+  if verify_argon2(&user.password, &password).with_op("verify_argon2")? {
+    return Err(AppError::invalid_credentials(
+      "Invalid email or password".to_string(),
+    ));
+  }
+
+  let token = jwt::sign(user.id, jwt_key, 30 * 24 * 60 * 60).with_op("sign jwt token")?;
+
+  Ok(LoginResponse {
+    avatar: user.avatar,
+    nickname: user.nickname,
+    url: user.url,
+    // datetime: user.created_at.and_utc().to_rfc3339(),
     token,
   })
 }

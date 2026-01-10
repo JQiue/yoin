@@ -4,7 +4,12 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{AppState, error::AppError, response::ApiResponse, service::create_user};
+use crate::{
+  AppState,
+  error::AppError,
+  response::ApiResponse,
+  service::{create_user, get_token},
+};
 
 pub struct AppJson<T>(pub T);
 
@@ -63,5 +68,28 @@ pub async fn register(
       &state.jwt_key,
     )
     .await?,
+  ))
+}
+
+#[derive(Deserialize)]
+pub struct LoginRequest {
+  email: String,
+  password: String,
+}
+
+#[derive(Serialize)]
+pub struct LoginResponse {
+  pub avatar: String,
+  pub nickname: String,
+  pub url: String,
+  pub token: String,
+}
+
+pub async fn login(
+  State(state): State<AppState>,
+  AppJson(payload): AppJson<LoginRequest>,
+) -> Result<ApiResponse<LoginResponse>, AppError> {
+  Ok(ApiResponse::success(
+    get_token(payload.email, payload.password, &state.conn, &state.jwt_key).await?,
   ))
 }
