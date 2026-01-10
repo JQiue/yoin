@@ -5,12 +5,12 @@ use helpers::{
   uuid::{Alphabet, nanoid},
 };
 use migration::enums::UserRole;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, IntoActiveModel};
 
 use crate::{
   entity::{prelude::Users, users},
   error::{AppError, ToAppError},
-  handler::{LoginResponse, RegisterResponse},
+  handler::{LoginResponse, RegisterResponse, UpdateProfileResponse},
   helper::generate_avatar,
   repo::UserRepo,
 };
@@ -87,5 +87,34 @@ pub async fn get_token(
     url: user.url,
     // datetime: user.created_at.and_utc().to_rfc3339(),
     token,
+  })
+}
+
+pub async fn update_my_profile(
+  user_id: i32,
+  nickname: Option<String>,
+  avatar: Option<String>,
+  url: Option<String>,
+  conn: &DatabaseConnection,
+) -> Result<UpdateProfileResponse, AppError> {
+  let user = Users::get_user_by_id(user_id, conn)
+    .await
+    .with_op("get_user_by_id")?
+    .ok_or(AppError::user_not_found("User not found".to_string()))?;
+  let mut update_user = user.into_active_model();
+  if let Some(nickname) = nickname {
+    update_user.nickname = Set(nickname);
+  }
+  if let Some(avatar) = avatar {
+    update_user.avatar = Set(avatar);
+  }
+  if let Some(url) = url {
+    update_user.url = Set(url);
+  }
+  let updated_user = update_user.update(conn).await.with_op("update_user")?;
+  Ok(UpdateProfileResponse {
+    avatar: updated_user.avatar,
+    nickname: updated_user.nickname,
+    url: updated_user.url,
   })
 }

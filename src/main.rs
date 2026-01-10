@@ -1,7 +1,7 @@
 use axum::{
   Router,
   middleware::from_extractor_with_state,
-  routing::{get, post},
+  routing::{get, patch, post},
 };
 use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
@@ -13,8 +13,8 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 use crate::{
   config::Config,
   db::migrate,
-  handler::{health_check, login, register},
-  middleware::Auth,
+  handler::{health_check, login, register, update_profile},
+  middleware::RequireAuth,
 };
 
 mod config;
@@ -65,8 +65,11 @@ fn create_router(state: AppState) -> Router {
     .route("/auth/register", post(register))
     .route("/auth/login", post(login));
 
-  let private_routes =
-    Router::new().route_layer(from_extractor_with_state::<Auth, AppState>(state.clone()));
+  let private_routes = Router::new()
+    .route("/users/me", patch(update_profile))
+    .route_layer(from_extractor_with_state::<RequireAuth, AppState>(
+      state.clone(),
+    ));
 
   let api_routes = Router::new().merge(public_routes).merge(private_routes);
 

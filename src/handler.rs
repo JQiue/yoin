@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
   AppState,
   error::AppError,
+  middleware::RequireAuth,
   response::ApiResponse,
-  service::{create_user, get_token},
+  service::{create_user, get_token, update_my_profile},
 };
 
 pub struct AppJson<T>(pub T);
@@ -91,5 +92,36 @@ pub async fn login(
 ) -> Result<ApiResponse<LoginResponse>, AppError> {
   Ok(ApiResponse::success(
     get_token(payload.email, payload.password, &state.conn, &state.jwt_key).await?,
+  ))
+}
+
+#[derive(Deserialize)]
+pub struct UpdateProfileRequest {
+  nickname: Option<String>,
+  avatar: Option<String>,
+  url: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct UpdateProfileResponse {
+  pub avatar: String,
+  pub nickname: String,
+  pub url: String,
+}
+
+pub async fn update_profile(
+  State(state): State<AppState>,
+  require_auth: RequireAuth,
+  AppJson(payload): AppJson<UpdateProfileRequest>,
+) -> Result<ApiResponse<UpdateProfileResponse>, AppError> {
+  Ok(ApiResponse::success(
+    update_my_profile(
+      require_auth.user_id,
+      payload.nickname,
+      payload.avatar,
+      payload.url,
+      &state.conn,
+    )
+    .await?,
   ))
 }

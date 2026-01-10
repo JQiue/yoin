@@ -6,11 +6,11 @@ use helpers::jwt;
 
 use crate::AppState;
 
-pub struct Auth {
+pub struct RequireAuth {
   pub user_id: i32,
 }
 
-impl FromRequestParts<AppState> for Auth {
+impl FromRequestParts<AppState> for RequireAuth {
   type Rejection = StatusCode;
 
   async fn from_request_parts(
@@ -27,7 +27,7 @@ impl FromRequestParts<AppState> for Auth {
     {
       let token = auth_header.trim_start_matches("Bearer ");
       if let Ok(data) = jwt::verify::<i32>(token, &state.jwt_key) {
-        Ok(Auth {
+        Ok(RequireAuth {
           user_id: data.claims.data,
         })
       } else {
