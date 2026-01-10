@@ -9,7 +9,7 @@ use crate::{
   error::AppError,
   middleware::RequireAuth,
   response::ApiResponse,
-  service::{create_user, get_token, update_my_profile},
+  service::{create_user, get_token, get_user_profile, update_user_profile},
 };
 
 pub struct AppJson<T>(pub T);
@@ -95,27 +95,43 @@ pub async fn login(
   ))
 }
 
+#[derive(Serialize)]
+pub struct GetMyProfileResponse {
+  pub avatar: String,
+  pub nickname: String,
+  pub url: String,
+}
+
+pub async fn get_my_profile(
+  State(state): State<AppState>,
+  require_auth: RequireAuth,
+) -> Result<ApiResponse<GetMyProfileResponse>, AppError> {
+  Ok(ApiResponse::success(
+    get_user_profile(require_auth.user_id, &state.conn).await?,
+  ))
+}
+
 #[derive(Deserialize)]
-pub struct UpdateProfileRequest {
+pub struct UpdateMyProfileRequest {
   nickname: Option<String>,
   avatar: Option<String>,
   url: Option<String>,
 }
 
 #[derive(Serialize)]
-pub struct UpdateProfileResponse {
+pub struct UpdateMyProfileResponse {
   pub avatar: String,
   pub nickname: String,
   pub url: String,
 }
 
-pub async fn update_profile(
+pub async fn update_my_profile(
   State(state): State<AppState>,
   require_auth: RequireAuth,
-  AppJson(payload): AppJson<UpdateProfileRequest>,
-) -> Result<ApiResponse<UpdateProfileResponse>, AppError> {
+  AppJson(payload): AppJson<UpdateMyProfileRequest>,
+) -> Result<ApiResponse<UpdateMyProfileResponse>, AppError> {
   Ok(ApiResponse::success(
-    update_my_profile(
+    update_user_profile(
       require_auth.user_id,
       payload.nickname,
       payload.avatar,

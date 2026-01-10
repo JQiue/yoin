@@ -13,7 +13,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 use crate::{
   config::Config,
   db::migrate,
-  handler::{health_check, login, register, update_profile},
+  handler::{get_my_profile, health_check, login, register, update_my_profile},
   middleware::RequireAuth,
 };
 
@@ -66,7 +66,8 @@ fn create_router(state: AppState) -> Router {
     .route("/auth/login", post(login));
 
   let private_routes = Router::new()
-    .route("/users/me", patch(update_profile))
+    .route("/users/me", get(get_my_profile))
+    .route("/users/me", patch(update_my_profile))
     .route_layer(from_extractor_with_state::<RequireAuth, AppState>(
       state.clone(),
     ));

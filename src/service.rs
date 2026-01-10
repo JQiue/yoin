@@ -10,7 +10,7 @@ use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, IntoActive
 use crate::{
   entity::{prelude::Users, users},
   error::{AppError, ToAppError},
-  handler::{LoginResponse, RegisterResponse, UpdateProfileResponse},
+  handler::{GetMyProfileResponse, LoginResponse, RegisterResponse, UpdateMyProfileResponse},
   helper::generate_avatar,
   repo::UserRepo,
 };
@@ -90,13 +90,28 @@ pub async fn get_token(
   })
 }
 
-pub async fn update_my_profile(
+pub async fn get_user_profile(
+  user_id: i32,
+  conn: &DatabaseConnection,
+) -> Result<GetMyProfileResponse, AppError> {
+  let user = Users::get_user_by_id(user_id, conn)
+    .await
+    .with_op("get_user_by_id")?
+    .ok_or(AppError::user_not_found("User not found".to_string()))?;
+  Ok(GetMyProfileResponse {
+    avatar: user.avatar,
+    nickname: user.nickname,
+    url: user.url,
+  })
+}
+
+pub async fn update_user_profile(
   user_id: i32,
   nickname: Option<String>,
   avatar: Option<String>,
   url: Option<String>,
   conn: &DatabaseConnection,
-) -> Result<UpdateProfileResponse, AppError> {
+) -> Result<UpdateMyProfileResponse, AppError> {
   let user = Users::get_user_by_id(user_id, conn)
     .await
     .with_op("get_user_by_id")?
@@ -112,7 +127,7 @@ pub async fn update_my_profile(
     update_user.url = Set(url);
   }
   let updated_user = update_user.update(conn).await.with_op("update_user")?;
-  Ok(UpdateProfileResponse {
+  Ok(UpdateMyProfileResponse {
     avatar: updated_user.avatar,
     nickname: updated_user.nickname,
     url: updated_user.url,
