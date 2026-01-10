@@ -20,6 +20,7 @@ pub struct Config {
   pub host: String,
   #[serde(default = "default_port")]
   pub port: u16,
+  pub jwt_key: String,
 }
 
 impl Config {

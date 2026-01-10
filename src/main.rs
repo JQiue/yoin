@@ -1,6 +1,11 @@
-use axum::{Json, Router, response::IntoResponse, routing::get};
-use serde_json::json;
+use axum::{
+  Router,
+  middleware::from_extractor_with_state,
+  routing::{get, post},
+};
+use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
+use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
@@ -8,32 +13,43 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 use crate::{
   config::Config,
   db::migrate,
-  error::{AppError, ToAppError},
-  response::ApiResponse,
+  handler::{health_check, register},
+  middleware::Auth,
 };
 
 mod config;
 mod db;
 mod entity;
 mod error;
+mod handler;
+mod helper;
+mod middleware;
+mod repo;
 mod response;
+mod service;
 
 #[derive(Clone)]
-struct AppState {}
+struct AppState {
+  conn: DatabaseConnection,
+  jwt_key: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-  init_log();
+  init_tracing();
   let config = Config::from_env()?;
   let conn = migrate(&config.database_url).await?;
   let addr = format!("{}:{}", config.host, config.port);
-  let state = AppState {};
-  info!("listening on http://{}", addr);
-  axum::serve(TcpListener::bind(addr).await?, router(state)).await?;
+  let state = AppState {
+    conn,
+    jwt_key: config.jwt_key,
+  };
+  info!("🚀 Server running on http://{}", addr);
+  axum::serve(TcpListener::bind(addr).await?, create_router(state)).await?;
   Ok(())
 }
 
-fn init_log() {
+fn init_tracing() {
   tracing_subscriber::registry()
     .with(
       tracing_subscriber::EnvFilter::try_from_default_env()
@@ -43,13 +59,18 @@ fn init_log() {
     .init();
 }
 
-fn router(state: AppState) -> Router {
-  Router::new()
-    .nest("/api/v1", Router::new().route("/health", get(health_check)))
-    .layer(TraceLayer::new_for_http())
-    .with_state(state)
-}
+fn create_router(state: AppState) -> Router {
+  let public_routes = Router::new()
+    .route("/health", get(health_check))
+    .route("/auth/register", post(register));
 
-async fn health_check() -> Result<ApiResponse<()>, AppError> {
-  Ok(ApiResponse::success(()))
+  let private_routes =
+    Router::new().route_layer(from_extractor_with_state::<Auth, AppState>(state.clone()));
+
+  let api_routes = Router::new().merge(public_routes).merge(private_routes);
+
+  Router::new()
+    .nest("/api", api_routes)
+    .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()))
+    .with_state(state)
 }
