@@ -91,7 +91,7 @@ pub async fn get_token(
 }
 
 pub async fn get_user_profile(
-  user_id: i32,
+  user_id: i64,
   conn: &DatabaseConnection,
 ) -> Result<GetMyProfileResponse, AppError> {
   let user = Users::get_user_by_id(user_id, conn)
@@ -106,7 +106,7 @@ pub async fn get_user_profile(
 }
 
 pub async fn update_user_profile(
-  user_id: i32,
+  user_id: i64,
   nickname: Option<String>,
   avatar: Option<String>,
   url: Option<String>,

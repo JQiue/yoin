@@ -8,7 +8,7 @@ use crate::entity::{
 pub trait UserRepo {
   async fn is_first_user(conn: &DatabaseConnection) -> Result<bool, DbErr>;
   async fn has_user_by_email(email: &str, conn: &DatabaseConnection) -> Result<bool, DbErr>;
-  async fn get_user_by_id(user_id: i32, conn: &DatabaseConnection) -> Result<Option<Model>, DbErr>;
+  async fn get_user_by_id(user_id: i64, conn: &DatabaseConnection) -> Result<Option<Model>, DbErr>;
   async fn get_user_by_email(
     email: &str,
     conn: &DatabaseConnection,
@@ -28,7 +28,7 @@ impl UserRepo for Users {
     Ok(Users::find().all(conn).await?.is_empty())
   }
 
-  async fn get_user_by_id(user_id: i32, conn: &DatabaseConnection) -> Result<Option<Model>, DbErr> {
+  async fn get_user_by_id(user_id: i64, conn: &DatabaseConnection) -> Result<Option<Model>, DbErr> {
     Ok(
       Users::find()
         .filter(users::Column::Id.eq(user_id))
