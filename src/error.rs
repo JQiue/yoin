@@ -90,6 +90,13 @@ impl AppError {
       msg,
     }
   }
+
+  pub fn forbidden(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::Forbidden(ClientErrorKind::AUTH_MODULE + 403),
+      msg,
+    }
+  }
 }
 
 impl IntoResponse for AppError {

@@ -1,9 +1,14 @@
+use std::{
+  collections::HashMap,
+  sync::{Arc, Mutex},
+};
+
 use axum::{
   Router,
   middleware::from_extractor_with_state,
-  routing::{get, patch, post},
+  routing::{get, post},
 };
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, EntityTrait};
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
@@ -13,8 +18,13 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 use crate::{
   config::Config,
   db::migrate,
-  handler::{get_my_profile, health_check, login, register, update_my_profile},
-  middleware::RequireAuth,
+  entity::{prelude::Sites, sites::SiteConfig},
+  handler::{
+    create_comment, create_site, get_my_profile, health_check, list_sites, login, register,
+    update_my_profile,
+  },
+  middleware::{OptionnalAuth, RequireAuth},
+  repo::SiteRepo,
 };
 
 mod config;
@@ -32,6 +42,24 @@ mod service;
 struct AppState {
   conn: DatabaseConnection,
   jwt_key: String,
+  site_config: Arc<Mutex<HashMap<i64, SiteConfig>>>,
+}
+
+impl AppState {
+  async fn preload_site_configs(&self) {
+    let sites = Sites::get_sites(&self.conn).await.unwrap();
+    for site in sites {
+      self
+        .site_config
+        .lock()
+        .unwrap()
+        .insert(site.id, site.config);
+    }
+  }
+
+  async fn get_site_config(&self, site_id: i64) -> Option<SiteConfig> {
+    self.site_config.lock().unwrap().get(&site_id).cloned()
+  }
 }
 
 #[tokio::main]
@@ -43,7 +71,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   let state = AppState {
     conn,
     jwt_key: config.jwt_key,
+    site_config: Arc::new(Mutex::new(HashMap::new())),
   };
+  state.preload_site_configs().await;
   info!("🚀 Server running on http://{}", addr);
   axum::serve(TcpListener::bind(addr).await?, create_router(state)).await?;
   Ok(())
@@ -63,11 +93,18 @@ fn create_router(state: AppState) -> Router {
   let public_routes = Router::new()
     .route("/health", get(health_check))
     .route("/auth/register", post(register))
-    .route("/auth/login", post(login));
+    .route("/auth/login", post(login))
+    .route("/comments", post(create_comment))
+    .route_layer(from_extractor_with_state::<OptionnalAuth, AppState>(
+      state.clone(),
+    ));
 
   let private_routes = Router::new()
-    .route("/users/me", get(get_my_profile))
-    .route("/users/me", patch(update_my_profile))
+    .route("/users/me", get(get_my_profile).patch(update_my_profile))
+    .route(
+      "/sites",
+      post(create_site).get(list_sites), // .patch(update_site_config),
+    )
     .route_layer(from_extractor_with_state::<RequireAuth, AppState>(
       state.clone(),
     ));

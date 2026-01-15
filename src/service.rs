@@ -8,11 +8,18 @@ use migration::enums::UserRole;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, IntoActiveModel};
 
 use crate::{
-  entity::{prelude::Users, users},
+  entity::{
+    prelude::{Sites, Users},
+    sites::{self, SiteConfig},
+    users,
+  },
   error::{AppError, ToAppError},
-  handler::{GetMyProfileResponse, LoginResponse, RegisterResponse, UpdateMyProfileResponse},
+  handler::{
+    GetMyProfileResponse, ListSitesResponse, LoginResponse, RegisterResponse,
+    UpdateMyProfileResponse,
+  },
   helper::generate_avatar,
-  repo::UserRepo,
+  repo::{SiteRepo, UserRepo},
 };
 
 pub async fn create_user(
@@ -31,14 +38,22 @@ pub async fn create_user(
       "User already exists".to_string(),
     ));
   }
-
+  let datetime = utc_now().naive_utc();
   let role = if Users::is_first_user(conn).await.with_op("is_first_user")? {
+    let new_site = sites::ActiveModel {
+      name: Set("Default Site".to_string()),
+      url: Set("".to_string()),
+      config: Set(SiteConfig::default()),
+      created_at: Set(datetime),
+      updated_at: Set(datetime),
+      ..Default::default()
+    };
+    new_site.insert(conn).await.with_op("insert_site")?;
     UserRole::Admin
   } else {
     UserRole::Normal
   };
   let hashed = argon2(&password, &nanoid(&Alphabet::DEFAULT, 8)).with_op("hash_password")?;
-  let datetime = utc_now().naive_utc();
   let insert_user = users::ActiveModel {
     nickname: Set(nickname),
     password: Set(hashed),
@@ -50,7 +65,6 @@ pub async fn create_user(
     updated_at: Set(datetime),
     ..Default::default()
   };
-
   let new_user = insert_user.insert(conn).await.with_op("insert_user")?;
   let token = jwt::sign(new_user.id, jwt_key, 30 * 24 * 60 * 60).with_op("sign jwt token")?;
 
@@ -73,7 +87,7 @@ pub async fn get_token(
     .with_op("get_user_by_email")?
     .ok_or(AppError::user_not_found("User not found".to_string()))?;
 
-  if verify_argon2(&user.password, &password).with_op("verify_argon2")? {
+  if !verify_argon2(&user.password, &password).with_op("verify_argon2")? {
     return Err(AppError::invalid_credentials(
       "Invalid email or password".to_string(),
     ));
@@ -132,4 +146,31 @@ pub async fn update_user_profile(
     nickname: updated_user.nickname,
     url: updated_user.url,
   })
+}
+
+pub async fn get_all_sites(
+  user_id: i64,
+  conn: &DatabaseConnection,
+) -> Result<Vec<ListSitesResponse>, AppError> {
+  let user = Users::get_user_by_id(user_id, conn)
+    .await
+    .with_op("get_user_by_id")?
+    .ok_or(AppError::user_not_found("User not found".to_string()))?;
+
+  if user.role != UserRole::Admin {
+    return Err(AppError::forbidden("You are not admin".to_string()));
+  }
+
+  let sites = Sites::get_sites(conn)
+    .await
+    .with_op("get_sites")?
+    .iter()
+    .map(|site| ListSitesResponse {
+      id: site.id,
+      name: site.name.clone(),
+      config: site.config.clone(),
+      url: site.url.clone(),
+    })
+    .collect();
+  Ok(sites)
 }

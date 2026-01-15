@@ -7,7 +7,7 @@ use helpers::jwt;
 use crate::AppState;
 
 pub struct RequireAuth {
-  pub user_id: i32,
+  pub user_id: i64,
 }
 
 impl FromRequestParts<AppState> for RequireAuth {
@@ -26,7 +26,7 @@ impl FromRequestParts<AppState> for RequireAuth {
       && auth_header.starts_with("Bearer ")
     {
       let token = auth_header.trim_start_matches("Bearer ");
-      if let Ok(data) = jwt::verify::<i32>(token, &state.jwt_key) {
+      if let Ok(data) = jwt::verify(token, &state.jwt_key) {
         Ok(RequireAuth {
           user_id: data.claims.data,
         })
@@ -35,6 +35,40 @@ impl FromRequestParts<AppState> for RequireAuth {
       }
     } else {
       Err(StatusCode::UNAUTHORIZED)
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct OptionnalAuth {
+  pub user_id: Option<i64>,
+}
+
+impl FromRequestParts<AppState> for OptionnalAuth {
+  type Rejection = StatusCode;
+
+  async fn from_request_parts(
+    parts: &mut Parts,
+    state: &AppState,
+  ) -> Result<Self, Self::Rejection> {
+    let auth_header = parts
+      .headers
+      .get(AUTHORIZATION)
+      .and_then(|value| value.to_str().ok());
+
+    if let Some(auth_header) = auth_header
+      && auth_header.starts_with("Bearer ")
+    {
+      let token = auth_header.trim_start_matches("Bearer ");
+      if let Ok(data) = jwt::verify(token, &state.jwt_key) {
+        Ok(OptionnalAuth {
+          user_id: Some(data.claims.data),
+        })
+      } else {
+        Err(StatusCode::UNAUTHORIZED)
+      }
+    } else {
+      Ok(OptionnalAuth { user_id: None })
     }
   }
 }
