@@ -1,4 +1,34 @@
 use axum::{
+  Json,
+  extract::{FromRequest, Request, State},
+};
+
+use crate::error::AppError;
+
+pub struct AppJson<T>(pub T);
+
+impl<S, T> FromRequest<S> for AppJson<T>
+where
+  axum::Json<T>: FromRequest<S, Rejection = axum::extract::rejection::JsonRejection>,
+  S: Send + Sync,
+{
+  type Rejection = AppError;
+  async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+    match axum::Json::<T>::from_request(req, state).await {
+      Ok(Json(value)) => Ok(AppJson(value)),
+      Err(rejection) => match rejection {
+        axum::extract::rejection::JsonRejection::MissingJsonContentType(
+          missing_json_content_type,
+        ) => Err(AppError::unsupported_media_type(
+          missing_json_content_type.body_text(),
+        )),
+        other => Err(AppError::bad_request(other.body_text())),
+      },
+    }
+  }
+}
+
+use axum::{
   extract::FromRequestParts,
   http::{StatusCode, header::AUTHORIZATION, request::Parts},
 };

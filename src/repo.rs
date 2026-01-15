@@ -7,20 +7,24 @@ use crate::entity::{
 };
 
 pub trait UserRepo {
-  async fn is_first_user(conn: &DatabaseConnection) -> Result<bool, DbErr>;
-  async fn has_user_by_email(email: &str, conn: &DatabaseConnection) -> Result<bool, DbErr>;
-  async fn get_user_by_id(
+  async fn exists_any(conn: &DatabaseConnection) -> Result<bool, DbErr>;
+  async fn exists_by_email(email: &str, conn: &DatabaseConnection) -> Result<bool, DbErr>;
+  async fn find_by_id(
     user_id: i64,
     conn: &DatabaseConnection,
   ) -> Result<Option<users::Model>, DbErr>;
-  async fn get_user_by_email(
+  async fn find_by_email(
     email: &str,
     conn: &DatabaseConnection,
   ) -> Result<Option<users::Model>, DbErr>;
 }
 
 impl UserRepo for Users {
-  async fn has_user_by_email(email: &str, conn: &DatabaseConnection) -> Result<bool, DbErr> {
+  async fn exists_any(conn: &DatabaseConnection) -> Result<bool, DbErr> {
+    Ok(Self::find().all(conn).await?.is_empty())
+  }
+
+  async fn exists_by_email(email: &str, conn: &DatabaseConnection) -> Result<bool, DbErr> {
     let user = Self::find()
       .filter(users::Column::Email.eq(email))
       .one(conn)
@@ -28,11 +32,7 @@ impl UserRepo for Users {
     Ok(user.is_some())
   }
 
-  async fn is_first_user(conn: &DatabaseConnection) -> Result<bool, DbErr> {
-    Ok(Self::find().all(conn).await?.is_empty())
-  }
-
-  async fn get_user_by_id(
+  async fn find_by_id(
     user_id: i64,
     conn: &DatabaseConnection,
   ) -> Result<Option<users::Model>, DbErr> {
@@ -44,7 +44,7 @@ impl UserRepo for Users {
     )
   }
 
-  async fn get_user_by_email(
+  async fn find_by_email(
     email: &str,
     conn: &DatabaseConnection,
   ) -> Result<Option<users::Model>, DbErr> {
@@ -58,11 +58,11 @@ impl UserRepo for Users {
 }
 
 pub trait SiteRepo {
-  async fn get_sites(conn: &DatabaseConnection) -> Result<Vec<sites::Model>, DbErr>;
+  async fn find_all(conn: &DatabaseConnection) -> Result<Vec<sites::Model>, DbErr>;
 }
 
 impl SiteRepo for Sites {
-  async fn get_sites(conn: &DatabaseConnection) -> Result<Vec<sites::Model>, DbErr> {
+  async fn find_all(conn: &DatabaseConnection) -> Result<Vec<sites::Model>, DbErr> {
     Self::find().all(conn).await
   }
 }

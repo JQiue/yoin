@@ -8,7 +8,7 @@ use axum::{
   middleware::from_extractor_with_state,
   routing::{get, post},
 };
-use sea_orm::{DatabaseConnection, EntityTrait};
+use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
@@ -19,11 +19,8 @@ use crate::{
   config::Config,
   db::migrate,
   entity::{prelude::Sites, sites::SiteConfig},
-  handler::{
-    create_comment, create_site, get_my_profile, health_check, list_sites, login, register,
-    update_my_profile,
-  },
-  middleware::{OptionnalAuth, RequireAuth},
+  extractor::{OptionnalAuth, RequireAuth},
+  handler::{auth, comment, health, site, user},
   repo::SiteRepo,
 };
 
@@ -31,9 +28,9 @@ mod config;
 mod db;
 mod entity;
 mod error;
+pub mod extractor;
 mod handler;
 mod helper;
-mod middleware;
 mod repo;
 mod response;
 mod service;
@@ -47,7 +44,7 @@ struct AppState {
 
 impl AppState {
   async fn preload_site_configs(&self) {
-    let sites = Sites::get_sites(&self.conn).await.unwrap();
+    let sites = Sites::find_all(&self.conn).await.unwrap();
     for site in sites {
       self
         .site_config
@@ -91,19 +88,19 @@ fn init_tracing() {
 
 fn create_router(state: AppState) -> Router {
   let public_routes = Router::new()
-    .route("/health", get(health_check))
-    .route("/auth/register", post(register))
-    .route("/auth/login", post(login))
-    .route("/comments", post(create_comment))
+    .route("/health", get(health::health_check))
+    .route("/auth/register", post(auth::register))
+    .route("/auth/login", post(auth::login))
+    .route("/comments", post(comment::create_comment))
     .route_layer(from_extractor_with_state::<OptionnalAuth, AppState>(
       state.clone(),
     ));
 
   let private_routes = Router::new()
-    .route("/users/me", get(get_my_profile).patch(update_my_profile))
+    .route("/users/me", get(user::profile).patch(user::update_profile))
     .route(
       "/sites",
-      post(create_site).get(list_sites), // .patch(update_site_config),
+      post(site::create).get(site::list), // .patch(update_site_config),
     )
     .route_layer(from_extractor_with_state::<RequireAuth, AppState>(
       state.clone(),
