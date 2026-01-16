@@ -25,7 +25,8 @@ pub struct Config {
 
 impl Config {
   pub fn from_env() -> Result<Config, envy::Error> {
-    dotenvy::dotenv_override().ok();
+    dotenvy::dotenv_override()
+      .map_err(|_| envy::Error::Custom(".env file not found".to_string()))?;
     envy::from_env()
   }
 }
