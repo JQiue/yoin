@@ -1,3 +1,4 @@
+use helpers::uuid::{Alphabet, nanoid};
 use serde::Deserialize;
 
 fn default_database_url() -> String {
@@ -12,6 +13,10 @@ fn default_port() -> u16 {
   7410
 }
 
+fn default_jwt_key() -> String {
+  nanoid(&Alphabet::DEFAULT, 8)
+}
+
 #[derive(Deserialize)]
 pub struct Config {
   #[serde(default = "default_database_url")]
@@ -20,6 +25,7 @@ pub struct Config {
   pub host: String,
   #[serde(default = "default_port")]
   pub port: u16,
+  #[serde(default = "default_jwt_key")]
   pub jwt_key: String,
 }
 
