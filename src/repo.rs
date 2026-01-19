@@ -59,10 +59,18 @@ impl UserRepo for Users {
 
 pub trait SiteRepo {
   async fn find_all(conn: &DatabaseConnection) -> Result<Vec<sites::Model>, DbErr>;
+  async fn find_by_id(id: i64, conn: &DatabaseConnection) -> Result<Option<sites::Model>, DbErr>;
 }
 
 impl SiteRepo for Sites {
   async fn find_all(conn: &DatabaseConnection) -> Result<Vec<sites::Model>, DbErr> {
     Self::find().all(conn).await
+  }
+
+  async fn find_by_id(id: i64, conn: &DatabaseConnection) -> Result<Option<sites::Model>, DbErr> {
+    Self::find()
+      .filter(sites::Column::Id.eq(id))
+      .one(conn)
+      .await
   }
 }

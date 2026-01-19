@@ -29,6 +29,7 @@ pub struct UserProfile {
   pub avatar: String,
   pub nickname: String,
   pub url: String,
+  pub role: String,
 }
 
 pub async fn register(

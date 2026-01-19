@@ -7,7 +7,7 @@ use crate::{
   error::AppError,
   extractor::{AppJson, RequireAuth},
   response::ApiResponse,
-  service::{create_site, list_sites},
+  service::{create_site, list_sites, update_site},
 };
 
 #[derive(Serialize)]
@@ -41,4 +41,22 @@ pub async fn create(
   Ok(ApiResponse::success(
     create_site(require_auth.user_id, payload, &state.conn).await?,
   ))
+}
+
+#[derive(Deserialize)]
+pub struct UpdateSitePayload {
+  pub id: i64,
+  pub name: Option<String>,
+  pub url: Option<String>,
+  pub config: Option<SiteConfig>,
+}
+
+pub async fn update(
+  State(state): State<AppState>,
+  require_auth: RequireAuth,
+  AppJson(payload): AppJson<UpdateSitePayload>,
+) -> Result<ApiResponse<SiteView>, AppError> {
+  let resp = ApiResponse::success(update_site(require_auth.user_id, payload, &state.conn).await?);
+  state.preload_configs().await;
+  Ok(resp)
 }

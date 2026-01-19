@@ -31,8 +31,9 @@ pub enum ClientErrorKind {
 
 impl ClientErrorKind {
   pub const COMMON_MODULE: i32 = 0;
-  pub const USER_MODULE: i32 = 100_000;
-  pub const AUTH_MODULE: i32 = 200_000;
+  pub const AUTH_MODULE: i32 = 100_000;
+  pub const USER_MODULE: i32 = 200_000;
+  pub const SITE_MODULE: i32 = 300_000;
 
   pub fn bad_request() -> Self {
     Self::BadRequest(Self::COMMON_MODULE + 400)
@@ -50,6 +51,10 @@ impl ClientErrorKind {
     Self::NotFound(Self::USER_MODULE + 404)
   }
 
+  pub fn site_not_found() -> Self {
+    Self::NotFound(Self::SITE_MODULE + 404)
+  }
+
   pub fn user_already_exists() -> Self {
     Self::Conflict(Self::USER_MODULE + 409)
   }
@@ -59,6 +64,13 @@ impl AppError {
   pub fn bad_request(msg: String) -> Self {
     Self::Client {
       kind: ClientErrorKind::bad_request(),
+      msg,
+    }
+  }
+
+  pub fn forbidden(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::Forbidden(ClientErrorKind::AUTH_MODULE + 403),
       msg,
     }
   }
@@ -91,9 +103,9 @@ impl AppError {
     }
   }
 
-  pub fn forbidden(msg: String) -> Self {
+  pub fn site_not_found(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::Forbidden(ClientErrorKind::AUTH_MODULE + 403),
+      kind: ClientErrorKind::site_not_found(),
       msg,
     }
   }
