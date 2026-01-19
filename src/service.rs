@@ -9,6 +9,7 @@ use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, IntoActive
 
 use crate::{
   entity::{
+    comments,
     prelude::{Sites, Users},
     sites::{self, SiteConfig},
     users,
@@ -16,7 +17,8 @@ use crate::{
   error::{AppError, ToAppError},
   handler::{
     auth::{LoginPayload, UserProfile, UserWithToken},
-    site::{CreateSitePayload, SiteView},
+    comment::{CommentView, CreateCommentPayload},
+    site::{CreateSitePayload, SiteView, UpdateSitePayload},
     user::UpdateProfilePayload,
   },
   helper::generate_avatar,
@@ -75,6 +77,7 @@ pub async fn create_user(
       avatar: new_user.avatar,
       nickname: new_user.nickname,
       url: new_user.url,
+      role: new_user.role.to_string(),
     },
   })
 }
@@ -102,6 +105,7 @@ pub async fn login_user(
       avatar: user.avatar,
       nickname: user.nickname,
       url: user.url,
+      role: user.role.to_string(),
     },
     // datetime: user.created_at.and_utc().to_rfc3339(),
     token,
@@ -120,6 +124,7 @@ pub async fn fetch_profile(
     avatar: user.avatar,
     nickname: user.nickname,
     url: user.url,
+    role: user.role.to_string(),
   })
 }
 
@@ -147,6 +152,7 @@ pub async fn update_user_profile(
     avatar: updated_user.avatar,
     nickname: updated_user.nickname,
     url: updated_user.url,
+    role: updated_user.role.to_string(),
   })
 }
 
@@ -191,7 +197,7 @@ pub async fn create_site(
 
   if user.role != UserRole::Admin {
     return Err(AppError::forbidden(
-      "You are not admin 1234".to_string() + &user.id.to_string(),
+      "You are not admin".to_string() + &user.id.to_string(),
     ));
   }
   let datetime = utc_now().naive_utc();
@@ -210,5 +216,112 @@ pub async fn create_site(
     name: site.name,
     config: site.config,
     url: site.url,
+  })
+}
+
+pub async fn update_site(
+  user_id: i64,
+  payload: UpdateSitePayload,
+  conn: &DatabaseConnection,
+) -> Result<SiteView, AppError> {
+  let user = Users::find_by_id(user_id, conn)
+    .await
+    .with_op("find user by id")?
+    .ok_or(AppError::user_not_found("User not found".to_string()))?;
+
+  if user.role != UserRole::Admin {
+    return Err(AppError::forbidden(
+      "You are not admin".to_string() + &user.id.to_string(),
+    ));
+  }
+
+  let mut active_site = Sites::find_by_id(payload.id, conn)
+    .await
+    .with_op("find site by id")?
+    .ok_or(AppError::site_not_found("Site not found".to_string()))?
+    .into_active_model();
+
+  if let Some(name) = payload.name {
+    active_site.name = Set(name);
+  }
+  if let Some(url) = payload.url {
+    active_site.url = Set(url);
+  }
+  if let Some(config) = payload.config {
+    active_site.config = Set(config);
+  }
+
+  active_site.updated_at = Set(utc_now().naive_utc());
+  let site = active_site.update(conn).await.with_op("update site")?;
+
+  Ok(SiteView {
+    id: site.id,
+    name: site.name,
+    config: site.config,
+    url: site.url,
+  })
+}
+
+pub async fn create_comment(
+  user_id: Option<i64>,
+  payload: CreateCommentPayload,
+  conn: &DatabaseConnection,
+) -> Result<CommentView, AppError> {
+  let device = "unknown".to_string();
+  let location = "unknown".to_string();
+
+  let mut active_comment = comments::ActiveModel {
+    site_id: Set(payload.site_id),
+    nickname: Set(payload.nickname),
+    page_path: Set(payload.page_page),
+    link: Set(payload.link),
+    content: Set(payload.content),
+    created_at: Set(utc_now().naive_utc()),
+    updated_at: Set(utc_now().naive_utc()),
+    email: Set(payload.email),
+    device: Set(device),
+    location: Set(location),
+    is_sticky: Set(false),
+    ..Default::default()
+  };
+
+  if let Some(user_id) = user_id {
+    active_comment.user_id = Set(Some(user_id));
+  }
+
+  if let Some(rid) = payload.rid {
+    active_comment.rid = Set(rid);
+  }
+
+  let comments::Model {
+    id,
+    nickname,
+    link,
+    content,
+    updated_at,
+    up_vote,
+    down_vote,
+    device,
+    location,
+    rid,
+    is_sticky,
+    ..
+  } = active_comment
+    .insert(conn)
+    .await
+    .with_op("insert comment")?;
+
+  Ok(CommentView {
+    id,
+    rid,
+    nickname,
+    link,
+    content,
+    up_vote,
+    down_vote,
+    device,
+    location,
+    is_sticky,
+    updated_at: updated_at.and_utc().to_rfc3339(),
   })
 }

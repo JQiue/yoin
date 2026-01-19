@@ -1,6 +1,8 @@
+use std::net::{IpAddr, SocketAddr};
+
 use axum::{
   Json,
-  extract::{FromRequest, Request, State},
+  extract::{ConnectInfo, FromRequest, Request},
 };
 
 use crate::error::AppError;
@@ -100,5 +102,36 @@ impl FromRequestParts<AppState> for OptionnalAuth {
     } else {
       Ok(OptionnalAuth { user_id: None })
     }
+  }
+}
+
+#[derive(Debug)]
+pub struct RemoteIp {
+  pub ip: String,
+}
+
+impl FromRequestParts<AppState> for RemoteIp {
+  type Rejection = StatusCode;
+
+  async fn from_request_parts(
+    parts: &mut Parts,
+    _state: &AppState,
+  ) -> Result<Self, Self::Rejection> {
+    if let Some(ip) = parts
+      .headers
+      .get("x-forwarded-for")
+      .and_then(|v| v.to_str().ok())
+      .and_then(|s| s.split(',').next()) // 取第一个 IP
+      .and_then(|s| s.trim().parse::<IpAddr>().ok())
+    {
+      return Ok(RemoteIp { ip: ip.to_string() });
+    }
+    parts
+      .extensions
+      .get::<ConnectInfo<SocketAddr>>()
+      .map(|ConnectInfo(addr)| RemoteIp {
+        ip: addr.to_string(),
+      })
+      .ok_or(StatusCode::INTERNAL_SERVER_ERROR)
   }
 }
