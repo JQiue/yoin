@@ -37,7 +37,7 @@ enum Comments {
   PagePath,
   Content,
   Status,
-  Nick,
+  Nickname,
   Link,
   Email,
   Device,
@@ -101,7 +101,7 @@ impl MigrationTrait for Migration {
           .col(string(Comments::PagePath))
           .col(text(Comments::Content))
           .col(string(Comments::Status).default(CommentStatus::Pending))
-          .col(string(Comments::Nick))
+          .col(string(Comments::Nickname))
           .col(string(Comments::Link))
           .col(string(Comments::Email))
           .col(string(Comments::Device))

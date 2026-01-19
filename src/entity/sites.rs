@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct SiteConfig {
   pub allow_anonymous: bool,
-  pub max_comment_length: i32,
+  pub max_comment_length: usize,
 }
 
 impl Default for SiteConfig {

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use sea_orm_migration::{
   prelude::*,
   sea_orm::{DeriveActiveEnum, EnumIter},
@@ -21,4 +23,13 @@ pub enum UserRole {
   Normal,
   #[sea_orm(string_value = "admin")]
   Admin,
+}
+
+impl Display for UserRole {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      UserRole::Normal => write!(f, "normal"),
+      UserRole::Admin => write!(f, "admin"),
+    }
+  }
 }

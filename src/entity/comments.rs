@@ -8,16 +8,23 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
   #[sea_orm(primary_key)]
   pub id: i64,
-  pub user_id: i64,
+  pub user_id: Option<i64>,
   pub site_id: i64,
-  pub path: String,
+  pub rid: i64,
+  pub page_path: String,
   pub content: String,
   pub status: CommentStatus,
-  pub nick: String,
+  pub nickname: String,
   pub link: String,
   pub email: String,
+  pub device: String,
+  pub location: String,
+  pub is_sticky: bool,
+  pub up_vote: i32,
+  pub down_vote: i32,
   pub created_at: DateTime,
   pub updated_at: DateTime,
+  pub deleted_at: Option<DateTime>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
