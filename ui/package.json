@@ -1,0 +1,27 @@
+{
+  "name": "yoin",
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist/index.d.ts",
+    "dist/index.js"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rsbuild build",
+    "dev": "rsbuild dev --open",
+    "preview": "rsbuild preview",
+    "build:analyze": "BUNDLE_ANALYZE=true rsbuild build"
+  },
+  "dependencies": {
+    "preact": "^10.28.2"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^1.7.1",
+    "@rsbuild/plugin-preact": "^1.7.1",
+    "@tailwindcss/postcss": "^4.1.18",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3"
+  }
+}
