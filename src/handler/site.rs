@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::State;
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +21,7 @@ pub struct SiteView {
 }
 
 pub async fn list(
-  State(state): State<AppState>,
+  State(state): State<Arc<AppState>>,
   require_auth: RequireAuth,
 ) -> Result<ApiResponse<Vec<SiteView>>, AppError> {
   Ok(ApiResponse::success(
@@ -34,7 +36,7 @@ pub struct CreateSitePayload {
 }
 
 pub async fn create(
-  State(state): State<AppState>,
+  State(state): State<Arc<AppState>>,
   require_auth: RequireAuth,
   AppJson(payload): AppJson<CreateSitePayload>,
 ) -> Result<ApiResponse<SiteView>, AppError> {
@@ -52,7 +54,7 @@ pub struct UpdateSitePayload {
 }
 
 pub async fn update(
-  State(state): State<AppState>,
+  State(state): State<Arc<AppState>>,
   require_auth: RequireAuth,
   AppJson(payload): AppJson<UpdateSitePayload>,
 ) -> Result<ApiResponse<SiteView>, AppError> {

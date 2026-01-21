@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::State;
 use serde::Deserialize;
 
@@ -11,7 +13,7 @@ use crate::{
 };
 
 pub async fn profile(
-  State(state): State<AppState>,
+  State(state): State<Arc<AppState>>,
   require_auth: RequireAuth,
 ) -> Result<ApiResponse<UserProfile>, AppError> {
   Ok(ApiResponse::success(
@@ -27,7 +29,7 @@ pub struct UpdateProfilePayload {
 }
 
 pub async fn update_profile(
-  State(state): State<AppState>,
+  State(state): State<Arc<AppState>>,
   require_auth: RequireAuth,
   AppJson(payload): AppJson<UpdateProfilePayload>,
 ) -> Result<ApiResponse<UserProfile>, AppError> {

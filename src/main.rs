@@ -1,13 +1,14 @@
 use std::{
   collections::{HashMap, HashSet},
   net::SocketAddr,
-  sync::{Arc, Mutex},
+  sync::Arc,
 };
 
 use axum::{
   Router,
-  http::StatusCode,
-  middleware::{self, from_extractor_with_state},
+  body::Body,
+  http::{HeaderMap, StatusCode, header},
+  middleware::{self, from_extractor, from_extractor_with_state},
   response::{IntoResponse, Response},
   routing::{get, post},
 };
@@ -16,9 +17,9 @@ use migration::{
   prelude::{DateTime, Utc},
 };
 use sea_orm::{DatabaseConnection, EntityTrait};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::Mutex};
 use tower::ServiceBuilder;
-use tower_http::trace::TraceLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -52,21 +53,22 @@ enum UserKey {
   Ip(String),
 }
 
-#[derive(Clone)]
 struct AppState {
   conn: DatabaseConnection,
   jwt_key: String,
-  site_config: Arc<Mutex<HashMap<i64, SiteConfig>>>,
-  admin_ids: Arc<Mutex<HashSet<i64>>>,
-  rate_limit_cache: Arc<Mutex<HashMap<(i64, UserKey), DateTime<Utc>>>>,
+  site_config: Mutex<HashMap<i64, SiteConfig>>,
+  admin_ids: Mutex<HashSet<i64>>,
+  // todo There is no expiration clearance mechanism
+  // 并发时所有的限流请求竞争同一把锁，换并发锁
+  rate_limit_cache: Mutex<HashMap<(i64, UserKey), DateTime<Utc>>>,
 }
 
 impl AppState {
-  fn is_admin(&self, user_id: i64) -> bool {
-    self.admin_ids.lock().unwrap().contains(&user_id)
+  async fn is_admin(&self, user_id: i64) -> bool {
+    self.admin_ids.lock().await.contains(&user_id)
   }
 
-  fn check_rate_limit(
+  async fn check_rate_limit(
     &self,
     site_id: i64,
     user_id: Option<i64>,
@@ -78,7 +80,7 @@ impl AppState {
       None => UserKey::Ip(remote_ip),
     };
     let key = (site_id, user_key);
-    let mut cache = self.rate_limit_cache.lock().unwrap();
+    let mut cache = self.rate_limit_cache.lock().await;
     let now = Utc::now();
 
     if let Some(last_comment_time) = cache.get(&key) {
@@ -97,23 +99,19 @@ impl AppState {
   async fn preload_configs(&self) {
     let sites = Sites::find_all(&self.conn).await.unwrap();
     for site in sites {
-      self
-        .site_config
-        .lock()
-        .unwrap()
-        .insert(site.id, site.config);
+      self.site_config.lock().await.insert(site.id, site.config);
     }
 
     let users = Users::find().all(&self.conn).await.unwrap();
     for user in users {
       if user.role == UserRole::Admin {
-        self.admin_ids.lock().unwrap().insert(user.id);
+        self.admin_ids.lock().await.insert(user.id);
       }
     }
   }
 
   async fn get_site_config(&self, site_id: i64) -> Option<SiteConfig> {
-    self.site_config.lock().unwrap().get(&site_id).cloned()
+    self.site_config.lock().await.get(&site_id).cloned()
   }
 }
 
@@ -123,13 +121,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   let config = Config::from_env()?;
   let conn = migrate(&config.database_url).await?;
   let addr = format!("{}:{}", config.host, config.port);
-  let state = AppState {
+  let state = Arc::new(AppState {
     conn,
     jwt_key: config.jwt_key,
-    site_config: Arc::new(Mutex::new(HashMap::new())),
-    admin_ids: Arc::new(Mutex::new(HashSet::new())),
-    rate_limit_cache: Arc::new(Mutex::new(HashMap::new())),
-  };
+    site_config: Mutex::new(HashMap::new()),
+    admin_ids: Mutex::new(HashSet::new()),
+    rate_limit_cache: Mutex::new(HashMap::new()),
+  });
   state.preload_configs().await;
   info!("🚀 Server running on http://{}", addr);
   axum::serve(
@@ -150,13 +148,13 @@ fn init_tracing() {
     .init();
 }
 
-fn create_router(state: AppState) -> Router {
+fn create_router(state: Arc<AppState>) -> Router {
   let public_routes = Router::new()
     .route("/health", get(health::health_check))
     .route("/auth/register", post(auth::register))
     .route("/auth/login", post(auth::login))
-    .route("/comments", post(comment::create))
-    .route_layer(from_extractor_with_state::<OptionnalAuth, AppState>(
+    .route("/comments", post(comment::create).get(comment::list))
+    .route_layer(from_extractor_with_state::<OptionnalAuth, Arc<AppState>>(
       state.clone(),
     ));
 
@@ -166,22 +164,53 @@ fn create_router(state: AppState) -> Router {
       "/sites",
       post(site::create).get(site::list).patch(site::update),
     )
-    .route_layer(from_extractor_with_state::<RequireAuth, AppState>(
-      state.clone(),
+    .route_layer(from_extractor_with_state::<RequireAuth, Arc<AppState>>(
+      Arc::clone(&state),
     ));
 
   let api_routes = Router::new()
     .merge(public_routes)
     .merge(private_routes)
-    .route_layer(from_extractor_with_state::<RemoteIp, AppState>(
-      state.clone(),
-    ));
+    .route_layer(from_extractor::<RemoteIp>());
 
   Router::new()
+    .route("/static/yoin.js", get(handle_js))
     .nest("/api", api_routes)
     .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()))
     .layer(middleware::map_response(common_error_interceptor))
+    .layer(CorsLayer::permissive())
     .with_state(state)
+}
+
+async fn handle_js(headers: HeaderMap) -> impl IntoResponse {
+  let js = include_str!("../ui/dist/index.js");
+
+  #[cfg(debug_assertions)]
+  let (etag, cache_ctrl): (Option<&str>, &str) = (None, "no-store, must-revalidate");
+
+  #[cfg(not(debug_assertions))]
+  let (etag, cache_ctrl) = (
+    Some(concat!("\"", env!("CARGO_PKG_VERSION"), "\"")),
+    "no-cache",
+  );
+
+  if let Some(current_etag) = etag {
+    if let Some(if_none_match) = headers.get(header::IF_NONE_MATCH) {
+      if if_none_match == current_etag {
+        return StatusCode::NOT_MODIFIED.into_response();
+      }
+    }
+  }
+
+  let mut builder = Response::builder()
+    .header(header::CONTENT_TYPE, "application/javascript")
+    .header(header::CACHE_CONTROL, cache_ctrl);
+
+  if let Some(current_etag) = etag {
+    builder = builder.header(header::ETAG, current_etag);
+  }
+
+  builder.body(Body::from(js)).unwrap().into_response()
 }
 
 async fn common_error_interceptor(res: Response) -> Response {

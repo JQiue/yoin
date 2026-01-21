@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::State;
 use serde::{Deserialize, Serialize};
 
@@ -33,7 +35,7 @@ pub struct UserProfile {
 }
 
 pub async fn register(
-  State(state): State<AppState>,
+  State(state): State<Arc<AppState>>,
   AppJson(payload): AppJson<RegisterPayload>,
 ) -> Result<ApiResponse<UserWithToken>, AppError> {
   Ok(ApiResponse::success(
@@ -56,7 +58,7 @@ pub struct LoginPayload {
 }
 
 pub async fn login(
-  State(state): State<AppState>,
+  State(state): State<Arc<AppState>>,
   AppJson(payload): AppJson<LoginPayload>,
 ) -> Result<ApiResponse<UserWithToken>, AppError> {
   Ok(ApiResponse::success(

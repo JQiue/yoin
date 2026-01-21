@@ -1,4 +1,7 @@
-use std::net::{IpAddr, SocketAddr};
+use std::{
+  net::{IpAddr, SocketAddr},
+  sync::Arc,
+};
 
 use axum::{
   Json,
@@ -42,12 +45,12 @@ pub struct RequireAuth {
   pub user_id: i64,
 }
 
-impl FromRequestParts<AppState> for RequireAuth {
+impl FromRequestParts<Arc<AppState>> for RequireAuth {
   type Rejection = StatusCode;
 
   async fn from_request_parts(
     parts: &mut Parts,
-    state: &AppState,
+    state: &Arc<AppState>,
   ) -> Result<Self, Self::Rejection> {
     let auth_header = parts
       .headers
@@ -76,12 +79,12 @@ pub struct OptionnalAuth {
   pub user_id: Option<i64>,
 }
 
-impl FromRequestParts<AppState> for OptionnalAuth {
+impl FromRequestParts<Arc<AppState>> for OptionnalAuth {
   type Rejection = StatusCode;
 
   async fn from_request_parts(
     parts: &mut Parts,
-    state: &AppState,
+    state: &Arc<AppState>,
   ) -> Result<Self, Self::Rejection> {
     let auth_header = parts
       .headers
@@ -110,13 +113,13 @@ pub struct RemoteIp {
   pub ip: String,
 }
 
-impl FromRequestParts<AppState> for RemoteIp {
+impl<S> FromRequestParts<S> for RemoteIp
+where
+  S: Send + Sync,
+{
   type Rejection = StatusCode;
 
-  async fn from_request_parts(
-    parts: &mut Parts,
-    _state: &AppState,
-  ) -> Result<Self, Self::Rejection> {
+  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
     if let Some(ip) = parts
       .headers
       .get("x-forwarded-for")
