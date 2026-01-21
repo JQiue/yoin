@@ -1,3 +1,14 @@
+mod config;
+mod db;
+mod entity;
+mod error;
+pub mod extractor;
+mod handler;
+mod helper;
+mod repo;
+mod response;
+mod service;
+
 use std::{
   collections::{HashMap, HashSet},
   net::SocketAddr,
@@ -35,17 +46,6 @@ use crate::{
   handler::{auth, comment, health, site, user},
   repo::SiteRepo,
 };
-
-mod config;
-mod db;
-mod entity;
-mod error;
-pub mod extractor;
-mod handler;
-mod helper;
-mod repo;
-mod response;
-mod service;
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 enum UserKey {
@@ -194,12 +194,11 @@ async fn handle_js(headers: HeaderMap) -> impl IntoResponse {
     "no-cache",
   );
 
-  if let Some(current_etag) = etag {
-    if let Some(if_none_match) = headers.get(header::IF_NONE_MATCH) {
-      if if_none_match == current_etag {
-        return StatusCode::NOT_MODIFIED.into_response();
-      }
-    }
+  if let Some(current_etag) = etag
+    && let Some(if_none_match) = headers.get(header::IF_NONE_MATCH)
+    && if_none_match == current_etag
+  {
+    return StatusCode::NOT_MODIFIED.into_response();
   }
 
   let mut builder = Response::builder()

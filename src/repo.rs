@@ -37,24 +37,20 @@ impl UserRepo for Users {
     user_id: i64,
     conn: &DatabaseConnection,
   ) -> Result<Option<users::Model>, DbErr> {
-    Ok(
-      Self::find()
-        .filter(users::Column::Id.eq(user_id))
-        .one(conn)
-        .await?,
-    )
+    Self::find()
+      .filter(users::Column::Id.eq(user_id))
+      .one(conn)
+      .await
   }
 
   async fn find_by_email(
     email: &str,
     conn: &DatabaseConnection,
   ) -> Result<Option<users::Model>, DbErr> {
-    Ok(
-      Self::find()
-        .filter(users::Column::Email.eq(email))
-        .one(conn)
-        .await?,
-    )
+    Self::find()
+      .filter(users::Column::Email.eq(email))
+      .one(conn)
+      .await
   }
 }
 
