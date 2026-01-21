@@ -4,25 +4,27 @@ use helpers::{
   time::utc_now,
   uuid::{Alphabet, nanoid},
 };
-use migration::enums::UserRole;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, IntoActiveModel};
+use migration::enums::{CommentStatus, UserRole};
+use sea_orm::{
+  ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, IntoActiveModel,
+};
 
 use crate::{
   entity::{
     comments,
-    prelude::{Sites, Users},
+    prelude::{Comments, Sites, Users},
     sites::{self, SiteConfig},
     users,
   },
   error::{AppError, ToAppError},
   handler::{
     auth::{LoginPayload, UserProfile, UserWithToken},
-    comment::{CommentView, CreateCommentPayload},
+    comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
     site::{CreateSitePayload, SiteView, UpdateSitePayload},
     user::UpdateProfilePayload,
   },
   helper::generate_avatar,
-  repo::{SiteRepo, UserRepo},
+  repo::{CommentRepo, SiteRepo, UserRepo},
 };
 
 pub async fn create_user(
@@ -298,7 +300,7 @@ pub async fn create_comment(
     nickname,
     link,
     content,
-    updated_at,
+    created_at,
     up_vote,
     down_vote,
     device,
@@ -322,6 +324,68 @@ pub async fn create_comment(
     device,
     location,
     is_sticky,
-    updated_at: updated_at.and_utc().to_rfc3339(),
+    created_at: created_at.and_utc().to_rfc3339(),
+  })
+}
+
+pub async fn list_comments(
+  qs: ListQueryString,
+  conn: &DatabaseConnection,
+) -> Result<PageResponse<CommentView>, AppError> {
+  use sea_orm::{EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder};
+
+  let (sort_col, sort_ord) = match qs.sort_by.as_str() {
+    "created_asc" => (comments::Column::CreatedAt, Order::Asc),
+    "created_desc" => (comments::Column::CreatedAt, Order::Desc),
+    "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
+    "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
+    "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
+    "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
+    _ => (comments::Column::CreatedAt, Order::Desc),
+  };
+
+  let paginator = Comments::find()
+    .filter(comments::Column::SiteId.eq(qs.site_id))
+    .filter(comments::Column::PagePath.eq(qs.page_path))
+    .filter(comments::Column::Status.is_not_in([CommentStatus::Spam]))
+    .order_by(sort_col, sort_ord)
+    .paginate(conn, qs.limit);
+
+  let total = paginator.num_items().await.with_op("count comments")?;
+  println!("total: {:?}", total);
+  let page = paginator.cur_page() + 1;
+  println!("page: {:?}", page);
+  let total_page = paginator.num_pages().await.with_op("count total pages")?;
+  println!("total_page: {:?}", total_page);
+  let page_size = qs.limit;
+  println!("page_size: {:?}", page_size);
+
+  let comments = paginator
+    .fetch_page(qs.offset - 1)
+    .await
+    .with_op("fetch comments")?;
+
+  let items = comments
+    .into_iter()
+    .map(|comment| CommentView {
+      id: comment.id,
+      rid: comment.rid,
+      nickname: comment.nickname,
+      link: comment.link,
+      content: comment.content,
+      up_vote: comment.up_vote,
+      down_vote: comment.down_vote,
+      device: comment.device,
+      location: comment.location,
+      is_sticky: comment.is_sticky,
+      created_at: comment.created_at.and_utc().to_rfc3339(),
+    })
+    .collect();
+
+  Ok(PageResponse {
+    items,
+    page_size,
+    page,
+    total,
   })
 }

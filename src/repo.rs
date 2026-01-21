@@ -1,6 +1,7 @@
 use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 use crate::entity::{
+  comments,
   prelude::{Sites, Users},
   sites,
   users::{self},
@@ -72,5 +73,15 @@ impl SiteRepo for Sites {
       .filter(sites::Column::Id.eq(id))
       .one(conn)
       .await
+  }
+}
+
+pub trait CommentRepo {
+  async fn find_all(conn: &DatabaseConnection) -> Result<Vec<comments::Model>, DbErr>;
+}
+
+impl CommentRepo for comments::Entity {
+  async fn find_all(conn: &DatabaseConnection) -> Result<Vec<comments::Model>, DbErr> {
+    Self::find().all(conn).await
   }
 }

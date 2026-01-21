@@ -3,9 +3,9 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct ApiResponse<T> {
-  pub code: i32,       // 0=成功，非0=业务错误码
-  pub msg: String,     // 描述信息
-  pub data: Option<T>, // 成功时有数据
+  pub code: i32, // 0=成功，非0=业务错误码
+  pub msg: String,
+  pub data: Option<T>,
 }
 
 impl<T> ApiResponse<T> {

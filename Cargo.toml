@@ -24,7 +24,7 @@ tower-http = "0.6.8"
 helpers = "0.6.1"
 
 [dependencies]
-tower-http = { workspace = true, features = ["trace"] }
+tower-http = { workspace = true, features = ["trace", "cors"] }
 migration.workspace = true
 dotenvy.workspace = true
 envy.workspace = true
@@ -36,11 +36,18 @@ tracing-subscriber = { workspace = true, features = [
   "local-time",
 ] }
 sea-orm.workspace = true
-axum.workspace = true
+axum = { workspace = true, features = ["macros"] }
 serde_json.workspace = true
 thiserror.workspace = true
 helpers = { workspace = true, features = ["hash", "jwt", "time", "uuid"] }
 tower.workspace = true
+
+[build-dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = [
+  "env-filter",
+  "local-time",
+] }
 
 [features]
 sqlite = ["migration/sqlite"]
