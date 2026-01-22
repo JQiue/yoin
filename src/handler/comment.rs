@@ -17,7 +17,7 @@ pub struct CreateCommentPayload {
   pub nickname: String,
   pub link: String,
   pub content: String,
-  pub page_page: String,
+  pub page_path: String,
   pub email: String,
   pub rid: Option<i64>,
 }
@@ -43,17 +43,7 @@ pub async fn create(
   remote_ip: RemoteIp,
   AppJson(payload): AppJson<CreateCommentPayload>,
 ) -> Result<ApiResponse<CommentView>, AppError> {
-  let site_config = state
-    .site_config
-    .lock()
-    .await
-    .get(&payload.site_id)
-    .ok_or(AppError::Internal {
-      msg: "site config not found".to_string(),
-      source: None,
-    })?
-    .clone();
-
+  let site_config = state.get_site_config(payload.site_id).await?;
   let is_admin = state.is_admin(optional_auth.user_id.unwrap_or(-1)).await;
 
   if !is_admin {
@@ -63,7 +53,7 @@ pub async fn create(
       ));
     }
     state
-      .check_rate_limit(payload.site_id, optional_auth.user_id, remote_ip.ip, 10)
+      .check_rate_limit(payload.site_id, optional_auth.user_id, remote_ip.ip, 0)
       .await?;
     if payload.content.chars().count() > site_config.max_comment_length {
       return Err(AppError::bad_request("comment too long".to_string()));
@@ -90,6 +80,7 @@ pub struct PageResponse<T> {
   pub page_size: u64,
   pub page: u64,
   pub total: u64,
+  pub total_page: u64,
 }
 
 #[axum::debug_handler]

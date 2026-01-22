@@ -275,7 +275,7 @@ pub async fn create_comment(
   let mut active_comment = comments::ActiveModel {
     site_id: Set(payload.site_id),
     nickname: Set(payload.nickname),
-    page_path: Set(payload.page_page),
+    page_path: Set(payload.page_path),
     link: Set(payload.link),
     content: Set(payload.content),
     created_at: Set(utc_now().naive_utc()),
@@ -344,6 +344,89 @@ pub async fn list_comments(
     _ => (comments::Column::CreatedAt, Order::Desc),
   };
 
+  // #[derive(FromQueryResult)]
+  // struct CommentWithCount {
+  //   total_count: i64,
+  //   #[sea_orm(primary_key)]
+  //   pub id: i64,
+  //   pub user_id: Option<i64>,
+  //   pub site_id: i64,
+  //   pub rid: i64,
+  //   pub page_path: String,
+  //   pub content: String,
+  //   pub status: CommentStatus,
+  //   pub nickname: String,
+  //   pub link: String,
+  //   pub email: String,
+  //   pub device: String,
+  //   pub location: String,
+  //   pub is_sticky: bool,
+  //   pub up_vote: i32,
+  //   pub down_vote: i32,
+  //   pub created_at: DateTime,
+  //   pub updated_at: DateTime,
+  //   pub deleted_at: Option<DateTime>,
+  // }
+
+  // let query = match conn.get_database_backend() {
+  //   DbBackend::Postgres => {
+  //     r#"
+  //     SELECT *, count(*) OVER() AS total_count
+  //     FROM comments
+  //     WHERE site_id = $1 AND page_path = $2 AND status != 'spam'
+  //     ORDER BY created_at ASC
+  //     LIMIT $3 OFFSET $4
+  //     "#
+  //   }
+  //   _ => {
+  //     r#"
+  //     SELECT *, count(*) OVER() AS total_count
+  //     FROM comments
+  //     WHERE site_id = ? AND page_path = ? AND status != 'spam'
+  //     ORDER BY created_at ASC
+  //     LIMIT ? OFFSET ?
+  //     "#
+  //   }
+  // };
+
+  // let stmt = Statement::from_sql_and_values(
+  //   conn.get_database_backend(),
+  //   query,
+  //   [
+  //     qs.site_id.into(),
+  //     qs.page_path.into(),
+  //     qs.limit.into(),
+  //     (qs.offset - 1).into(),
+  //   ],
+  // );
+
+  // let comment = CommentWithCount::find_by_statement(stmt)
+  //   .all(conn)
+  //   .await
+  //   .with_op("query comments")?;
+
+  // let total = comment.first().map(|c| c.total_count).unwrap_or(0) as u64;
+  // let total_page = (total as f64 / qs.limit as f64).ceil() as u64;
+  // let page = qs.offset;
+  // let page_size = qs.limit;
+
+  // let items: Vec<CommentView> = comment
+  //   .into_iter()
+  //   .map(|c| CommentView {
+  //     id: c.id,
+  //     rid: c.rid,
+  //     nickname: c.nickname,
+  //     link: c.link,
+  //     content: c.content,
+  //     up_vote: c.up_vote,
+  //     down_vote: c.down_vote,
+  //     device: c.device,
+  //     location: c.location,
+  //     is_sticky: c.is_sticky,
+  //     created_at: c.created_at.and_utc().to_rfc3339(),
+  //   })
+  //   .collect();
+
   let paginator = Comments::find()
     .filter(comments::Column::SiteId.eq(qs.site_id))
     .filter(comments::Column::PagePath.eq(qs.page_path))
@@ -352,13 +435,9 @@ pub async fn list_comments(
     .paginate(conn, qs.limit);
 
   let total = paginator.num_items().await.with_op("count comments")?;
-  println!("total: {:?}", total);
+  let total_page = (total as f64 / qs.limit as f64).ceil() as u64;
   let page = paginator.cur_page() + 1;
-  println!("page: {:?}", page);
-  let total_page = paginator.num_pages().await.with_op("count total pages")?;
-  println!("total_page: {:?}", total_page);
   let page_size = qs.limit;
-  println!("page_size: {:?}", page_size);
 
   let comments = paginator
     .fetch_page(qs.offset - 1)
@@ -387,5 +466,6 @@ pub async fn list_comments(
     page_size,
     page,
     total,
+    total_page,
   })
 }
