@@ -9,7 +9,6 @@ use crate::{
   extractor::{AppJson, RequireAuth},
   handler::auth::UserProfile,
   response::ApiResponse,
-  service::{fetch_profile, update_user_profile},
 };
 
 pub async fn profile(
@@ -17,7 +16,7 @@ pub async fn profile(
   require_auth: RequireAuth,
 ) -> Result<ApiResponse<UserProfile>, AppError> {
   Ok(ApiResponse::success(
-    fetch_profile(require_auth.user_id, &state.conn).await?,
+    state.service.fetch_profile(require_auth.user_id).await?,
   ))
 }
 
@@ -34,6 +33,9 @@ pub async fn update_profile(
   AppJson(payload): AppJson<UpdateProfilePayload>,
 ) -> Result<ApiResponse<UserProfile>, AppError> {
   Ok(ApiResponse::success(
-    update_user_profile(require_auth.user_id, payload, &state.conn).await?,
+    state
+      .service
+      .update_user_profile(require_auth.user_id, payload)
+      .await?,
   ))
 }

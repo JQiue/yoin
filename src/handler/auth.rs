@@ -3,13 +3,7 @@ use std::sync::Arc;
 use axum::extract::State;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-  AppState,
-  error::AppError,
-  extractor::AppJson,
-  response::ApiResponse,
-  service::{create_user, login_user},
-};
+use crate::{AppState, error::AppError, extractor::AppJson, response::ApiResponse};
 
 #[derive(Deserialize)]
 pub struct RegisterPayload {
@@ -39,15 +33,16 @@ pub async fn register(
   AppJson(payload): AppJson<RegisterPayload>,
 ) -> Result<ApiResponse<UserWithToken>, AppError> {
   Ok(ApiResponse::success(
-    create_user(
-      payload.nickname,
-      payload.url,
-      payload.email,
-      payload.password,
-      &state.conn,
-      &state.jwt_key,
-    )
-    .await?,
+    state
+      .service
+      .create_user(
+        payload.nickname,
+        payload.url,
+        payload.email,
+        payload.password,
+        &state.jwt_key,
+      )
+      .await?,
   ))
 }
 
@@ -62,6 +57,6 @@ pub async fn login(
   AppJson(payload): AppJson<LoginPayload>,
 ) -> Result<ApiResponse<UserWithToken>, AppError> {
   Ok(ApiResponse::success(
-    login_user(payload, &state.conn, &state.jwt_key).await?,
+    state.service.login_user(payload, &state.jwt_key).await?,
   ))
 }

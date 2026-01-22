@@ -9,7 +9,6 @@ use crate::{
   error::AppError,
   extractor::{AppJson, RequireAuth},
   response::ApiResponse,
-  service::{create_site, list_sites, update_site},
 };
 
 #[derive(Serialize)]
@@ -25,7 +24,7 @@ pub async fn list(
   require_auth: RequireAuth,
 ) -> Result<ApiResponse<Vec<SiteView>>, AppError> {
   Ok(ApiResponse::success(
-    list_sites(require_auth.user_id, &state.conn).await?,
+    state.service.list_sites(require_auth.user_id).await?,
   ))
 }
 
@@ -33,6 +32,7 @@ pub async fn list(
 pub struct CreateSitePayload {
   pub name: String,
   pub url: String,
+  pub config: SiteConfig,
 }
 
 pub async fn create(
@@ -41,7 +41,10 @@ pub async fn create(
   AppJson(payload): AppJson<CreateSitePayload>,
 ) -> Result<ApiResponse<SiteView>, AppError> {
   Ok(ApiResponse::success(
-    create_site(require_auth.user_id, payload, &state.conn).await?,
+    state
+      .service
+      .create_site(require_auth.user_id, payload)
+      .await?,
   ))
 }
 
@@ -58,7 +61,12 @@ pub async fn update(
   require_auth: RequireAuth,
   AppJson(payload): AppJson<UpdateSitePayload>,
 ) -> Result<ApiResponse<SiteView>, AppError> {
-  let resp = ApiResponse::success(update_site(require_auth.user_id, payload, &state.conn).await?);
+  let resp = ApiResponse::success(
+    state
+      .service
+      .update_site(require_auth.user_id, payload)
+      .await?,
+  );
   state.preload_configs().await?;
   Ok(resp)
 }

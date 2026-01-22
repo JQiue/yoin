@@ -5,7 +5,7 @@ mod error;
 pub mod extractor;
 mod handler;
 mod helper;
-mod repo;
+mod repository;
 mod response;
 mod service;
 
@@ -27,7 +27,7 @@ use migration::{
   enums::UserRole,
   prelude::{DateTime, Utc},
 };
-use sea_orm::{DatabaseConnection, EntityTrait};
+use sea_orm::DatabaseConnection;
 use tokio::{net::TcpListener, sync::Mutex};
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -37,14 +37,12 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 use crate::{
   config::Config,
   db::migrate,
-  entity::{
-    prelude::{Sites, Users},
-    sites::SiteConfig,
-  },
+  entity::sites::SiteConfig,
   error::{AppError, ToAppError},
   extractor::{OptionnalAuth, RemoteIp, RequireAuth},
   handler::{auth, comment, health, site, user},
-  repo::SiteRepo,
+  repository::{Repository, SiteRepositoryTrait, UserRepositoryTrait},
+  service::AppService,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -54,13 +52,13 @@ enum UserKey {
 }
 
 struct AppState {
-  conn: DatabaseConnection,
   jwt_key: String,
   site_config: Mutex<HashMap<i64, SiteConfig>>,
   admin_ids: Mutex<HashSet<i64>>,
   // todo There is no expiration clearance mechanism
   // 并发时所有的限流请求竞争同一把锁，换并发锁
   rate_limit_cache: Mutex<HashMap<(i64, UserKey), DateTime<Utc>>>,
+  service: AppService,
 }
 
 impl AppState {
@@ -97,13 +95,22 @@ impl AppState {
   }
 
   async fn preload_configs(&self) -> Result<(), AppError> {
-    let sites = Sites::find_all(&self.conn).await.with_op("get all sites")?;
+    let sites = self
+      .service
+      .repo
+      .site()
+      .find_all()
+      .await
+      .with_op("get all sites")?;
     for site in sites {
       self.site_config.lock().await.insert(site.id, site.config);
     }
 
-    let users = Users::find()
-      .all(&self.conn)
+    let users = self
+      .service
+      .repo
+      .user()
+      .find_all()
       .await
       .with_op("get all users")?;
     for user in users {
@@ -123,7 +130,13 @@ impl AppState {
     }
 
     tracing::info!("Cache miss for site {}, fetching from DB", site_id);
-    let all_sites = Sites::find_all(&self.conn).await.with_op("get all sites")?;
+    let all_sites = self
+      .service
+      .repo
+      .site()
+      .find_all()
+      .await
+      .with_op("get all sites")?;
     let mut cache = self.site_config.lock().await;
 
     for site in all_sites {
@@ -144,14 +157,16 @@ impl AppState {
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   init_tracing();
   let config = Config::from_env()?;
-  let conn = migrate(&config.database_url).await?;
+  let conn: &'static DatabaseConnection = Box::leak(Box::new(migrate(&config.database_url).await?));
   let addr = format!("{}:{}", config.host, config.port);
   let state = Arc::new(AppState {
-    conn,
     jwt_key: config.jwt_key,
     site_config: Mutex::new(HashMap::new()),
     admin_ids: Mutex::new(HashSet::new()),
     rate_limit_cache: Mutex::new(HashMap::new()),
+    service: AppService {
+      repo: Repository::new(conn),
+    },
   });
   state.preload_configs().await?;
   info!("🚀 Server running on http://{}", addr);

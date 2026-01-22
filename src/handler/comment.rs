@@ -8,7 +8,6 @@ use crate::{
   error::AppError,
   extractor::{AppJson, OptionnalAuth, RemoteIp},
   response::ApiResponse,
-  service::{create_comment, list_comments},
 };
 
 #[derive(Debug, Deserialize)]
@@ -61,7 +60,10 @@ pub async fn create(
   }
 
   Ok(ApiResponse::success(
-    create_comment(optional_auth.user_id, payload, &state.conn).await?,
+    state
+      .service
+      .create_comment(optional_auth.user_id, payload)
+      .await?,
   ))
 }
 
@@ -69,24 +71,23 @@ pub async fn create(
 pub struct ListQueryString {
   pub site_id: i64,
   pub page_path: String,
-  pub sort_by: String,
-  pub limit: u64,
-  pub offset: u64,
+  pub page_size: u64,
+  pub page_offset: u64,
+  pub sort: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct PageResponse<T> {
   pub items: Vec<T>,
   pub page_size: u64,
-  pub page: u64,
+  pub page_offset: u64,
   pub total: u64,
   pub total_page: u64,
 }
 
-#[axum::debug_handler]
 pub async fn list(
   State(state): State<Arc<AppState>>,
   Query(qs): Query<ListQueryString>,
 ) -> Result<ApiResponse<PageResponse<CommentView>>, AppError> {
-  Ok(ApiResponse::success(list_comments(qs, &state.conn).await?))
+  Ok(ApiResponse::success(state.service.list_comments(qs).await?))
 }
