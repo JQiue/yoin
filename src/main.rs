@@ -41,7 +41,7 @@ use crate::{
     prelude::{Sites, Users},
     sites::SiteConfig,
   },
-  error::AppError,
+  error::{AppError, ToAppError},
   extractor::{OptionnalAuth, RemoteIp, RequireAuth},
   handler::{auth, comment, health, site, user},
   repo::SiteRepo,
@@ -96,22 +96,47 @@ impl AppState {
     Ok(())
   }
 
-  async fn preload_configs(&self) {
-    let sites = Sites::find_all(&self.conn).await.unwrap();
+  async fn preload_configs(&self) -> Result<(), AppError> {
+    let sites = Sites::find_all(&self.conn).await.with_op("get all sites")?;
     for site in sites {
       self.site_config.lock().await.insert(site.id, site.config);
     }
 
-    let users = Users::find().all(&self.conn).await.unwrap();
+    let users = Users::find()
+      .all(&self.conn)
+      .await
+      .with_op("get all users")?;
     for user in users {
       if user.role == UserRole::Admin {
         self.admin_ids.lock().await.insert(user.id);
       }
     }
+    Ok(())
   }
 
-  async fn get_site_config(&self, site_id: i64) -> Option<SiteConfig> {
-    self.site_config.lock().await.get(&site_id).cloned()
+  async fn get_site_config(&self, site_id: i64) -> Result<SiteConfig, AppError> {
+    {
+      let cache = self.site_config.lock().await;
+      if let Some(config) = cache.get(&site_id) {
+        return Ok(config.clone());
+      }
+    }
+
+    tracing::info!("Cache miss for site {}, fetching from DB", site_id);
+    let all_sites = Sites::find_all(&self.conn).await.with_op("get all sites")?;
+    let mut cache = self.site_config.lock().await;
+
+    for site in all_sites {
+      cache.insert(site.id, site.config);
+    }
+
+    cache
+      .get(&site_id)
+      .cloned()
+      .ok_or_else(|| AppError::Internal {
+        msg: format!("Site {} not found", site_id),
+        source: None,
+      })
   }
 }
 
@@ -128,7 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     admin_ids: Mutex::new(HashSet::new()),
     rate_limit_cache: Mutex::new(HashMap::new()),
   });
-  state.preload_configs().await;
+  state.preload_configs().await?;
   info!("🚀 Server running on http://{}", addr);
   axum::serve(
     TcpListener::bind(addr).await?,
@@ -142,9 +167,9 @@ fn init_tracing() {
   tracing_subscriber::registry()
     .with(
       tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("debug,sqlx::query=off,hyper=debug,axum=debug")),
+        .unwrap_or_else(|_| EnvFilter::new("info,sqlx::query=off,hyper=debug,axum=debug")),
     )
-    .with(tracing_subscriber::fmt::layer().with_target(false))
+    .with(tracing_subscriber::fmt::layer().with_target(true))
     .init();
 }
 

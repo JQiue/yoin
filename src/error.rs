@@ -126,11 +126,14 @@ impl IntoResponse for AppError {
         };
         (status_code, biz_code, msg)
       }
-      AppError::Internal { .. } => (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        500_000,
-        "An internal server error occurred".to_string(),
-      ),
+      AppError::Internal { .. } => {
+        tracing::error!("Detailed Error: {:?}", self);
+        (
+          StatusCode::INTERNAL_SERVER_ERROR,
+          500_000,
+          "An internal server error occurred".to_string(),
+        )
+      }
     };
     let resp = ApiResponse::<()> {
       code: business_code,

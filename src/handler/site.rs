@@ -59,6 +59,6 @@ pub async fn update(
   AppJson(payload): AppJson<UpdateSitePayload>,
 ) -> Result<ApiResponse<SiteView>, AppError> {
   let resp = ApiResponse::success(update_site(require_auth.user_id, payload, &state.conn).await?);
-  state.preload_configs().await;
+  state.preload_configs().await?;
   Ok(resp)
 }
