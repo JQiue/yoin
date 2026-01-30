@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -112,9 +112,21 @@ pub struct PageResponse<T> {
   pub total_page: u64,
 }
 
+// FIXME: Cursor pagination
 pub async fn list(
   State(state): State<Arc<AppState>>,
   Query(qs): Query<ListQueryString>,
 ) -> Result<ApiResponse<PageResponse<CommentView>>, AppError> {
   Ok(ApiResponse::success(state.service.list_comments(qs).await?))
+}
+
+// FIXME: Cursor pagination
+pub async fn list_replies(
+  State(state): State<Arc<AppState>>,
+  Path(id): Path<i64>,
+  Query(qs): Query<ListQueryString>,
+) -> Result<ApiResponse<PageResponse<CommentView>>, AppError> {
+  Ok(ApiResponse::success(
+    state.service.list_replies(id, qs).await?,
+  ))
 }

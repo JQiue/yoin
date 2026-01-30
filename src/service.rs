@@ -510,4 +510,25 @@ impl AppService {
       total,
     })
   }
+
+  pub async fn list_replies(
+    &self,
+    id: i64,
+    qs: ListQueryString,
+  ) -> Result<PageResponse<CommentView>, AppError> {
+    let (replies, total, total_page) = self
+      .repo
+      .comment()
+      .find_replies_by_thread(id, qs.site_id, &qs.page_path, qs.page_size, qs.page_offset)
+      .await
+      .with_op("query replies")?;
+    let items: Vec<CommentView> = replies.into_iter().map(CommentView::from_model).collect();
+    Ok(PageResponse {
+      items,
+      page_size: qs.page_size,
+      page_offset: qs.page_offset,
+      total_page,
+      total,
+    })
+  }
 }

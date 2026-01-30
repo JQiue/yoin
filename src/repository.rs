@@ -238,6 +238,14 @@ pub trait CommentRepositoryTrait {
     &self,
     thread_ids: Vec<i64>,
   ) -> Result<Vec<comments::Model>, DbErr>;
+  async fn find_replies_by_thread(
+    &self,
+    thread_id: i64,
+    site_id: i64,
+    page_path: &str,
+    page_size: u64,
+    page_offset: u64,
+  ) -> Result<(Vec<comments::Model>, u64, u64), DbErr>;
 }
 
 pub struct CommentRepository {
@@ -314,6 +322,28 @@ impl CommentRepositoryTrait for CommentRepository {
       .filter(comments::Column::ParentId.is_not_null())
       .all(self.conn)
       .await
+  }
+
+  async fn find_replies_by_thread(
+    &self,
+    thread_id: i64,
+    site_id: i64,
+    page_path: &str,
+    page_size: u64,
+    page_offset: u64,
+  ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
+    let paginator = Comments::find()
+      .filter(comments::Column::SiteId.eq(site_id))
+      .filter(comments::Column::ThreadId.eq(thread_id))
+      .filter(comments::Column::PagePath.eq(page_path))
+      .filter(comments::Column::Status.is_not_in([CommentStatus::Spam]))
+      .order_by(comments::Column::CreatedAt, Order::Asc)
+      .paginate(self.conn, page_size);
+    let total = paginator.num_items().await?;
+    let total_page = (total as f64 / page_size as f64).ceil() as u64;
+    let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
+    let comments = paginator.fetch_page(page_idx).await?;
+    Ok((comments, total, total_page))
   }
 }
 

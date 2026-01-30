@@ -194,6 +194,7 @@ fn create_router(state: Arc<AppState>) -> Router {
     .route("/auth/register", post(auth::register))
     .route("/auth/login", post(auth::login))
     .route("/comments", post(comment::create).get(comment::list))
+    .route("/comments/{id}/replies", get(comment::list_replies))
     .route_layer(from_extractor_with_state::<OptionnalAuth, Arc<AppState>>(
       state.clone(),
     ));
