@@ -34,6 +34,7 @@ impl ClientErrorKind {
   pub const AUTH_MODULE: i32 = 100_000;
   pub const USER_MODULE: i32 = 200_000;
   pub const SITE_MODULE: i32 = 300_000;
+  pub const COMMENT_MODULE: i32 = 400_000;
 
   pub fn bad_request() -> Self {
     Self::BadRequest(Self::COMMON_MODULE + 400)
@@ -53,6 +54,10 @@ impl ClientErrorKind {
 
   pub fn site_not_found() -> Self {
     Self::NotFound(Self::SITE_MODULE + 404)
+  }
+
+  pub fn comment_not_found() -> Self {
+    Self::NotFound(Self::COMMENT_MODULE + 404)
   }
 
   pub fn user_already_exists() -> Self {
@@ -106,6 +111,13 @@ impl AppError {
   pub fn site_not_found(msg: String) -> Self {
     Self::Client {
       kind: ClientErrorKind::site_not_found(),
+      msg,
+    }
+  }
+
+  pub fn comment_not_found(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::comment_not_found(),
       msg,
     }
   }

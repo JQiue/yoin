@@ -210,7 +210,8 @@ impl SiteRepositoryTrait for SiteRepository {
 pub struct CommentCreateData {
   pub site_id: i64,
   pub user_id: Option<i64>,
-  pub rid: Option<i64>,
+  pub thread_id: Option<i64>,
+  pub parent_id: Option<i64>,
   pub nickname: String,
   pub page_path: String,
   pub link: String,
@@ -224,7 +225,8 @@ pub struct CommentCreateData {
 
 pub trait CommentRepositoryTrait {
   async fn create(&self, data: CommentCreateData) -> Result<comments::Model, DbErr>;
-  async fn find_paged(
+  async fn find_by_id(&self, id: i64) -> Result<Option<comments::Model>, DbErr>;
+  async fn find_roots_paged(
     &self,
     site_id: i64,
     page_path: &str,
@@ -232,6 +234,10 @@ pub trait CommentRepositoryTrait {
     page_offset: u64,
     sort: &str,
   ) -> Result<(Vec<comments::Model>, u64, u64), DbErr>;
+  async fn find_all_replies_by_thread_ids(
+    &self,
+    thread_ids: Vec<i64>,
+  ) -> Result<Vec<comments::Model>, DbErr>;
 }
 
 pub struct CommentRepository {
@@ -239,7 +245,7 @@ pub struct CommentRepository {
 }
 
 impl CommentRepositoryTrait for CommentRepository {
-  async fn find_paged(
+  async fn find_roots_paged(
     &self,
     site_id: i64,
     page_path: &str,
@@ -260,6 +266,7 @@ impl CommentRepositoryTrait for CommentRepository {
       .filter(comments::Column::SiteId.eq(site_id))
       .filter(comments::Column::PagePath.eq(page_path))
       .filter(comments::Column::Status.is_not_in([CommentStatus::Spam]))
+      .filter(comments::Column::ParentId.is_null())
       .order_by(sort_col, sort_ord)
       .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
@@ -273,6 +280,8 @@ impl CommentRepositoryTrait for CommentRepository {
     let mut active_comment = comments::ActiveModel {
       site_id: Set(data.site_id),
       nickname: Set(data.nickname),
+      thread_id: Set(data.thread_id),
+      parent_id: Set(data.parent_id),
       page_path: Set(data.page_path),
       link: Set(data.link),
       content: Set(data.content),
@@ -284,15 +293,27 @@ impl CommentRepositoryTrait for CommentRepository {
       updated_at: Set(data.datetime),
       ..Default::default()
     };
+
     if let Some(user_id) = data.user_id {
       active_comment.user_id = Set(Some(user_id));
     }
 
-    if let Some(rid) = data.rid {
-      active_comment.rid = Set(rid);
-    }
-
     active_comment.insert(self.conn).await
+  }
+
+  async fn find_by_id(&self, id: i64) -> Result<Option<comments::Model>, DbErr> {
+    Comments::find_by_id(id).one(self.conn).await
+  }
+
+  async fn find_all_replies_by_thread_ids(
+    &self,
+    thread_ids: Vec<i64>,
+  ) -> Result<Vec<comments::Model>, DbErr> {
+    Comments::find()
+      .filter(comments::Column::ThreadId.is_in(thread_ids))
+      .filter(comments::Column::ParentId.is_not_null())
+      .all(self.conn)
+      .await
   }
 }
 

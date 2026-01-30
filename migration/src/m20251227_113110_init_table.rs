@@ -33,7 +33,8 @@ enum Comments {
   Id,
   UserId,
   SiteId,
-  Rid,
+  ThreadId,
+  ParentId,
   PagePath,
   Content,
   Status,
@@ -97,7 +98,8 @@ impl MigrationTrait for Migration {
           .col(big_pk_auto(Comments::Id))
           .col(big_integer(Comments::UserId).null())
           .col(big_integer(Comments::SiteId))
-          .col(big_integer(Comments::Rid).default(0))
+          .col(big_integer(Comments::ThreadId).null())
+          .col(big_integer(Comments::ParentId).null())
           .col(string(Comments::PagePath))
           .col(text(Comments::Content))
           .col(string(Comments::Status).default(CommentStatus::Pending))

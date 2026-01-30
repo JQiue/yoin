@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
   AppState,
+  entity::comments,
   error::AppError,
   extractor::{AppJson, OptionnalAuth, RemoteIp},
   response::ApiResponse,
@@ -18,13 +19,14 @@ pub struct CreateCommentPayload {
   pub content: String,
   pub page_path: String,
   pub email: String,
-  pub rid: Option<i64>,
+  pub parent_id: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct CommentView {
   pub id: i64,
-  pub rid: i64,
+  pub thread_id: Option<i64>,
+  pub parent_id: Option<i64>,
   pub nickname: String,
   pub link: String,
   pub content: String,
@@ -34,6 +36,31 @@ pub struct CommentView {
   pub location: String,
   pub is_sticky: bool,
   pub created_at: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub replies: Option<Vec<CommentView>>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub has_more: Option<bool>,
+}
+
+impl CommentView {
+  pub fn from_model(model: comments::Model) -> Self {
+    Self {
+      id: model.id,
+      thread_id: model.thread_id,
+      parent_id: model.parent_id,
+      nickname: model.nickname,
+      link: model.link,
+      content: model.content,
+      up_vote: model.up_vote,
+      down_vote: model.down_vote,
+      device: model.device,
+      location: model.location,
+      is_sticky: model.is_sticky,
+      created_at: model.created_at.and_utc().to_rfc3339(),
+      replies: None,
+      has_more: None,
+    }
+  }
 }
 
 pub async fn create(

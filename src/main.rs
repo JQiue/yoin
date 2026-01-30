@@ -254,12 +254,8 @@ async fn handle_js(headers: HeaderMap) -> impl IntoResponse {
 
 async fn common_error_interceptor(res: Response) -> Response {
   let status = res.status();
-  if status == StatusCode::NOT_FOUND || status == StatusCode::METHOD_NOT_ALLOWED {
-    let msg = if status == StatusCode::NOT_FOUND {
-      "Not found"
-    } else {
-      "Method not allowed"
-    };
+  if status == StatusCode::METHOD_NOT_ALLOWED {
+    let msg = "Method not allowed";
     return AppError::bad_request(msg.to_string()).into_response();
   }
   res

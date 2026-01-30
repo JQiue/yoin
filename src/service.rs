@@ -297,6 +297,18 @@ impl AppService {
     user_id: Option<i64>,
     payload: CreateCommentPayload,
   ) -> Result<CommentView, AppError> {
+    let thread_id = if let Some(parent_id) = payload.parent_id {
+      let parent = self
+        .repo
+        .comment()
+        .find_by_id(parent_id)
+        .await
+        .with_op("find comment by id")?
+        .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+      Some(parent.thread_id.unwrap_or(parent.id))
+    } else {
+      None
+    };
     let device = "unknown".to_string();
     let location = "unknown".to_string();
     let comment = self
@@ -305,7 +317,8 @@ impl AppService {
       .create(CommentCreateData {
         site_id: payload.site_id,
         user_id,
-        rid: payload.rid,
+        thread_id,
+        parent_id: payload.parent_id,
         nickname: payload.nickname,
         page_path: payload.page_path,
         link: payload.link,
@@ -321,7 +334,8 @@ impl AppService {
 
     Ok(CommentView {
       id: comment.id,
-      rid: comment.rid,
+      thread_id: comment.thread_id,
+      parent_id: comment.parent_id,
       nickname: comment.nickname,
       link: comment.link,
       content: comment.content,
@@ -331,6 +345,8 @@ impl AppService {
       location,
       is_sticky: comment.is_sticky,
       created_at: comment.created_at.and_utc().to_rfc3339(),
+      replies: None,
+      has_more: None,
     })
   }
 
@@ -420,10 +436,10 @@ impl AppService {
     //     created_at: c.created_at.and_utc().to_rfc3339(),
     //   })
     //   .collect();
-    let (comments, total, total_page) = self
+    let (roots, total, total_page) = self
       .repo
       .comment()
-      .find_paged(
+      .find_roots_paged(
         qs.site_id,
         &qs.page_path,
         qs.page_size,
@@ -432,23 +448,59 @@ impl AppService {
       )
       .await
       .with_op("query comments")?;
-
-    let items = comments
+    let root_ids: Vec<i64> = roots.iter().map(|c| c.id).collect();
+    let all_replies = self
+      .repo
+      .comment()
+      .find_all_replies_by_thread_ids(root_ids)
+      .await
+      .with_op("find all replies by thread ids")?;
+    let reply_limit = 3;
+    let items = roots
       .into_iter()
-      .map(|comment| CommentView {
-        id: comment.id,
-        rid: comment.rid,
-        nickname: comment.nickname,
-        link: comment.link,
-        content: comment.content,
-        up_vote: comment.up_vote,
-        down_vote: comment.down_vote,
-        device: comment.device,
-        location: comment.location,
-        is_sticky: comment.is_sticky,
-        created_at: comment.created_at.and_utc().to_rfc3339(),
+      .map(|root| {
+        let mut view = CommentView::from_model(root);
+        let mut thread_replies: Vec<CommentView> = all_replies
+          .iter()
+          .filter(|r| r.thread_id == Some(view.id))
+          .map(|r| CommentView::from_model(r.clone()))
+          .collect();
+
+        if thread_replies.len() > reply_limit {
+          view.has_more = Some(true);
+          thread_replies.truncate(reply_limit);
+        } else {
+          view.has_more = Some(false);
+        }
+
+        view.replies = if thread_replies.is_empty() {
+          None
+        } else {
+          Some(thread_replies)
+        };
+        view
       })
       .collect();
+
+    // let items = comments
+    //   .into_iter()
+    //   .map(|comment| CommentView {
+    //     id: comment.id,
+    //     parent_id: comment.parent_id,
+    //     thread_id: comment.thread_id,
+    //     nickname: comment.nickname,
+    //     link: comment.link,
+    //     content: comment.content,
+    //     up_vote: comment.up_vote,
+    //     down_vote: comment.down_vote,
+    //     device: comment.device,
+    //     location: comment.location,
+    //     is_sticky: comment.is_sticky,
+    //     created_at: comment.created_at.and_utc().to_rfc3339(),
+    //     replies: None,
+    //     has_more: None,
+    //   })
+    //   .collect();
 
     Ok(PageResponse {
       items,
