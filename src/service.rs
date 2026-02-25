@@ -436,7 +436,7 @@ impl AppService {
     //     created_at: c.created_at.and_utc().to_rfc3339(),
     //   })
     //   .collect();
-    let (roots, total, total_page) = self
+    let (roots, total, total_pages) = self
       .repo
       .comment()
       .find_roots_paged(
@@ -506,7 +506,7 @@ impl AppService {
       items,
       page_size: qs.page_size,
       page_offset: qs.page_offset,
-      total_page,
+      total_pages,
       total,
     })
   }
@@ -516,7 +516,7 @@ impl AppService {
     id: i64,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
-    let (replies, total, total_page) = self
+    let (replies, total, total_pages) = self
       .repo
       .comment()
       .find_replies_by_thread(id, qs.site_id, &qs.page_path, qs.page_size, qs.page_offset)
@@ -527,7 +527,7 @@ impl AppService {
       items,
       page_size: qs.page_size,
       page_offset: qs.page_offset,
-      total_page,
+      total_pages,
       total,
     })
   }

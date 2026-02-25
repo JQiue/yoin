@@ -278,10 +278,10 @@ impl CommentRepositoryTrait for CommentRepository {
       .order_by(sort_col, sort_ord)
       .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
-    let total_page = (total as f64 / page_size as f64).ceil() as u64;
+    let total_pages = (total as f64 / page_size as f64).ceil() as u64;
     let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
     let comments = paginator.fetch_page(page_idx).await?;
-    Ok((comments, total, total_page))
+    Ok((comments, total, total_pages))
   }
 
   async fn create(&self, data: CommentCreateData) -> Result<comments::Model, DbErr> {
@@ -340,10 +340,10 @@ impl CommentRepositoryTrait for CommentRepository {
       .order_by(comments::Column::CreatedAt, Order::Asc)
       .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
-    let total_page = (total as f64 / page_size as f64).ceil() as u64;
+    let total_pages = (total as f64 / page_size as f64).ceil() as u64;
     let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
     let comments = paginator.fetch_page(page_idx).await?;
-    Ok((comments, total, total_page))
+    Ok((comments, total, total_pages))
   }
 }
 

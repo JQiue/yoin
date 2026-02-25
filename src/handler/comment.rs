@@ -109,7 +109,7 @@ pub struct PageResponse<T> {
   pub page_size: u64,
   pub page_offset: u64,
   pub total: u64,
-  pub total_page: u64,
+  pub total_pages: u64,
 }
 
 // FIXME: Cursor pagination
