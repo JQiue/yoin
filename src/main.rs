@@ -23,10 +23,7 @@ use axum::{
   response::{IntoResponse, Response},
   routing::{get, post},
 };
-use migration::{
-  enums::UserRole,
-  prelude::{DateTime, Utc},
-};
+use migration::enums::UserRole;
 use sea_orm::DatabaseConnection;
 use tokio::{net::TcpListener, sync::Mutex};
 use tower::ServiceBuilder;
@@ -41,12 +38,13 @@ use crate::{
   error::{AppError, ToAppError},
   extractor::{OptionnalAuth, RemoteIp, RequireAuth},
   handler::{auth, comment, health, site, user},
+  helper::RateLimiter,
   repository::{Repository, SiteRepositoryTrait, UserRepositoryTrait},
   service::AppService,
 };
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-enum UserKey {
+pub enum UserKey {
   UserId(i64),
   Ip(String),
 }
@@ -57,41 +55,14 @@ struct AppState {
   admin_ids: Mutex<HashSet<i64>>,
   // todo There is no expiration clearance mechanism
   // 并发时所有的限流请求竞争同一把锁，换并发锁
-  rate_limit_cache: Mutex<HashMap<(i64, UserKey), DateTime<Utc>>>,
+  comment_rate_limiter: RateLimiter<(i64, UserKey)>,
+  // rate_limit_cache: Mutex<HashMap<(i64, UserKey), DateTime<Utc>>>,
   service: AppService,
 }
 
 impl AppState {
   async fn is_admin(&self, user_id: i64) -> bool {
     self.admin_ids.lock().await.contains(&user_id)
-  }
-
-  async fn check_rate_limit(
-    &self,
-    site_id: i64,
-    user_id: Option<i64>,
-    remote_ip: String,
-    limit_seconds: i64,
-  ) -> Result<(), AppError> {
-    let user_key = match user_id {
-      Some(id) => UserKey::UserId(id),
-      None => UserKey::Ip(remote_ip),
-    };
-    let key = (site_id, user_key);
-    let mut cache = self.rate_limit_cache.lock().await;
-    let now = Utc::now();
-
-    if let Some(last_comment_time) = cache.get(&key) {
-      let elapsed = now.signed_duration_since(*last_comment_time).num_seconds();
-      if elapsed < limit_seconds {
-        return Err(AppError::bad_request(format!(
-          "The comment is too fast. Please try again in {} seconds",
-          limit_seconds - elapsed
-        )));
-      }
-    }
-    cache.insert(key, now);
-    Ok(())
   }
 
   async fn preload_configs(&self) -> Result<(), AppError> {
@@ -163,7 +134,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     jwt_key: config.jwt_key,
     site_config: Mutex::new(HashMap::new()),
     admin_ids: Mutex::new(HashSet::new()),
-    rate_limit_cache: Mutex::new(HashMap::new()),
+    // rate_limit_cache: Mutex::new(HashMap::new()),
+    comment_rate_limiter: RateLimiter::new(),
     service: AppService {
       repo: Repository::new(conn),
     },
