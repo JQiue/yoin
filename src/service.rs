@@ -29,7 +29,7 @@ impl AppService {
   pub async fn create_user(
     &self,
     nickname: String,
-    url: String,
+    website: String,
     email: String,
     password: String,
     jwt_key: &str,
@@ -63,15 +63,15 @@ impl AppService {
     } else {
       UserRole::Normal
     };
-    let hashed = argon2(&password, &nanoid(&Alphabet::DEFAULT, 8)).with_op("hash_password")?;
+    let password = argon2(&password, &nanoid(&Alphabet::DEFAULT, 8)).with_op("hash_password")?;
     let new_user = self
       .repo
       .user()
       .create(UserCreateData {
         nickname,
-        password: hashed,
+        password,
         email: email.clone(),
-        url,
+        website,
         avatar: generate_avatar(&email),
         role,
         datetime,
@@ -85,8 +85,9 @@ impl AppService {
       user: UserProfile {
         avatar: new_user.avatar,
         nickname: new_user.nickname,
-        url: new_user.url,
+        website: new_user.website,
         role: new_user.role.to_string(),
+        email,
       },
     })
   }
@@ -116,8 +117,9 @@ impl AppService {
       user: UserProfile {
         avatar: user.avatar,
         nickname: user.nickname,
-        url: user.url,
+        website: user.website,
         role: user.role.to_string(),
+        email: user.email,
       },
       // datetime: user.created_at.and_utc().to_rfc3339(),
       token,
@@ -135,8 +137,9 @@ impl AppService {
     Ok(UserProfile {
       avatar: user.avatar,
       nickname: user.nickname,
-      url: user.url,
+      website: user.website,
       role: user.role.to_string(),
+      email: user.email,
     })
   }
 
@@ -159,7 +162,7 @@ impl AppService {
       .update(UserUpdateData {
         id: user.id,
         nickname: payload.nickname,
-        url: payload.url,
+        website: payload.website,
         avatar: payload.avatar,
         datetime: utc_now().naive_utc(),
         ..Default::default()
@@ -169,8 +172,9 @@ impl AppService {
     Ok(UserProfile {
       avatar: updated_user.avatar,
       nickname: updated_user.nickname,
-      url: updated_user.url,
+      website: updated_user.website,
       role: updated_user.role.to_string(),
+      email: updated_user.email,
     })
   }
 
@@ -311,6 +315,18 @@ impl AppService {
     };
     let device = "unknown".to_string();
     let location = "unknown".to_string();
+    let (nickname, avatar) = if let Some(user_id) = user_id {
+      let user = self
+        .repo
+        .user()
+        .find_by_id(user_id)
+        .await
+        .with_op("find user by id")?
+        .ok_or(AppError::user_not_found("User not found".to_string()))?;
+      (user.nickname, user.avatar)
+    } else {
+      (payload.nickname, generate_avatar(&payload.email))
+    };
     let comment = self
       .repo
       .comment()
@@ -319,13 +335,14 @@ impl AppService {
         user_id,
         thread_id,
         parent_id: payload.parent_id,
-        nickname: payload.nickname,
+        nickname,
         page_path: payload.page_path,
-        link: payload.link,
+        website: payload.website,
         content: payload.content,
         email: payload.email,
-        device: device.clone(),
-        location: location.clone(),
+        avatar,
+        device,
+        location,
         is_sticky: false,
         datetime: utc_now().naive_utc(),
       })
@@ -337,12 +354,13 @@ impl AppService {
       thread_id: comment.thread_id,
       parent_id: comment.parent_id,
       nickname: comment.nickname,
-      link: comment.link,
+      website: comment.website,
       content: comment.content,
       up_vote: comment.up_vote,
       down_vote: comment.down_vote,
-      device,
-      location,
+      device: comment.device,
+      location: comment.location,
+      avatar: comment.avatar,
       is_sticky: comment.is_sticky,
       created_at: comment.created_at.and_utc().to_rfc3339(),
       replies: None,

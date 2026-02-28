@@ -13,7 +13,7 @@ pub struct Model {
   pub email: String,
   pub avatar: String,
   pub role: UserRole,
-  pub url: String,
+  pub website: String,
   pub created_at: DateTime,
   pub updated_at: DateTime,
 }

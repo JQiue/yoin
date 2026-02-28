@@ -3,10 +3,22 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
+fn default_max_comment_length() -> usize {
+  1024
+}
+
+fn default_comment_limit_seconds() -> i64 {
+  60
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct SiteConfig {
+  #[serde(default)]
   pub allow_anonymous: bool,
+  #[serde(default = "default_max_comment_length")]
   pub max_comment_length: usize,
+  #[serde(default = "default_comment_limit_seconds")]
+  pub comment_limit_seconds: i64,
 }
 
 impl Default for SiteConfig {
@@ -14,6 +26,7 @@ impl Default for SiteConfig {
     Self {
       allow_anonymous: Default::default(),
       max_comment_length: 1024,
+      comment_limit_seconds: 60,
     }
   }
 }

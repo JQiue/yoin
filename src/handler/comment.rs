@@ -4,7 +4,7 @@ use axum::extract::{Path, Query, State};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  AppState,
+  AppState, UserKey,
   entity::comments,
   error::AppError,
   extractor::{AppJson, OptionnalAuth, RemoteIp},
@@ -15,7 +15,7 @@ use crate::{
 pub struct CreateCommentPayload {
   pub site_id: i64,
   pub nickname: String,
-  pub link: String,
+  pub website: String,
   pub content: String,
   pub page_path: String,
   pub email: String,
@@ -28,13 +28,14 @@ pub struct CommentView {
   pub thread_id: Option<i64>,
   pub parent_id: Option<i64>,
   pub nickname: String,
-  pub link: String,
+  pub website: String,
   pub content: String,
   pub up_vote: i32,
   pub down_vote: i32,
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
+  pub avatar: String,
   pub created_at: String,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub replies: Option<Vec<CommentView>>,
@@ -49,8 +50,9 @@ impl CommentView {
       thread_id: model.thread_id,
       parent_id: model.parent_id,
       nickname: model.nickname,
-      link: model.link,
+      website: model.website,
       content: model.content,
+      avatar: model.avatar,
       up_vote: model.up_vote,
       down_vote: model.down_vote,
       device: model.device,
@@ -70,17 +72,29 @@ pub async fn create(
   AppJson(payload): AppJson<CreateCommentPayload>,
 ) -> Result<ApiResponse<CommentView>, AppError> {
   let site_config = state.get_site_config(payload.site_id).await?;
-  let is_admin = state.is_admin(optional_auth.user_id.unwrap_or(-1)).await;
 
-  if !is_admin {
+  if !state.is_admin(optional_auth.user_id.unwrap_or(-1)).await {
     if optional_auth.user_id.is_none() && !site_config.allow_anonymous {
       return Err(AppError::forbidden(
         "anonymous access not allowed".to_string(),
       ));
     }
-    state
-      .check_rate_limit(payload.site_id, optional_auth.user_id, remote_ip.ip, 0)
-      .await?;
+
+    let key = match optional_auth.user_id {
+      Some(id) => (payload.site_id, UserKey::UserId(id)),
+      None => (payload.site_id, UserKey::Ip(remote_ip.ip)),
+    };
+
+    if state
+      .comment_rate_limiter
+      .check_rate_limit(key, site_config.comment_limit_seconds)
+      .await
+    {
+      return Err(AppError::bad_request(
+        "The comment is too fast.".to_string(),
+      ));
+    };
+
     if payload.content.chars().count() > site_config.max_comment_length {
       return Err(AppError::bad_request("comment too long".to_string()));
     }

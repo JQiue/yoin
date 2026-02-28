@@ -15,7 +15,7 @@ pub struct UserCreateData {
   pub nickname: String,
   pub password: String,
   pub email: String,
-  pub url: String,
+  pub website: String,
   pub avatar: String,
   pub role: migration::enums::UserRole,
   pub datetime: DateTime,
@@ -27,7 +27,7 @@ pub struct UserUpdateData {
   pub nickname: Option<String>,
   pub password: Option<String>,
   pub email: Option<String>,
-  pub url: Option<String>,
+  pub website: Option<String>,
   pub avatar: Option<String>,
   pub role: Option<migration::enums::UserRole>,
   pub datetime: DateTime,
@@ -85,7 +85,7 @@ impl UserRepositoryTrait for UserRepository {
       email: Set(data.email),
       avatar: Set(data.avatar),
       role: Set(data.role),
-      url: Set(data.url),
+      website: Set(data.website),
       created_at: Set(data.datetime),
       updated_at: Set(data.datetime),
       ..Default::default()
@@ -108,8 +108,8 @@ impl UserRepositoryTrait for UserRepository {
     if let Some(email) = data.email {
       user.email = Set(email);
     }
-    if let Some(url) = data.url {
-      user.url = Set(url);
+    if let Some(website) = data.website {
+      user.website = Set(website);
     }
     if let Some(avatar) = data.avatar {
       user.avatar = Set(avatar);
@@ -214,7 +214,8 @@ pub struct CommentCreateData {
   pub parent_id: Option<i64>,
   pub nickname: String,
   pub page_path: String,
-  pub link: String,
+  pub website: String,
+  pub avatar: String,
   pub content: String,
   pub email: String,
   pub device: String,
@@ -291,11 +292,12 @@ impl CommentRepositoryTrait for CommentRepository {
       thread_id: Set(data.thread_id),
       parent_id: Set(data.parent_id),
       page_path: Set(data.page_path),
-      link: Set(data.link),
+      website: Set(data.website),
       content: Set(data.content),
       email: Set(data.email),
       device: Set(data.device),
       location: Set(data.location),
+      avatar: Set(data.avatar),
       is_sticky: Set(data.is_sticky),
       created_at: Set(data.datetime),
       updated_at: Set(data.datetime),

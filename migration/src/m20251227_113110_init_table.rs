@@ -11,7 +11,7 @@ enum Users {
   Email,
   Avatar,
   Role,
-  Url,
+  Website,
   CreatedAt,
   UpdatedAt,
 }
@@ -39,8 +39,9 @@ enum Comments {
   Content,
   Status,
   Nickname,
-  Link,
+  Website,
   Email,
+  Avatar,
   Device,
   Location,
   IsSticky,
@@ -68,7 +69,7 @@ impl MigrationTrait for Migration {
           .col(string(Users::Email).unique_key())
           .col(string(Users::Avatar))
           .col(string(Users::Role).default(UserRole::Normal))
-          .col(string(Users::Url))
+          .col(string(Users::Website))
           .col(date_time(Users::CreatedAt))
           .col(date_time(Users::UpdatedAt))
           .to_owned(),
@@ -104,7 +105,8 @@ impl MigrationTrait for Migration {
           .col(text(Comments::Content))
           .col(string(Comments::Status).default(CommentStatus::Pending))
           .col(string(Comments::Nickname))
-          .col(string(Comments::Link))
+          .col(string(Comments::Avatar))
+          .col(string(Comments::Website))
           .col(string(Comments::Email))
           .col(string(Comments::Device))
           .col(string(Comments::Location))

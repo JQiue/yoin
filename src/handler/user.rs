@@ -24,7 +24,7 @@ pub async fn profile(
 pub struct UpdateProfilePayload {
   pub nickname: Option<String>,
   pub avatar: Option<String>,
-  pub url: Option<String>,
+  pub website: Option<String>,
 }
 
 pub async fn update_profile(

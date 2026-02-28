@@ -10,7 +10,7 @@ pub struct RegisterPayload {
   email: String,
   password: String,
   nickname: String,
-  url: String,
+  website: String,
 }
 
 #[derive(Serialize)]
@@ -24,7 +24,8 @@ pub struct UserWithToken {
 pub struct UserProfile {
   pub avatar: String,
   pub nickname: String,
-  pub url: String,
+  pub website: String,
+  pub email: String,
   pub role: String,
 }
 
@@ -37,7 +38,7 @@ pub async fn register(
       .service
       .create_user(
         payload.nickname,
-        payload.url,
+        payload.website,
         payload.email,
         payload.password,
         &state.jwt_key,
