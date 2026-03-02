@@ -16,22 +16,27 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
 		const { config } = useConfigStore.getState();
 		const { comments: oldComments, pageSize, sort } = get();
 		set({ isLoading: true });
-		const {
-			data: { items, total, total_pages },
-		} = await fetchCommentsList(
-			config.site_id,
-			pageOffset,
-			pageSize,
-			location.pathname,
-			sort,
-		);
-		set({
-			comments: append ? [...oldComments, ...items] : items,
-			total,
-			pageOffset,
-			totalPages: total_pages,
-		});
-		set({ isLoading: false });
+		try {
+			const {
+				data: { items, total, total_pages },
+			} = await fetchCommentsList(
+				config.site_id,
+				pageOffset,
+				pageSize,
+				location.pathname,
+				sort,
+			);
+			set({
+				comments: append ? [...oldComments, ...items] : items,
+				total,
+				pageOffset,
+				totalPages: total_pages,
+			});
+		} catch (error) {
+			console.error("Failed to fetch comments", error);
+		} finally {
+			set({ isLoading: false });
+		}
 	},
 	fetchNextPage: async () => {
 		const { pageOffset, fetchComments } = get();
