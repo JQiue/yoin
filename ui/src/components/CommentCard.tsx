@@ -9,8 +9,22 @@ interface Props {
 	comment: Comment;
 }
 
+const toSafeHttpUrl = (raw: string) => {
+	try {
+		if (!raw) return null;
+		const parsed = new URL(raw);
+		if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+			return parsed.toString();
+		}
+		return null;
+	} catch (_error) {
+		return null;
+	}
+};
+
 export default ({ comment }: Props) => {
 	const [isReply, setIsReply] = useState(false);
+	const safeWebsite = toSafeHttpUrl(comment.website);
 	const handleClickReply = () => {
 		setIsReply(!isReply);
 	};
@@ -26,7 +40,18 @@ export default ({ comment }: Props) => {
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-x-2 mb-0.5 text-xs">
 						<span className="font-bold text-brand-black tracking-tight">
-							<a href={comment.website} target="_blank" rel="noopener noreferrer" className="hover:underline">{comment.nickname}</a>
+							{safeWebsite ? (
+								<a
+									href={safeWebsite}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="hover:underline"
+								>
+									{comment.nickname}
+								</a>
+							) : (
+								<span>{comment.nickname}</span>
+							)}
 						</span>
 						<span className="text-[11px] text-app-muted flex items-center gap-1 ml-auto">
 							<Icon name="clock" />
@@ -52,7 +77,7 @@ export default ({ comment }: Props) => {
 								<Icon name="thumbsDown" />
 								{comment.down_vote || 0}
 							</button>
-							<button type="button" onClick={handleClickReply}>
+							<button type="button" aria-label="回复评论" onClick={handleClickReply}>
 								<Icon name="reply" />
 							</button>
 						</div>
