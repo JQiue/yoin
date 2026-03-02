@@ -1,0 +1,48 @@
+import { storage } from "../helper";
+import type { Method, RequestConfig, ResData } from "./types";
+
+const BASE_URL = "http://localhost:7410";
+
+async function baseRequest<T>(
+	url: string,
+	method: Method,
+	config: RequestConfig = {},
+): Promise<ResData<T>> {
+	const { params, data, headers, ...rest } = config;
+	const fullUrl = new URL(url.startsWith("http") ? url : `${BASE_URL}${url}`);
+
+	if (params) {
+		Object.keys(params).forEach((key) => {
+			fullUrl.searchParams.append(key, String(params[key]));
+		});
+	}
+
+	const response = await fetch(fullUrl.toString(), {
+		method,
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${storage.get("yoin:token") || ""}`,
+			...headers,
+		},
+		body: data ? JSON.stringify(data) : undefined,
+		...rest,
+	});
+	// console.log(response);
+	if (!response.ok) {
+		const errorBody = await response.json().catch(() => ({}));
+		throw new Error(errorBody.msg || `网络错误: ${response.status}`);
+	}
+
+	return response.json();
+}
+
+export const http = {
+	get: <T>(url: string, config?: RequestConfig) =>
+		baseRequest<T>(url, "GET", config),
+	post: <T>(url: string, data?: unknown, config?: RequestConfig) =>
+		baseRequest<T>(url, "POST", { ...config, data }),
+	put: <T>(url: string, data?: unknown, config?: RequestConfig) =>
+		baseRequest<T>(url, "PUT", { ...config, data }),
+	delete: <T>(url: string, config?: RequestConfig) =>
+		baseRequest<T>(url, "DELETE", config),
+};

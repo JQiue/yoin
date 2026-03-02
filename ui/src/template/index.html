@@ -12,8 +12,9 @@
   <script>
     window.onload = () => {
       if (typeof Yoin !== 'undefined') {
-        const yoin = new Yoin({
-          containerId: "root"
+        new Yoin({
+          containerId: "root",
+          site_id: 1
         });
       } else {
         console.error("Yoin load failed");
