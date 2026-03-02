@@ -5,6 +5,11 @@ export default defineConfig({
 	dev: {
 		assetPrefix: "/",
 	},
+	server: {
+		proxy: {
+			"/api": "http://127.0.0.1:7410",
+		}
+	},
 	performance: {
 		chunkSplit: {
 			strategy: "all-in-one",

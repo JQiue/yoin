@@ -1,7 +1,21 @@
 import { storage } from "../helper";
+import { useConfigStore } from "../store/useConfigStore";
 import type { Method, RequestConfig, ResData } from "./types";
 
-const BASE_URL = "http://localhost:7410";
+function getApiBase() {
+	const configuredBase = useConfigStore.getState().config.api_base?.trim() || "";
+	return configuredBase.replace(/\/+$/, "");
+}
+
+function buildUrl(url: string) {
+	if (url.startsWith("http")) {
+		return new URL(url).toString();
+	}
+	const base = getApiBase();
+	const path = url.startsWith("/") ? url : `/${url}`;
+	const target = base ? `${base}${path}` : path;
+	return new URL(target, window.location.origin).toString();
+}
 
 async function baseRequest<T>(
 	url: string,
@@ -9,7 +23,7 @@ async function baseRequest<T>(
 	config: RequestConfig = {},
 ): Promise<ResData<T>> {
 	const { params, data, headers, ...rest } = config;
-	const fullUrl = new URL(url.startsWith("http") ? url : `${BASE_URL}${url}`);
+	const fullUrl = new URL(buildUrl(url));
 
 	if (params) {
 		Object.keys(params).forEach((key) => {
