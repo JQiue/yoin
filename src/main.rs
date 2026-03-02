@@ -73,10 +73,12 @@ impl AppState {
       .find_all()
       .await
       .with_op("get all sites")?;
+    let mut site_config = self.site_config.lock().await;
+    site_config.clear();
     for site in sites {
-      self.site_config.lock().await.insert(site.id, site.config);
+      site_config.insert(site.id, site.config);
     }
-
+    drop(site_config);
     let users = self
       .service
       .repo
@@ -84,9 +86,11 @@ impl AppState {
       .find_all()
       .await
       .with_op("get all users")?;
+    let mut admin_ids = self.admin_ids.lock().await;
+    admin_ids.clear();
     for user in users {
       if user.role == UserRole::Admin {
-        self.admin_ids.lock().await.insert(user.id);
+        admin_ids.insert(user.id);
       }
     }
     Ok(())
@@ -134,7 +138,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     jwt_key: config.jwt_key,
     site_config: Mutex::new(HashMap::new()),
     admin_ids: Mutex::new(HashSet::new()),
-    // rate_limit_cache: Mutex::new(HashMap::new()),
     comment_rate_limiter: RateLimiter::new(),
     service: AppService {
       repo: Repository::new(conn),
