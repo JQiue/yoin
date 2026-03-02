@@ -113,6 +113,13 @@ pub struct RemoteIp {
   pub ip: String,
 }
 
+fn is_trusted_proxy(ip: &IpAddr) -> bool {
+  match ip {
+    IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
+    IpAddr::V6(v6) => v6.is_loopback() || v6.is_unique_local(),
+  }
+}
+
 impl<S> FromRequestParts<S> for RemoteIp
 where
   S: Send + Sync,
@@ -120,21 +127,27 @@ where
   type Rejection = StatusCode;
 
   async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-    if let Some(ip) = parts
-      .headers
-      .get("x-forwarded-for")
-      .and_then(|v| v.to_str().ok())
-      .and_then(|s| s.split(',').next()) // 取第一个 IP
-      .and_then(|s| s.trim().parse::<IpAddr>().ok())
-    {
-      return Ok(RemoteIp { ip: ip.to_string() });
-    }
-    parts
+    let peer_ip = parts
       .extensions
       .get::<ConnectInfo<SocketAddr>>()
-      .map(|ConnectInfo(addr)| RemoteIp {
-        ip: addr.to_string(),
-      })
-      .ok_or(StatusCode::INTERNAL_SERVER_ERROR)
+      .map(|ConnectInfo(addr)| addr.ip())
+      .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if is_trusted_proxy(&peer_ip)
+      && let Some(forwarded_ip) = parts
+        .headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .and_then(|s| s.trim().parse::<IpAddr>().ok())
+    {
+      return Ok(RemoteIp {
+        ip: forwarded_ip.to_string(),
+      });
+    }
+
+    Ok(RemoteIp {
+      ip: peer_ip.to_string(),
+    })
   }
 }
