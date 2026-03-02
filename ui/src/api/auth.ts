@@ -11,11 +11,11 @@ export const login = (
   });
 };
 
-export const register = (email: string, password: string, nickname: string, url: string, ) => {
+export const register = (email: string, password: string, nickname: string, website: string ) => {
   return http.post("/api/auth/register", {
       email,
       password,
       nickname,
-      url,
+      website,
   });
 }

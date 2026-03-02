@@ -11,7 +11,7 @@ export interface LoginInput {
 export interface NewUserInput extends LoginInput {
   password_confirmation: string;
   nickname: string;
-  url: string;
+  website: string;
 }
 
 export const useAuthForm = (onSuccess?: ()=>void) => {
@@ -58,7 +58,7 @@ export const useAuthForm = (onSuccess?: ()=>void) => {
           regData.email,
           regData.password,
           regData.nickname,
-          regData.url
+          regData.website
         );
         if (resData.code === 0) {
           setSubmitStatus({ type: "success", msg: "注册成功，请登录" });

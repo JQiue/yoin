@@ -21,8 +21,8 @@ export type Paged<T> = {
 
 export type Comment = {
 	id: number;
-	thread_id: number;
-	parent_id: number;
+	thread_id: number | null;
+	parent_id: number | null;
 	nickname: string;
 	website: string;
 	content: string;

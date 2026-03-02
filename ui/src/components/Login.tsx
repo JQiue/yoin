@@ -79,7 +79,7 @@ interface NewUserInput {
   password: string;
   password_confirmation: string;
   nickname: string;
-  url: string;
+  website: string;
 }
 
 interface RegisterFormProps {
@@ -90,7 +90,7 @@ interface RegisterFormProps {
 }
 
 const RegisterForm = ({ submitting, submitStatus, setSubmitStatus, onSubmit }: RegisterFormProps) => {
-  const [newUser, setNewUser] = useState<NewUserInput>({ email: "", password: "", nickname: "", password_confirmation: "", url: "" });
+  const [newUser, setNewUser] = useState<NewUserInput>({ email: "", password: "", nickname: "", password_confirmation: "", website: "" });
 
   const handleInputChange = (
     e: TargetedEvent<HTMLTextAreaElement | HTMLInputElement>,
@@ -113,7 +113,7 @@ const RegisterForm = ({ submitting, submitStatus, setSubmitStatus, onSubmit }: R
     <input className="w-full px-3 py-2 border rounded-sm bg-zinc-50 text-sm outline-none transition-all focus:bg-white focus:ring-1 placeholder:text-zinc-400" name="password" type="password" required placeholder="密码" onChange={handleInputChange} />
     <input className="w-full px-3 py-2 border rounded-sm bg-zinc-50 text-sm outline-none transition-all focus:bg-white focus:ring-1 placeholder:text-zinc-400" name="password_confirmation" type="password" required placeholder="确认密码" onChange={handleInputChange} />
     <input className="w-full px-3 py-2 border rounded-sm bg-zinc-50 text-sm outline-none transition-all focus:bg-white focus:ring-1 placeholder:text-zinc-400" name="nickname" type="text" required placeholder="昵称" onChange={handleInputChange} />
-    <input className="w-full px-3 py-2 border rounded-sm bg-zinc-50 text-sm outline-none transition-all focus:bg-white focus:ring-1 placeholder:text-zinc-400" name="url" type="url" required placeholder="网址：https://www.example.com" onChange={handleInputChange} />
+    <input className="w-full px-3 py-2 border rounded-sm bg-zinc-50 text-sm outline-none transition-all focus:bg-white focus:ring-1 placeholder:text-zinc-400" name="website" type="url" required placeholder="网址：https://www.example.com" onChange={handleInputChange} />
     <div className="flex items-center gap-2">
       {submitStatus.msg && (
         <span
