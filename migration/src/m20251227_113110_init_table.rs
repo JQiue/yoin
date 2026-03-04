@@ -88,6 +88,62 @@ enum Reactions {
   CreatedAt,
 }
 
+#[derive(Iden)]
+enum CommentSubscriptions {
+  Table,
+  Id,
+  SiteId,
+  PagePath,
+  EventType,
+  UserId,
+  Email,
+  IsActive,
+  CreatedAt,
+  UpdatedAt,
+}
+
+#[derive(Iden)]
+enum Roles {
+  Table,
+  Id,
+  Name,
+  Description,
+  CreatedAt,
+  UpdatedAt,
+}
+
+#[derive(Iden)]
+enum RolePermissions {
+  Table,
+  Id,
+  RoleId,
+  PermissionId,
+  CreatedAt,
+  UpdatedAt,
+}
+
+#[derive(Iden)]
+enum Permissions {
+  Table,
+  Id,
+  Name,
+  Description,
+  CreatedAt,
+  UpdatedAt,
+}
+
+#[derive(Iden)]
+enum UserRoleBindings {
+  Table,
+  Id,
+  UserId,
+  RoleId,
+  ScopeType,
+  ScopeId,
+  CreatedAt,
+  UpdatedAt,
+}
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -241,10 +297,149 @@ impl MigrationTrait for Migration {
           .col(date_time(Reactions::CreatedAt))
           .to_owned(),
       )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(CommentSubscriptions::Table)
+          .if_not_exists()
+          .col(big_pk_auto(CommentSubscriptions::Id))
+          .col(big_integer(CommentSubscriptions::SiteId))
+          .col(string(CommentSubscriptions::PagePath))
+          .col(string(CommentSubscriptions::EventType))
+          .col(big_integer(CommentSubscriptions::UserId).null())
+          .col(string(CommentSubscriptions::Email).null())
+          .col(boolean(CommentSubscriptions::IsActive).default(true))
+          .col(date_time(CommentSubscriptions::CreatedAt))
+          .col(date_time(CommentSubscriptions::UpdatedAt))
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-comment-subscriptions-site_id")
+              .from(CommentSubscriptions::Table, CommentSubscriptions::SiteId)
+              .to(Sites::Table, Sites::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-comment-subscriptions-user_id")
+              .from(CommentSubscriptions::Table, CommentSubscriptions::UserId)
+              .to(Users::Table, Users::Id)
+              .on_delete(ForeignKeyAction::SetNull)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(Roles::Table)
+          .if_not_exists()
+          .col(big_pk_auto(Roles::Id))
+          .col(string(Roles::Name))
+          .col(string(Roles::Description).null())
+          .col(date_time(Roles::CreatedAt))
+          .col(date_time(Roles::UpdatedAt))
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(Permissions::Table)
+          .if_not_exists()
+          .col(big_pk_auto(Permissions::Id))
+          .col(string(Permissions::Name))
+          .col(string(Permissions::Description).null())
+          .col(date_time(Permissions::CreatedAt))
+          .col(date_time(Permissions::UpdatedAt))
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(RolePermissions::Table)
+          .if_not_exists()
+          .col(big_pk_auto(RolePermissions::Id))
+          .col(big_integer(RolePermissions::RoleId))
+          .col(big_integer(RolePermissions::PermissionId))
+          .col(date_time(RolePermissions::CreatedAt))
+          .col(date_time(RolePermissions::UpdatedAt))
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-role-permissions-role_id")
+              .from(RolePermissions::Table, RolePermissions::RoleId)
+              .to(Roles::Table, Roles::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-role-permissions-permission_id")
+              .from(RolePermissions::Table, RolePermissions::PermissionId)
+              .to(Permissions::Table, Permissions::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(UserRoleBindings::Table)
+          .if_not_exists()
+          .col(big_pk_auto(UserRoleBindings::Id))
+          .col(big_integer(UserRoleBindings::UserId))
+          .col(big_integer(UserRoleBindings::RoleId))
+          .col(string(UserRoleBindings::ScopeType))
+          .col(string(UserRoleBindings::ScopeId).null())
+          .col(date_time(UserRoleBindings::CreatedAt))
+          .col(date_time(UserRoleBindings::UpdatedAt))
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-user-role-bindings-user_id")
+              .from(UserRoleBindings::Table, UserRoleBindings::UserId)
+              .to(Users::Table, Users::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-user-role-bindings-role_id")
+              .from(UserRoleBindings::Table, UserRoleBindings::RoleId)
+              .to(Roles::Table, Roles::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .to_owned(),
+      )
       .await
   }
 
   async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+    manager
+      .drop_table(Table::drop().table(UserRoleBindings::Table).to_owned())
+      .await?;
+    manager
+      .drop_table(Table::drop().table(RolePermissions::Table).to_owned())
+      .await?;
+    manager
+      .drop_table(Table::drop().table(Permissions::Table).to_owned())
+      .await?;
+    manager
+      .drop_table(Table::drop().table(Roles::Table).to_owned())
+      .await?;
+    manager
+      .drop_table(Table::drop().table(CommentSubscriptions::Table).to_owned())
+      .await?;
     manager
       .drop_table(Table::drop().table(Reactions::Table).to_owned())
       .await?;
