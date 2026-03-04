@@ -17,6 +17,17 @@ enum Users {
 }
 
 #[derive(Iden)]
+enum UserIdentities {
+  Table,
+  Id,
+  UserId,
+  Provider,
+  ProviderUserId,
+  CreatedAt,
+  UpdatedAt,
+}
+
+#[derive(Iden)]
 enum Sites {
   Table,
   Id,
@@ -72,6 +83,29 @@ impl MigrationTrait for Migration {
           .col(string(Users::Website))
           .col(date_time(Users::CreatedAt))
           .col(date_time(Users::UpdatedAt))
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(UserIdentities::Table)
+          .if_not_exists()
+          .col(big_pk_auto(UserIdentities::Id))
+          .col(big_integer(UserIdentities::UserId))
+          .col(string(UserIdentities::Provider))
+          .col(string(UserIdentities::ProviderUserId))
+          .col(date_time(UserIdentities::CreatedAt))
+          .col(date_time(UserIdentities::UpdatedAt))
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-user_identities-user_id")
+              .from(UserIdentities::Table, UserIdentities::UserId)
+              .to(Users::Table, Users::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
           .to_owned(),
       )
       .await?;
@@ -143,6 +177,9 @@ impl MigrationTrait for Migration {
       .await?;
     manager
       .drop_table(Table::drop().table(Sites::Table).to_owned())
+      .await?;
+    manager
+      .drop_table(Table::drop().table(UserIdentities::Table).to_owned())
       .await?;
     manager
       .drop_table(Table::drop().table(Users::Table).to_owned())
