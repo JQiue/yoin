@@ -21,8 +21,21 @@ enum UserIdentities {
   Table,
   Id,
   UserId,
-  Provider,
+  ProviderId,
   ProviderUserId,
+  CreatedAt,
+  UpdatedAt,
+}
+
+#[derive(Iden)]
+enum OauthProviders {
+  Table,
+  Id,
+  SiteId,
+  Enabled,
+  ProviderCode,
+  ClientId,
+  ClientSecret,
   CreatedAt,
   UpdatedAt,
 }
@@ -90,11 +103,51 @@ impl MigrationTrait for Migration {
     manager
       .create_table(
         Table::create()
+          .table(Sites::Table)
+          .if_not_exists()
+          .col(big_pk_auto(Sites::Id))
+          .col(string(Sites::Name))
+          .col(string(Sites::Url).unique_key())
+          .col(json(Sites::Config))
+          .col(date_time(Sites::CreatedAt))
+          .col(date_time(Sites::UpdatedAt))
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
+          .table(OauthProviders::Table)
+          .if_not_exists()
+          .col(big_pk_auto(OauthProviders::Id))
+          .col(big_integer(OauthProviders::SiteId).null())
+          .col(string(OauthProviders::ProviderCode))
+          .col(boolean(OauthProviders::Enabled).default(true))
+          .col(string(OauthProviders::ClientId))
+          .col(string(OauthProviders::ClientSecret))
+          .col(date_time(OauthProviders::CreatedAt))
+          .col(date_time(OauthProviders::UpdatedAt))
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-oauth-providers-site_id")
+              .from(OauthProviders::Table, OauthProviders::SiteId)
+              .to(Sites::Table, Sites::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
           .table(UserIdentities::Table)
           .if_not_exists()
           .col(big_pk_auto(UserIdentities::Id))
           .col(big_integer(UserIdentities::UserId))
-          .col(string(UserIdentities::Provider))
+          .col(big_integer(UserIdentities::ProviderId))
           .col(string(UserIdentities::ProviderUserId))
           .col(date_time(UserIdentities::CreatedAt))
           .col(date_time(UserIdentities::UpdatedAt))
@@ -106,21 +159,14 @@ impl MigrationTrait for Migration {
               .on_delete(ForeignKeyAction::Cascade)
               .on_update(ForeignKeyAction::Cascade),
           )
-          .to_owned(),
-      )
-      .await?;
-
-    manager
-      .create_table(
-        Table::create()
-          .table(Sites::Table)
-          .if_not_exists()
-          .col(big_pk_auto(Sites::Id))
-          .col(string(Sites::Name))
-          .col(string(Sites::Url).unique_key())
-          .col(json(Sites::Config))
-          .col(date_time(Sites::CreatedAt))
-          .col(date_time(Sites::UpdatedAt))
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-user_identities-provider_id")
+              .from(UserIdentities::Table, UserIdentities::ProviderId)
+              .to(OauthProviders::Table, OauthProviders::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
           .to_owned(),
       )
       .await?;
@@ -176,10 +222,13 @@ impl MigrationTrait for Migration {
       .drop_table(Table::drop().table(Comments::Table).to_owned())
       .await?;
     manager
-      .drop_table(Table::drop().table(Sites::Table).to_owned())
+      .drop_table(Table::drop().table(UserIdentities::Table).to_owned())
       .await?;
     manager
-      .drop_table(Table::drop().table(UserIdentities::Table).to_owned())
+      .drop_table(Table::drop().table(OauthProviders::Table).to_owned())
+      .await?;
+    manager
+      .drop_table(Table::drop().table(Sites::Table).to_owned())
       .await?;
     manager
       .drop_table(Table::drop().table(Users::Table).to_owned())
