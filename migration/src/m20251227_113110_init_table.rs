@@ -76,6 +76,18 @@ enum Comments {
   DeletedAt,
 }
 
+#[derive(Iden)]
+enum Reactions {
+  Table,
+  Id,
+  ActorType,
+  ActorId,
+  TargetType,
+  TargetId,
+  Type,
+  CreatedAt,
+}
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -214,10 +226,28 @@ impl MigrationTrait for Migration {
           )
           .to_owned(),
       )
+      .await?;
+    manager
+      .create_table(
+        Table::create()
+          .table(Reactions::Table)
+          .if_not_exists()
+          .col(big_pk_auto(Reactions::Id))
+          .col(string(Reactions::ActorType))
+          .col(string(Reactions::ActorId))
+          .col(string(Reactions::TargetType))
+          .col(string(Reactions::TargetId))
+          .col(string(Reactions::Type))
+          .col(date_time(Reactions::CreatedAt))
+          .to_owned(),
+      )
       .await
   }
 
   async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+    manager
+      .drop_table(Table::drop().table(Reactions::Table).to_owned())
+      .await?;
     manager
       .drop_table(Table::drop().table(Comments::Table).to_owned())
       .await?;
