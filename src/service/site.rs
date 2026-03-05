@@ -1,29 +1,15 @@
 use helpers::time::utc_now;
-use migration::enums::UserRole;
 
 use super::AppService;
 use crate::{
   error::{AppError, ToAppError},
   handler::site::{CreateSitePayload, SiteView, UpdateSitePayload},
-  repository::{SiteCreateData, SiteRepositoryTrait, SiteUpdateData, UserRepositoryTrait},
+  repository::{SiteCreateData, SiteRepositoryTrait, SiteUpdateData},
 };
 
 impl AppService {
   pub async fn list_sites(&self, user_id: i64) -> Result<Vec<SiteView>, AppError> {
-    let user = self
-      .repo
-      .user()
-      .find_by_id(user_id)
-      .await
-      .with_op("find user by id")?
-      .ok_or(AppError::user_not_found("User not found".to_string()))?;
-
-    if user.role != UserRole::Admin {
-      return Err(AppError::forbidden(
-        "You are not admin".to_string() + &format!("{} {:?}", user.id, user.role),
-      ));
-    }
-
+    self.require_admin(user_id).await?;
     let sites = self
       .repo
       .site()
@@ -46,19 +32,7 @@ impl AppService {
     user_id: i64,
     payload: CreateSitePayload,
   ) -> Result<SiteView, AppError> {
-    let user = self
-      .repo
-      .user()
-      .find_by_id(user_id)
-      .await
-      .with_op("find user by id")?
-      .ok_or(AppError::user_not_found("User not found".to_string()))?;
-
-    if user.role != UserRole::Admin {
-      return Err(AppError::forbidden(
-        "You are not admin".to_string() + &user.id.to_string(),
-      ));
-    }
+    self.require_admin(user_id).await?;
     let datetime = utc_now().naive_utc();
     let site = self
       .repo
@@ -84,20 +58,7 @@ impl AppService {
     user_id: i64,
     payload: UpdateSitePayload,
   ) -> Result<SiteView, AppError> {
-    let user = self
-      .repo
-      .user()
-      .find_by_id(user_id)
-      .await
-      .with_op("find user by id")?
-      .ok_or(AppError::user_not_found("User not found".to_string()))?;
-
-    if user.role != UserRole::Admin {
-      return Err(AppError::forbidden(
-        "You are not admin".to_string() + &user.id.to_string(),
-      ));
-    }
-
+    self.require_admin(user_id).await?;
     let site = self
       .repo
       .site()
