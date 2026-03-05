@@ -45,6 +45,25 @@ pub struct RequireAuth {
   pub user_id: i64,
 }
 
+fn parse_bearer_user_id(parts: &Parts, jwt_key: &str) -> Result<Option<i64>, StatusCode> {
+  let auth_header = parts
+    .headers
+    .get(AUTHORIZATION)
+    .and_then(|value| value.to_str().ok());
+
+  let Some(auth_header) = auth_header else {
+    return Ok(None);
+  };
+
+  if !auth_header.starts_with("Bearer ") {
+    return Ok(None);
+  }
+
+  let token = auth_header.trim_start_matches("Bearer ");
+  let data = jwt::verify(token, jwt_key).map_err(|_| StatusCode::UNAUTHORIZED)?;
+  Ok(Some(data.claims.data))
+}
+
 impl FromRequestParts<Arc<AppState>> for RequireAuth {
   type Rejection = StatusCode;
 
@@ -52,25 +71,8 @@ impl FromRequestParts<Arc<AppState>> for RequireAuth {
     parts: &mut Parts,
     state: &Arc<AppState>,
   ) -> Result<Self, Self::Rejection> {
-    let auth_header = parts
-      .headers
-      .get(AUTHORIZATION)
-      .and_then(|value| value.to_str().ok());
-
-    if let Some(auth_header) = auth_header
-      && auth_header.starts_with("Bearer ")
-    {
-      let token = auth_header.trim_start_matches("Bearer ");
-      if let Ok(data) = jwt::verify(token, &state.jwt_key) {
-        Ok(RequireAuth {
-          user_id: data.claims.data,
-        })
-      } else {
-        Err(StatusCode::UNAUTHORIZED)
-      }
-    } else {
-      Err(StatusCode::UNAUTHORIZED)
-    }
+    let user_id = parse_bearer_user_id(parts, &state.jwt_key)?.ok_or(StatusCode::UNAUTHORIZED)?;
+    Ok(RequireAuth { user_id })
   }
 }
 
@@ -86,25 +88,8 @@ impl FromRequestParts<Arc<AppState>> for OptionnalAuth {
     parts: &mut Parts,
     state: &Arc<AppState>,
   ) -> Result<Self, Self::Rejection> {
-    let auth_header = parts
-      .headers
-      .get(AUTHORIZATION)
-      .and_then(|value| value.to_str().ok());
-
-    if let Some(auth_header) = auth_header
-      && auth_header.starts_with("Bearer ")
-    {
-      let token = auth_header.trim_start_matches("Bearer ");
-      if let Ok(data) = jwt::verify(token, &state.jwt_key) {
-        Ok(OptionnalAuth {
-          user_id: Some(data.claims.data),
-        })
-      } else {
-        Err(StatusCode::UNAUTHORIZED)
-      }
-    } else {
-      Ok(OptionnalAuth { user_id: None })
-    }
+    let user_id = parse_bearer_user_id(parts, &state.jwt_key)?;
+    Ok(OptionnalAuth { user_id })
   }
 }
 
