@@ -22,6 +22,8 @@ thiserror = "2.0.17"
 tower = "0.5.2"
 tower-http = "0.6.8"
 helpers = "0.6.1"
+ureq = "3.2.0"
+url = "2.5.8"
 
 [dependencies]
 tower-http = { workspace = true, features = ["trace", "cors"] }
@@ -41,6 +43,8 @@ serde_json.workspace = true
 thiserror.workspace = true
 helpers = { workspace = true, features = ["hash", "jwt", "time", "uuid"] }
 tower.workspace = true
+ureq.workspace = true
+url.workspace = true
 
 [build-dependencies]
 tracing = { workspace = true }
@@ -49,7 +53,12 @@ tracing-subscriber = { workspace = true, features = [
   "local-time",
 ] }
 
+[dev-dependencies]
+http-body-util = "0.1.3"
+tower = { workspace = true, features = ["util"] }
+
 [features]
+default = ["sqlite"]
 sqlite = ["migration/sqlite"]
 mysql = ["migration/mysql"]
 postgres = ["migration/postgres"]
