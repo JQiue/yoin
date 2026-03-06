@@ -3,10 +3,10 @@ pub mod oauth_provider;
 pub mod site;
 pub mod user;
 
-pub use comment::*;
-pub use oauth_provider::*;
-pub use site::*;
-pub use user::*;
+pub use comment::{CommentCreateData, CommentRepository};
+pub use oauth_provider::OauthProvider;
+pub use site::{SiteCreateData, SiteRepository, SiteUpdateData};
+pub use user::{UserCreateData, UserRepository, UserUpdateData};
 
 #[rustfmt::skip]
 use sea_orm::DatabaseConnection;

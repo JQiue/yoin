@@ -1,11 +1,10 @@
 use sea_orm::{
-  ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, Order,
-  PaginatorTrait, QueryFilter, QueryOrder, entity::prelude::*,
+  ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait,
+  PaginatorTrait, QueryFilter, entity::prelude::*,
 };
 
 use crate::entity::{
-  prelude::{Comments, Sites, Users},
-  sites::{self, SiteConfig},
+  prelude::Users,
   users::{self},
 };
 
@@ -31,26 +30,16 @@ pub struct UserUpdateData {
   pub datetime: DateTime,
 }
 
-pub trait UserRepositoryTrait {
-  async fn exists_any(&self) -> Result<bool, DbErr>;
-  async fn exists_by_email(&self, email: &str) -> Result<bool, DbErr>;
-  async fn find_by_id(&self, user_id: i64) -> Result<Option<users::Model>, DbErr>;
-  async fn find_by_email(&self, email: &str) -> Result<Option<users::Model>, DbErr>;
-  async fn find_all(&self) -> Result<Vec<users::Model>, DbErr>;
-  async fn create(&self, data: UserCreateData) -> Result<users::Model, DbErr>;
-  async fn update(&self, data: UserUpdateData) -> Result<users::Model, DbErr>;
-}
-
 pub struct UserRepository {
   pub conn: &'static DatabaseConnection,
 }
 
-impl UserRepositoryTrait for UserRepository {
-  async fn exists_any(&self) -> Result<bool, DbErr> {
+impl UserRepository {
+  pub async fn exists_any(&self) -> Result<bool, DbErr> {
     Ok(Users::find().count(self.conn).await? == 0)
   }
 
-  async fn exists_by_email(&self, email: &str) -> Result<bool, DbErr> {
+  pub async fn exists_by_email(&self, email: &str) -> Result<bool, DbErr> {
     let user = Users::find()
       .filter(users::Column::Email.eq(email))
       .one(self.conn)
@@ -58,25 +47,25 @@ impl UserRepositoryTrait for UserRepository {
     Ok(user.is_some())
   }
 
-  async fn find_by_id(&self, user_id: i64) -> Result<Option<users::Model>, DbErr> {
+  pub async fn find_by_id(&self, user_id: i64) -> Result<Option<users::Model>, DbErr> {
     Users::find()
       .filter(users::Column::Id.eq(user_id))
       .one(self.conn)
       .await
   }
 
-  async fn find_by_email(&self, email: &str) -> Result<Option<users::Model>, DbErr> {
+  pub async fn find_by_email(&self, email: &str) -> Result<Option<users::Model>, DbErr> {
     Users::find()
       .filter(users::Column::Email.eq(email))
       .one(self.conn)
       .await
   }
 
-  async fn find_all(&self) -> Result<Vec<users::Model>, DbErr> {
+  pub async fn find_all(&self) -> Result<Vec<users::Model>, DbErr> {
     Users::find().all(self.conn).await
   }
 
-  async fn create(&self, data: UserCreateData) -> Result<users::Model, DbErr> {
+  pub async fn create(&self, data: UserCreateData) -> Result<users::Model, DbErr> {
     let insert_user = users::ActiveModel {
       nickname: Set(data.nickname),
       password: Set(data.password),
@@ -91,7 +80,7 @@ impl UserRepositoryTrait for UserRepository {
     insert_user.insert(self.conn).await
   }
 
-  async fn update(&self, data: UserUpdateData) -> Result<users::Model, DbErr> {
+  pub async fn update(&self, data: UserUpdateData) -> Result<users::Model, DbErr> {
     let mut user = users::ActiveModel {
       id: Set(data.id),
       updated_at: Set(data.datetime),

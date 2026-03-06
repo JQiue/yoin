@@ -23,37 +23,12 @@ pub struct CommentCreateData {
   pub datetime: DateTime,
 }
 
-pub trait CommentRepositoryTrait {
-  async fn create(&self, data: CommentCreateData) -> Result<comments::Model, DbErr>;
-  async fn find_by_id(&self, id: i64) -> Result<Option<comments::Model>, DbErr>;
-  async fn find_roots_paged(
-    &self,
-    site_id: i64,
-    page_path: &str,
-    page_size: u64,
-    page_offset: u64,
-    sort: &str,
-  ) -> Result<(Vec<comments::Model>, u64, u64), DbErr>;
-  async fn find_all_replies_by_thread_ids(
-    &self,
-    thread_ids: Vec<i64>,
-  ) -> Result<Vec<comments::Model>, DbErr>;
-  async fn find_replies_by_thread(
-    &self,
-    thread_id: i64,
-    site_id: i64,
-    page_path: &str,
-    page_size: u64,
-    page_offset: u64,
-  ) -> Result<(Vec<comments::Model>, u64, u64), DbErr>;
-}
-
 pub struct CommentRepository {
   pub conn: &'static DatabaseConnection,
 }
 
-impl CommentRepositoryTrait for CommentRepository {
-  async fn find_roots_paged(
+impl CommentRepository {
+  pub async fn find_roots_paged(
     &self,
     site_id: i64,
     page_path: &str,
@@ -84,7 +59,7 @@ impl CommentRepositoryTrait for CommentRepository {
     Ok((comments, total, total_pages))
   }
 
-  async fn create(&self, data: CommentCreateData) -> Result<comments::Model, DbErr> {
+  pub async fn create(&self, data: CommentCreateData) -> Result<comments::Model, DbErr> {
     let mut active_comment = comments::ActiveModel {
       site_id: Set(data.site_id),
       nickname: Set(data.nickname),
@@ -110,11 +85,11 @@ impl CommentRepositoryTrait for CommentRepository {
     active_comment.insert(self.conn).await
   }
 
-  async fn find_by_id(&self, id: i64) -> Result<Option<comments::Model>, DbErr> {
+  pub async fn find_by_id(&self, id: i64) -> Result<Option<comments::Model>, DbErr> {
     Comments::find_by_id(id).one(self.conn).await
   }
 
-  async fn find_all_replies_by_thread_ids(
+  pub async fn find_all_replies_by_thread_ids(
     &self,
     thread_ids: Vec<i64>,
   ) -> Result<Vec<comments::Model>, DbErr> {
@@ -125,7 +100,7 @@ impl CommentRepositoryTrait for CommentRepository {
       .await
   }
 
-  async fn find_replies_by_thread(
+  pub async fn find_replies_by_thread(
     &self,
     thread_id: i64,
     site_id: i64,

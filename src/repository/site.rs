@@ -23,31 +23,23 @@ pub struct SiteUpdateData {
   pub datetime: DateTime,
 }
 
-pub trait SiteRepositoryTrait {
-  async fn create_default(&self, datetime: DateTime) -> Result<sites::Model, DbErr>;
-  async fn create(&self, data: SiteCreateData) -> Result<sites::Model, DbErr>;
-  async fn update(&self, data: SiteUpdateData) -> Result<sites::Model, DbErr>;
-  async fn find_all(&self) -> Result<Vec<sites::Model>, DbErr>;
-  async fn find_by_id(&self, id: i64) -> Result<Option<sites::Model>, DbErr>;
-}
-
 pub struct SiteRepository {
   pub conn: &'static DatabaseConnection,
 }
 
-impl SiteRepositoryTrait for SiteRepository {
-  async fn find_all(&self) -> Result<Vec<sites::Model>, DbErr> {
+impl SiteRepository {
+  pub async fn find_all(&self) -> Result<Vec<sites::Model>, DbErr> {
     Sites::find().all(self.conn).await
   }
 
-  async fn find_by_id(&self, id: i64) -> Result<Option<sites::Model>, DbErr> {
+  pub async fn find_by_id(&self, id: i64) -> Result<Option<sites::Model>, DbErr> {
     Sites::find()
       .filter(sites::Column::Id.eq(id))
       .one(self.conn)
       .await
   }
 
-  async fn create_default(&self, datetime: DateTime) -> Result<sites::Model, DbErr> {
+  pub async fn create_default(&self, datetime: DateTime) -> Result<sites::Model, DbErr> {
     let new_site = sites::ActiveModel {
       name: Set("Default Site".to_string()),
       url: Set("".to_string()),
@@ -59,7 +51,7 @@ impl SiteRepositoryTrait for SiteRepository {
     new_site.insert(self.conn).await
   }
 
-  async fn create(&self, data: SiteCreateData) -> Result<sites::Model, DbErr> {
+  pub async fn create(&self, data: SiteCreateData) -> Result<sites::Model, DbErr> {
     let new_site = sites::ActiveModel {
       name: Set(data.name),
       url: Set(data.url),
@@ -71,7 +63,7 @@ impl SiteRepositoryTrait for SiteRepository {
     new_site.insert(self.conn).await
   }
 
-  async fn update(&self, data: SiteUpdateData) -> Result<sites::Model, DbErr> {
+  pub async fn update(&self, data: SiteUpdateData) -> Result<sites::Model, DbErr> {
     let mut site = sites::ActiveModel {
       id: Set(data.id),
       updated_at: Set(data.datetime),
