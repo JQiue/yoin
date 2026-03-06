@@ -7,7 +7,7 @@ use migration::enums::UserRole;
 
 use crate::{
   error::{AppError, ToAppError},
-  repository::{Repository, UserRepositoryTrait},
+  repository::Repository,
 };
 
 pub struct AppService {

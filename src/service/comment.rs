@@ -5,7 +5,7 @@ use crate::{
   error::{AppError, ToAppError},
   handler::comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
   helper::generate_avatar,
-  repository::{CommentCreateData, CommentRepositoryTrait, UserRepositoryTrait},
+  repository::CommentCreateData,
 };
 
 impl AppService {

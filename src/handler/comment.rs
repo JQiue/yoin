@@ -4,7 +4,7 @@ use axum::extract::{Path, Query, State};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  AppState, UserKey,
+  app::{AppState, UserKey},
   entity::comments,
   error::AppError,
   extractor::{AppJson, OptionnalAuth, RemoteIp},

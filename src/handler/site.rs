@@ -4,7 +4,7 @@ use axum::extract::State;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  AppState,
+  app::AppState,
   entity::sites::SiteConfig,
   error::AppError,
   extractor::{AppJson, RequireAuth},

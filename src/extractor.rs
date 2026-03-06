@@ -8,7 +8,7 @@ use axum::{
   extract::{ConnectInfo, FromRequest, Request},
 };
 
-use crate::error::AppError;
+use crate::{app::AppState, error::AppError};
 
 pub struct AppJson<T>(pub T);
 
@@ -38,8 +38,6 @@ use axum::{
   http::{StatusCode, header::AUTHORIZATION, request::Parts},
 };
 use helpers::jwt;
-
-use crate::AppState;
 
 pub struct RequireAuth {
   pub user_id: i64,

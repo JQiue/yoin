@@ -14,7 +14,7 @@ use crate::{
     user::UpdateProfilePayload,
   },
   helper::generate_avatar,
-  repository::{SiteRepositoryTrait, UserCreateData, UserRepositoryTrait, UserUpdateData},
+  repository::{UserCreateData, UserUpdateData},
 };
 
 impl AppService {

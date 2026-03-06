@@ -4,7 +4,7 @@ use axum::extract::State;
 use serde::Deserialize;
 
 use crate::{
-  AppState,
+  app::AppState,
   error::AppError,
   extractor::{AppJson, RequireAuth},
   handler::auth::UserProfile,

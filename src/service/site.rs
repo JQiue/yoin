@@ -4,7 +4,7 @@ use super::AppService;
 use crate::{
   error::{AppError, ToAppError},
   handler::site::{CreateSitePayload, SiteView, UpdateSitePayload},
-  repository::{SiteCreateData, SiteRepositoryTrait, SiteUpdateData},
+  repository::{SiteCreateData, SiteUpdateData},
 };
 
 impl AppService {
