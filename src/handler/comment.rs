@@ -7,7 +7,7 @@ use crate::{
   app::{AppState, UserKey},
   entity::comments,
   error::AppError,
-  extractor::{AppJson, OptionnalAuth, RemoteIp},
+  extractor::{AppJson, OptionnalAuth, RemoteIp, RequireAuth},
   response::ApiResponse,
 };
 
@@ -45,13 +45,16 @@ pub struct CommentView {
 
 impl CommentView {
   pub fn from_model(model: comments::Model) -> Self {
+    let parser = pulldown_cmark::Parser::new(&model.content);
+    let mut html_output = String::new();
+    pulldown_cmark::html::push_html(&mut html_output, parser);
     Self {
       id: model.id,
       thread_id: model.thread_id,
       parent_id: model.parent_id,
       nickname: model.nickname,
       website: model.website,
-      content: model.content,
+      content: html_output,
       avatar: model.avatar,
       up_vote: model.up_vote,
       down_vote: model.down_vote,
@@ -143,4 +146,16 @@ pub async fn list_replies(
   Ok(ApiResponse::success(
     state.service.list_replies(id, qs).await?,
   ))
+}
+
+pub async fn delete(
+  State(state): State<Arc<AppState>>,
+  require_auth: RequireAuth,
+  Path(id): Path<i64>,
+) -> Result<ApiResponse<()>, AppError> {
+  state
+    .service
+    .delete_comment(require_auth.user_id, id)
+    .await?;
+  Ok(ApiResponse::success(()))
 }

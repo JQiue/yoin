@@ -48,7 +48,7 @@ impl CommentRepository {
     let paginator = Comments::find()
       .filter(comments::Column::SiteId.eq(site_id))
       .filter(comments::Column::PagePath.eq(page_path))
-      .filter(comments::Column::Status.is_not_in([CommentStatus::Spam]))
+      .filter(comments::Column::Status.is_not_in([CommentStatus::Spam, CommentStatus::Deleted]))
       .filter(comments::Column::ParentId.is_null())
       .order_by(sort_col, sort_ord)
       .paginate(self.conn, page_size);
@@ -96,6 +96,7 @@ impl CommentRepository {
     Comments::find()
       .filter(comments::Column::ThreadId.is_in(thread_ids))
       .filter(comments::Column::ParentId.is_not_null())
+      .filter(comments::Column::Status.is_not_in([CommentStatus::Spam, CommentStatus::Deleted]))
       .all(self.conn)
       .await
   }
@@ -120,5 +121,16 @@ impl CommentRepository {
     let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
     let comments = paginator.fetch_page(page_idx).await?;
     Ok((comments, total, total_pages))
+  }
+
+  pub async fn soft_delete(&self, comment: comments::Model) -> Result<comments::Model, DbErr> {
+    comments::ActiveModel {
+      id: Set(comment.id),
+      status: Set(CommentStatus::Deleted),
+      deleted_at: Set(Some(comment.created_at)),
+      ..Default::default()
+    }
+    .update(self.conn)
+    .await
   }
 }

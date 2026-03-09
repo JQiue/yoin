@@ -160,4 +160,26 @@ impl AppService {
       total,
     })
   }
+
+  pub async fn delete_comment(&self, user_id: i64, id: i64) -> Result<(), AppError> {
+    let comment = self
+      .repo
+      .comment()
+      .find_by_id(id)
+      .await
+      .with_op("find comment by id")?
+      .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+    if comment.user_id != Some(user_id) {
+      return Err(AppError::forbidden(
+        "You are not the owner of this comment".to_string(),
+      ));
+    }
+    self
+      .repo
+      .comment()
+      .soft_delete(comment)
+      .await
+      .with_op("delete comment")?;
+    Ok(())
+  }
 }

@@ -14,6 +14,8 @@ pub enum CommentStatus {
   Approved,
   #[sea_orm(string_value = "spam")]
   Spam,
+  #[sea_orm(string_value = "deleted")]
+  Deleted,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]

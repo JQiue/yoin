@@ -9,7 +9,7 @@ use axum::{
   http::{HeaderMap, StatusCode, header},
   middleware::{self, from_extractor, from_extractor_with_state},
   response::{IntoResponse, Response},
-  routing::{get, post},
+  routing::{delete, get, post},
 };
 use migration::enums::UserRole;
 use sea_orm::DatabaseConnection;
@@ -156,6 +156,7 @@ fn create_router(state: Arc<AppState>) -> Router {
 
   let private_routes = Router::new()
     .route("/users/me", get(user::profile).patch(user::update_profile))
+    .route("/comments/{id}", delete(comment::delete))
     .route(
       "/sites",
       post(site::create).get(site::list).patch(site::update),
