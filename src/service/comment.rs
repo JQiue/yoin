@@ -1,10 +1,14 @@
 use helpers::time::utc_now;
+use migration::enums::CommentStatus;
 
 use super::AppService;
 use crate::{
   error::{AppError, ToAppError},
   handler::comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
   helper::generate_avatar,
+  moderation::{
+    self, ModerationInput, provider_codes, types::CommentModerator, LLMModerator,
+  },
   repository::CommentCreateData,
 };
 
@@ -22,6 +26,19 @@ impl AppService {
         .await
         .with_op("find comment by id")?
         .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+
+      if parent.site_id != payload.site_id || parent.page_path != payload.page_path {
+        return Err(AppError::bad_request(
+          "Parent comment does not belong to the current site or page".to_string(),
+        ));
+      }
+
+      if matches!(parent.status, CommentStatus::Deleted | CommentStatus::Spam) {
+        return Err(AppError::bad_request(
+          "Parent comment is not available for reply".to_string(),
+        ));
+      }
+
       Some(parent.thread_id.unwrap_or(parent.id))
     } else {
       None
@@ -40,6 +57,17 @@ impl AppService {
     } else {
       (payload.nickname, generate_avatar(&payload.email))
     };
+    let moderation_provider = self
+      .repo
+      .moderation_provider()
+      .find_enabled_by_site(payload.site_id)
+      .await
+      .with_op("find enabled moderation provider")?;
+    let initial_status = if moderation_provider.is_some() {
+      CommentStatus::Pending
+    } else {
+      CommentStatus::Approved
+    };
     let comment = self
       .repo
       .comment()
@@ -51,10 +79,11 @@ impl AppService {
         nickname,
         page_path: payload.page_path,
         website: payload.website,
-        content: payload.content,
-        email: payload.email,
+        content: payload.content.clone(),
+        email: payload.email.clone(),
         avatar,
         device,
+        status: initial_status,
         location,
         is_sticky: false,
         datetime: utc_now().naive_utc(),
@@ -62,23 +91,79 @@ impl AppService {
       .await
       .with_op("insert comment")?;
 
-    Ok(CommentView {
-      id: comment.id,
-      thread_id: comment.thread_id,
-      parent_id: comment.parent_id,
-      nickname: comment.nickname,
-      website: comment.website,
-      content: comment.content,
-      up_vote: comment.up_vote,
-      down_vote: comment.down_vote,
-      device: comment.device,
-      location: comment.location,
-      avatar: comment.avatar,
-      is_sticky: comment.is_sticky,
-      created_at: comment.created_at.and_utc().to_rfc3339(),
-      replies: None,
-      has_more: None,
-    })
+    if let Some(moderation_provider) = moderation_provider {
+      let comment_repo = self.repo.comment();
+      let moderation_input = ModerationInput {
+        content: payload.content.clone(),
+        email: payload.email.clone(),
+      };
+      tokio::spawn(async move {
+        let status = match moderation_provider.provider.as_str() {
+          provider_codes::LLM => {
+            let moderator = if let Some(prompt) = moderation_provider.prompt.clone() {
+              LLMModerator::with_prompt(
+                moderation_provider.model.clone(),
+                moderation_provider.api_key.clone(),
+                prompt,
+                moderation_provider.api_base.clone(),
+              )
+            } else {
+              LLMModerator::new(
+                moderation_provider.model.clone(),
+                moderation_provider.api_key.clone(),
+                moderation_provider.api_base.clone(),
+              )
+            };
+
+            match moderator.check(moderation_input).await {
+              Ok(result) => {
+                tracing::info!(
+                  provider = result.provider,
+                  ?result.decision,
+                  score = ?result.score,
+                  reason = ?result.reason,
+                  "comment moderation result"
+                );
+                match result.decision {
+                  moderation::ModerationDecision::Allow => CommentStatus::Approved,
+                  moderation::ModerationDecision::Review => CommentStatus::Pending,
+                  moderation::ModerationDecision::Reject => CommentStatus::Spam,
+                }
+              }
+              Err(error) => {
+                tracing::error!(?error, "comment moderation failed");
+                CommentStatus::Pending
+              }
+            }
+          }
+          provider_codes::AKISMET => {
+            tracing::warn!(
+              site_id = moderation_provider.site_id,
+              "akismet moderation provider configured but not implemented"
+            );
+            CommentStatus::Pending
+          }
+          provider => {
+            tracing::warn!(
+              provider,
+              site_id = moderation_provider.site_id,
+              "unsupported moderation provider"
+            );
+            CommentStatus::Pending
+          }
+        };
+
+        if let Err(e) = comment_repo
+          .update_status_if_pending(comment.id, status)
+          .await
+          .with_op("update comment status")
+        {
+          tracing::error!(?e, "failed to update comment status");
+        };
+      });
+    }
+
+    Ok(CommentView::from_model(comment))
   }
 
   pub async fn list_comments(
@@ -98,18 +183,18 @@ impl AppService {
       .await
       .with_op("query comments")?;
     let root_ids: Vec<i64> = roots.iter().map(|c| c.id).collect();
-    let all_replies = self
+    let reply_limit = 3;
+    let preview_replies = self
       .repo
       .comment()
-      .find_all_replies_by_thread_ids(root_ids)
+      .find_preview_replies_by_thread_ids(root_ids, reply_limit)
       .await
       .with_op("find all replies by thread ids")?;
-    let reply_limit = 3;
     let items = roots
       .into_iter()
       .map(|root| {
         let mut view = CommentView::from_model(root);
-        let mut thread_replies: Vec<CommentView> = all_replies
+        let mut thread_replies: Vec<CommentView> = preview_replies
           .iter()
           .filter(|r| r.thread_id == Some(view.id))
           .map(|r| CommentView::from_model(r.clone()))
@@ -148,7 +233,7 @@ impl AppService {
     let (replies, total, total_pages) = self
       .repo
       .comment()
-      .find_replies_by_thread(id, qs.site_id, &qs.page_path, qs.page_size, qs.page_offset)
+      .find_thread_replies_paged(id, qs.site_id, &qs.page_path, qs.page_size, qs.page_offset)
       .await
       .with_op("query replies")?;
     let items: Vec<CommentView> = replies.into_iter().map(CommentView::from_model).collect();
@@ -169,17 +254,29 @@ impl AppService {
       .await
       .with_op("find comment by id")?
       .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+
     if comment.user_id != Some(user_id) {
       return Err(AppError::forbidden(
         "You are not the owner of this comment".to_string(),
       ));
     }
-    self
-      .repo
-      .comment()
-      .soft_delete(comment)
-      .await
-      .with_op("delete comment")?;
+
+    if comment.parent_id.is_none() {
+      self
+        .repo
+        .comment()
+        .soft_delete_thread(comment.id)
+        .await
+        .with_op("delete comment thread")?;
+    } else {
+      self
+        .repo
+        .comment()
+        .soft_delete(comment)
+        .await
+        .with_op("delete comment")?;
+    }
+
     Ok(())
   }
 }
