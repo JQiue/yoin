@@ -1,7 +1,8 @@
+use helpers::time::utc_now;
 use migration::enums::CommentStatus;
 use sea_orm::{
   ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, Order,
-  PaginatorTrait, QueryFilter, QueryOrder, entity::prelude::*,
+  PaginatorTrait, QueryFilter, QueryOrder, UpdateResult, entity::prelude::*,
 };
 
 use crate::entity::{comments, prelude::Comments};
@@ -28,37 +29,6 @@ pub struct CommentRepository {
 }
 
 impl CommentRepository {
-  pub async fn find_roots_paged(
-    &self,
-    site_id: i64,
-    page_path: &str,
-    page_size: u64,
-    page_offset: u64,
-    sort: &str,
-  ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
-    let (sort_col, sort_ord) = match sort {
-      "created_asc" => (comments::Column::CreatedAt, Order::Asc),
-      "created_desc" => (comments::Column::CreatedAt, Order::Desc),
-      "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
-      "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
-      "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
-      "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
-      _ => (comments::Column::CreatedAt, Order::Desc),
-    };
-    let paginator = Comments::find()
-      .filter(comments::Column::SiteId.eq(site_id))
-      .filter(comments::Column::PagePath.eq(page_path))
-      .filter(comments::Column::Status.is_not_in([CommentStatus::Spam, CommentStatus::Deleted]))
-      .filter(comments::Column::ParentId.is_null())
-      .order_by(sort_col, sort_ord)
-      .paginate(self.conn, page_size);
-    let total = paginator.num_items().await?;
-    let total_pages = (total as f64 / page_size as f64).ceil() as u64;
-    let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
-    let comments = paginator.fetch_page(page_idx).await?;
-    Ok((comments, total, total_pages))
-  }
-
   pub async fn create(&self, data: CommentCreateData) -> Result<comments::Model, DbErr> {
     let mut active_comment = comments::ActiveModel {
       site_id: Set(data.site_id),
@@ -89,6 +59,37 @@ impl CommentRepository {
     Comments::find_by_id(id).one(self.conn).await
   }
 
+  pub async fn find_roots_paged(
+    &self,
+    site_id: i64,
+    page_path: &str,
+    page_size: u64,
+    page_offset: u64,
+    sort: &str,
+  ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
+    let (sort_col, sort_ord) = match sort {
+      "created_asc" => (comments::Column::CreatedAt, Order::Asc),
+      "created_desc" => (comments::Column::CreatedAt, Order::Desc),
+      "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
+      "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
+      "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
+      "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
+      _ => (comments::Column::CreatedAt, Order::Desc),
+    };
+    let paginator = Comments::find()
+      .filter(comments::Column::SiteId.eq(site_id))
+      .filter(comments::Column::PagePath.eq(page_path))
+      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
+      .filter(comments::Column::ParentId.is_null())
+      .order_by(sort_col, sort_ord)
+      .paginate(self.conn, page_size);
+    let total = paginator.num_items().await?;
+    let total_pages = (total as f64 / page_size as f64).ceil() as u64;
+    let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
+    let comments = paginator.fetch_page(page_idx).await?;
+    Ok((comments, total, total_pages))
+  }
+
   pub async fn find_all_replies_by_thread_ids(
     &self,
     thread_ids: Vec<i64>,
@@ -96,7 +97,8 @@ impl CommentRepository {
     Comments::find()
       .filter(comments::Column::ThreadId.is_in(thread_ids))
       .filter(comments::Column::ParentId.is_not_null())
-      .filter(comments::Column::Status.is_not_in([CommentStatus::Spam, CommentStatus::Deleted]))
+      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
+      .order_by(comments::Column::CreatedAt, Order::Asc)
       .all(self.conn)
       .await
   }
@@ -113,7 +115,7 @@ impl CommentRepository {
       .filter(comments::Column::SiteId.eq(site_id))
       .filter(comments::Column::ThreadId.eq(thread_id))
       .filter(comments::Column::PagePath.eq(page_path))
-      .filter(comments::Column::Status.is_not_in([CommentStatus::Spam]))
+      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
       .order_by(comments::Column::CreatedAt, Order::Asc)
       .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
@@ -127,10 +129,22 @@ impl CommentRepository {
     comments::ActiveModel {
       id: Set(comment.id),
       status: Set(CommentStatus::Deleted),
-      deleted_at: Set(Some(comment.created_at)),
+      deleted_at: Set(Some(utc_now().naive_utc())),
       ..Default::default()
     }
     .update(self.conn)
     .await
+  }
+
+  pub async fn soft_delete_thread(&self, thread_id: i64) -> Result<UpdateResult, DbErr> {
+    Comments::update_many()
+      .filter(comments::Column::ThreadId.eq(thread_id))
+      .set(comments::ActiveModel {
+        status: Set(CommentStatus::Deleted),
+        deleted_at: Set(Some(utc_now().naive_utc())),
+        ..Default::default()
+      })
+      .exec(self.conn)
+      .await
   }
 }
