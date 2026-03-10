@@ -1,8 +1,8 @@
 use helpers::time::utc_now;
 use migration::enums::CommentStatus;
 use sea_orm::{
-  ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, Order,
-  PaginatorTrait, QueryFilter, QueryOrder, UpdateResult, entity::prelude::*,
+  ActiveModelTrait, ActiveValue::Set, ColumnTrait, Condition, DatabaseConnection, DbErr,
+  EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, UpdateResult, entity::prelude::*,
 };
 
 use crate::entity::{comments, prelude::Comments};
@@ -21,6 +21,7 @@ pub struct CommentCreateData {
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
+  pub status: CommentStatus,
   pub datetime: DateTime,
 }
 
@@ -43,6 +44,7 @@ impl CommentRepository {
       location: Set(data.location),
       avatar: Set(data.avatar),
       is_sticky: Set(data.is_sticky),
+      status: Set(data.status),
       created_at: Set(data.datetime),
       updated_at: Set(data.datetime),
       ..Default::default()
@@ -90,20 +92,40 @@ impl CommentRepository {
     Ok((comments, total, total_pages))
   }
 
-  pub async fn find_all_replies_by_thread_ids(
+  pub async fn find_preview_replies_by_thread_ids(
     &self,
     thread_ids: Vec<i64>,
+    per_thread_limit: usize,
   ) -> Result<Vec<comments::Model>, DbErr> {
-    Comments::find()
+    let all = Comments::find()
       .filter(comments::Column::ThreadId.is_in(thread_ids))
       .filter(comments::Column::ParentId.is_not_null())
       .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
+      .order_by(comments::Column::ThreadId, Order::Asc)
       .order_by(comments::Column::CreatedAt, Order::Asc)
       .all(self.conn)
-      .await
+      .await?;
+
+    let mut counts = std::collections::HashMap::<i64, usize>::new();
+    let mut preview = Vec::new();
+    let limit = per_thread_limit + 1;
+
+    for comment in all {
+      let Some(thread_id) = comment.thread_id else {
+        continue;
+      };
+
+      let count = counts.entry(thread_id).or_insert(0);
+      if *count < limit {
+        preview.push(comment);
+        *count += 1;
+      }
+    }
+
+    Ok(preview)
   }
 
-  pub async fn find_replies_by_thread(
+  pub async fn find_thread_replies_paged(
     &self,
     thread_id: i64,
     site_id: i64,
@@ -136,12 +158,32 @@ impl CommentRepository {
     .await
   }
 
-  pub async fn soft_delete_thread(&self, thread_id: i64) -> Result<UpdateResult, DbErr> {
+  pub async fn soft_delete_thread(&self, root_id: i64) -> Result<UpdateResult, DbErr> {
     Comments::update_many()
-      .filter(comments::Column::ThreadId.eq(thread_id))
+      .filter(
+        Condition::any()
+          .add(comments::Column::ThreadId.eq(root_id))
+          .add(comments::Column::Id.eq(root_id)),
+      )
       .set(comments::ActiveModel {
         status: Set(CommentStatus::Deleted),
         deleted_at: Set(Some(utc_now().naive_utc())),
+        ..Default::default()
+      })
+      .exec(self.conn)
+      .await
+  }
+
+  pub async fn update_status_if_pending(
+    &self,
+    id: i64,
+    status: CommentStatus,
+  ) -> Result<UpdateResult, DbErr> {
+    Comments::update_many()
+      .filter(comments::Column::Id.eq(id))
+      .filter(comments::Column::Status.eq(CommentStatus::Pending))
+      .set(comments::ActiveModel {
+        status: Set(status),
         ..Default::default()
       })
       .exec(self.conn)
