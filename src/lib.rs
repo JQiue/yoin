@@ -6,6 +6,8 @@ pub mod error;
 pub mod extractor;
 pub mod handler;
 pub mod helper;
+pub mod moderation;
+pub mod rbac;
 pub mod repository;
 pub mod response;
 pub mod service;

@@ -1,15 +1,19 @@
 use helpers::time::utc_now;
+use migration::enums::UserRoleBindingScopeType;
 
 use super::AppService;
 use crate::{
   error::{AppError, ToAppError},
   handler::site::{CreateSitePayload, SiteView, UpdateSitePayload},
+  rbac::permissions::codes::SITE_MANAGE,
   repository::{SiteCreateData, SiteUpdateData},
 };
 
 impl AppService {
   pub async fn list_sites(&self, user_id: i64) -> Result<Vec<SiteView>, AppError> {
-    self.require_admin(user_id).await?;
+    self
+      .require_permission(user_id, SITE_MANAGE, UserRoleBindingScopeType::Global, None)
+      .await?;
     let sites = self
       .repo
       .site()
@@ -32,7 +36,9 @@ impl AppService {
     user_id: i64,
     payload: CreateSitePayload,
   ) -> Result<SiteView, AppError> {
-    self.require_admin(user_id).await?;
+    self
+      .require_permission(user_id, SITE_MANAGE, UserRoleBindingScopeType::Global, None)
+      .await?;
     let datetime = utc_now().naive_utc();
     let site = self
       .repo
@@ -58,7 +64,9 @@ impl AppService {
     user_id: i64,
     payload: UpdateSitePayload,
   ) -> Result<SiteView, AppError> {
-    self.require_admin(user_id).await?;
+    self
+      .require_permission(user_id, SITE_MANAGE, UserRoleBindingScopeType::Global, None)
+      .await?;
     let site = self
       .repo
       .site()

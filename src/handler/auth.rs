@@ -9,6 +9,7 @@ use crate::{
   error::AppError,
   extractor::{AppJson, RequireAuth},
   helper::OauthService,
+  rbac::permissions::codes::OAUTH_PROVIDER_MANAGE,
   response::ApiResponse,
 };
 
@@ -33,7 +34,6 @@ pub struct UserProfile {
   pub nickname: String,
   pub website: String,
   pub email: String,
-  pub role: String,
 }
 
 pub async fn register(
@@ -82,10 +82,10 @@ pub async fn create_oauth_provider(
   require_auth: RequireAuth,
   AppJson(payload): AppJson<CreateOauthProviderPayload>,
 ) -> Result<ApiResponse<()>, AppError> {
-  if !state.is_admin(require_auth.user_id).await {
-    return Err(AppError::forbidden("You are not admin".to_string()));
-  }
-
+  state
+    .service
+    .require_global_permission(require_auth.user_id, OAUTH_PROVIDER_MANAGE)
+    .await?;
   state.service.create_oauth_provider(payload).await?;
   Ok(ApiResponse::success(()))
 }
@@ -162,6 +162,6 @@ pub async fn oauth_callback(
   oauth.config.redirect_uri = provider_config.redirect_uri;
   oauth.config.code = &qs.code;
   let access_token = oauth.exchange_code();
-  let user_profile = oauth.fetch_profile(access_token)?;
+  let _user_profile = oauth.fetch_profile(access_token)?;
   Ok(ApiResponse::success(()))
 }

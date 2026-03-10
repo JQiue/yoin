@@ -4,7 +4,6 @@ use helpers::{
   time::utc_now,
   uuid::{Alphabet, nanoid},
 };
-use migration::enums::UserRole;
 
 use super::AppService;
 use crate::{
@@ -14,6 +13,7 @@ use crate::{
     user::UpdateProfilePayload,
   },
   helper::generate_avatar,
+  rbac::bootstrap::ensure_super_admin_binding,
   repository::{UserCreateData, UserUpdateData},
 };
 
@@ -37,24 +37,24 @@ impl AppService {
         "User already exists".to_string(),
       ));
     }
+
     let datetime = utc_now().naive_utc();
-    let role = if self
+    let is_first_user = self
       .repo
       .user()
       .exists_any()
       .await
-      .with_op("is first user")?
-    {
+      .with_op("is first user")?;
+
+    if is_first_user {
       self
         .repo
         .site()
         .create_default(datetime)
         .await
         .with_op("create default site")?;
-      UserRole::Admin
-    } else {
-      UserRole::Normal
-    };
+    }
+
     let password = argon2(&password, &nanoid(&Alphabet::DEFAULT, 8)).with_op("hash_password")?;
     let new_user = self
       .repo
@@ -65,11 +65,15 @@ impl AppService {
         email: email.clone(),
         website,
         avatar: generate_avatar(&email),
-        role,
         datetime,
       })
       .await
       .with_op("insert_user")?;
+
+    if is_first_user {
+      ensure_super_admin_binding(&self.repo, new_user.id).await?;
+    }
+
     let token = jwt::sign(new_user.id, jwt_key, 30 * 24 * 60 * 60).with_op("sign jwt token")?;
 
     Ok(UserWithToken {
@@ -78,7 +82,6 @@ impl AppService {
         avatar: new_user.avatar,
         nickname: new_user.nickname,
         website: new_user.website,
-        role: new_user.role.to_string(),
         email,
       },
     })
@@ -110,7 +113,6 @@ impl AppService {
         avatar: user.avatar,
         nickname: user.nickname,
         website: user.website,
-        role: user.role.to_string(),
         email: user.email,
       },
       token,
@@ -129,7 +131,6 @@ impl AppService {
       avatar: user.avatar,
       nickname: user.nickname,
       website: user.website,
-      role: user.role.to_string(),
       email: user.email,
     })
   }
@@ -164,7 +165,6 @@ impl AppService {
       avatar: updated_user.avatar,
       nickname: updated_user.nickname,
       website: updated_user.website,
-      role: updated_user.role.to_string(),
       email: updated_user.email,
     })
   }

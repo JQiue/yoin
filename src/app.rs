@@ -11,7 +11,7 @@ use axum::{
   response::{IntoResponse, Response},
   routing::{delete, get, post},
 };
-use migration::enums::UserRole;
+use migration::enums::UserRoleBindingScopeType;
 use sea_orm::DatabaseConnection;
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
@@ -23,6 +23,7 @@ use crate::{
   extractor::{OptionnalAuth, RemoteIp, RequireAuth},
   handler::{auth, comment, health, site, user},
   helper::RateLimiter,
+  rbac::{bootstrap::bootstrap_rbac, permissions::roles::SUPER_ADMIN},
   repository::Repository,
   service::AppService,
 };
@@ -62,18 +63,25 @@ impl AppState {
       site_config.insert(site.id, site.config);
     }
     drop(site_config);
-    let users = self
+    let role = self
       .service
       .repo
-      .user()
-      .find_all()
+      .role()
+      .find_by_name(SUPER_ADMIN)
       .await
-      .with_op("get all users")?;
+      .with_op("find super admin role")?;
     let mut admin_ids = self.admin_ids.lock().await;
     admin_ids.clear();
-    for user in users {
-      if user.role == UserRole::Admin {
-        admin_ids.insert(user.id);
+    if let Some(role) = role {
+      let bindings = self
+        .service
+        .repo
+        .user_role_binding()
+        .find_all_by_role_and_scope(role.id, UserRoleBindingScopeType::Global, None)
+        .await
+        .with_op("find global super admin bindings")?;
+      for binding in bindings {
+        admin_ids.insert(binding.user_id);
       }
     }
     Ok(())
@@ -199,6 +207,7 @@ pub async fn app(conn: &'static DatabaseConnection, jwt_key: String) -> Result<R
       repo: Repository::new(conn),
     },
   });
+  bootstrap_rbac(&state.service.repo).await?;
   state.preload_configs().await?;
   Ok(create_router(state))
 }
