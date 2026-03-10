@@ -1,7 +1,17 @@
 import { create } from "zustand";
-import { fetchCommentsList } from "../api";
+import { deleteComment, fetchCommentsList } from "../api";
+import type { Comment } from "../api/types";
 import type { CommentsState } from "./type";
 import { useConfigStore } from "./useConfigStore";
+
+const removeCommentById = (comments: Comment[], id: number): Comment[] => {
+	return comments
+		.filter((comment) => comment.id !== id)
+		.map((comment) => ({
+			...comment,
+			replies: comment.replies ? removeCommentById(comment.replies, id) : comment.replies,
+		}));
+};
 
 export const useCommentStore = create<CommentsState>((set, get) => ({
 	comments: [],
@@ -45,5 +55,10 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
 	changeSort: (newSort: string) => {
 		set({ sort: newSort, pageOffset: 1 });
 		get().fetchComments();
+	},
+	deleteComment: async (id: number) => {
+		const { comments, total } = get();
+		set({ comments: removeCommentById(comments, id), total:  total - 1});
+		await deleteComment(id);
 	},
 }));

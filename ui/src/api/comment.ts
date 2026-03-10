@@ -38,3 +38,26 @@ export const sendComment = (
 		parent_id,
 	});
 };
+
+export const deleteComment = (id: number) => {
+	return http.delete(`/api/comments/${id}`);
+};
+
+export const fetchCommentReplies = (
+	id: number,
+	site_id: number,
+	page_offset: number,
+	page_size: number,
+	page_path: string,
+	sort: string,
+) => {
+	return http.get<Paged<Comment[]>>(`/api/comments/${id}/replies`, {
+		params: {
+			site_id,
+			page_offset,
+			page_size,
+			page_path,
+			sort,
+		},
+	});
+};

@@ -1,3 +1,4 @@
+import { storage } from "../helper";
 import { http } from "./client";
 import type { Login } from "./types";
 
@@ -5,6 +6,7 @@ export const login = (
   email: string,
   password: string,
 ) => {
+  storage.set("yoin:token", "");
   return http.post<Login>("/api/auth/login", {
       email,
       password,

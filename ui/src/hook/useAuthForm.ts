@@ -43,6 +43,7 @@ export const useAuthForm = (onSuccess?: ()=>void) => {
             nickname: resData.data.nickname,
             website: resData.data.website,
             email: resData.data.email,
+            avatar: resData.data.avatar,
           });
           setUser(resData.data);
           setSubmitStatus({ type: "success", msg: "登录成功" });

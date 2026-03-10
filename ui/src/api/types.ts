@@ -42,5 +42,4 @@ export type Login = {
 	nickname: string;
   website: string;
 	email: string;
-  role: string;
 }

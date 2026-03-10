@@ -2,6 +2,7 @@ interface UserInfo {
   nickname: string;
   website: string;
   email: string;
+  avatar?: string;
 }
 
 interface StorageSchema {

@@ -1,4 +1,4 @@
-import { useCommentStore } from "../store";
+import { useCommentStore } from "@/src/store";
 
 export default () => {
 	const { sort, changeSort, isLoading } = useCommentStore();
@@ -9,7 +9,7 @@ export default () => {
 	];
 
 	return (
-		<nav className="inline-flex p-1 bg-app-bg rounded-sm border-app-border shadow-sm">
+		<nav className="inline-flex p-1">
 			{tabs.map((tab) => {
 				const isActive = sort === tab.value;
 				return (
@@ -19,9 +19,9 @@ export default () => {
 						disabled={isLoading}
 						onClick={() => !isActive && changeSort(tab.value)}
 						className={`
-              relative px-5 py-1.5 text-xs font-bold rounded-sm transition-all
-              ${isActive ? "shadow-md" : "hover:text-zinc-700"}
-              ${isLoading ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+              relative px-5 py-1.5 text-xs font-bold transition-all rounded-md
+              ${isActive ? "bg-zinc-100 " : "hover:text-zinc-500 hover:bg-zinc-100"}
+              ${isLoading ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}
             `}
 					>
 						{tab.label}

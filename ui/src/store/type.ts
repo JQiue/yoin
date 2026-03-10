@@ -34,4 +34,5 @@ export interface CommentsState {
 	fetchComments: (pageOffset?: number, append?: boolean) => void;
 	fetchNextPage: () => void;
 	changeSort: (newSort: string) => void;
+	deleteComment: (id: number) => void;
 }
