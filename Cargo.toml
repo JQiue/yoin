@@ -24,6 +24,8 @@ tower-http = "0.6.8"
 helpers = "0.6.1"
 ureq = "3.2.0"
 url = "2.5.8"
+pulldown-cmark = "0.13.1"
+async-openai = "0.33.0"
 
 [dependencies]
 tower-http = { workspace = true, features = ["trace", "cors"] }
@@ -45,6 +47,8 @@ helpers = { workspace = true, features = ["hash", "jwt", "time", "uuid"] }
 tower.workspace = true
 ureq.workspace = true
 url.workspace = true
+pulldown-cmark.workspace = true
+async-openai = { workspace = true, features = ["full"] }
 
 [build-dependencies]
 tracing = { workspace = true }
