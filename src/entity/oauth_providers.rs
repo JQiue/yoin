@@ -3,15 +3,15 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "users")]
+#[sea_orm(table_name = "oauth_providers")]
 pub struct Model {
   #[sea_orm(primary_key)]
   pub id: i64,
-  pub nickname: String,
-  pub password: String,
-  pub email: String,
-  pub avatar: String,
-  pub website: String,
+  pub site_id: Option<i64>,
+  pub enabled: bool,
+  pub provider_code: String,
+  pub client_id: String,
+  pub client_secret: String,
   pub created_at: DateTime,
   pub updated_at: DateTime,
 }

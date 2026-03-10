@@ -2,6 +2,15 @@
 
 pub mod prelude;
 
+pub mod comment_subscriptions;
 pub mod comments;
+pub mod moderation_providers;
+pub mod oauth_providers;
+pub mod permissions;
+pub mod reactions;
+pub mod role_permissions;
+pub mod roles;
 pub mod sites;
+pub mod user_identities;
+pub mod user_role_bindings;
 pub mod users;

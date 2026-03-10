@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use crate::enums::{CommentStatus, UserRole};
+use crate::enums::CommentStatus;
 
 #[derive(Iden)]
 enum Users {
@@ -10,7 +10,6 @@ enum Users {
   Password,
   Email,
   Avatar,
-  Role,
   Website,
   CreatedAt,
   UpdatedAt,
@@ -21,8 +20,10 @@ enum UserIdentities {
   Table,
   Id,
   UserId,
-  ProviderId,
+  Provider,
   ProviderUserId,
+  Email,
+  Profile,
   CreatedAt,
   UpdatedAt,
 }
@@ -144,6 +145,21 @@ enum UserRoleBindings {
   UpdatedAt,
 }
 
+#[derive(Iden)]
+enum ModerationProviders {
+  Table,
+  Id,
+  SiteId,
+  Provider,
+  Enabled,
+  Model,
+  ApiBase,
+  ApiKey,
+  Prompt,
+  CreatedAt,
+  UpdatedAt,
+}
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -160,7 +176,6 @@ impl MigrationTrait for Migration {
           .col(string(Users::Password))
           .col(string(Users::Email).unique_key())
           .col(string(Users::Avatar))
-          .col(string(Users::Role).default(UserRole::Normal))
           .col(string(Users::Website))
           .col(date_time(Users::CreatedAt))
           .col(date_time(Users::UpdatedAt))
@@ -211,27 +226,56 @@ impl MigrationTrait for Migration {
     manager
       .create_table(
         Table::create()
+          .table(ModerationProviders::Table)
+          .if_not_exists()
+          .col(big_pk_auto(ModerationProviders::Id))
+          .col(big_integer(ModerationProviders::SiteId))
+          .col(string(ModerationProviders::Provider))
+          .col(boolean(ModerationProviders::Enabled).default(true))
+          .col(string(ModerationProviders::Model))
+          .col(string(ModerationProviders::ApiBase))
+          .col(string(ModerationProviders::ApiKey))
+          .col(text(ModerationProviders::Prompt).null())
+          .col(date_time(ModerationProviders::CreatedAt))
+          .col(date_time(ModerationProviders::UpdatedAt))
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-moderation-providers-site_id")
+              .from(ModerationProviders::Table, ModerationProviders::SiteId)
+              .to(Sites::Table, Sites::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .to_owned(),
+      )
+      .await?;
+
+    manager
+      .create_table(
+        Table::create()
           .table(UserIdentities::Table)
           .if_not_exists()
           .col(big_pk_auto(UserIdentities::Id))
           .col(big_integer(UserIdentities::UserId))
-          .col(big_integer(UserIdentities::ProviderId))
+          .col(string(UserIdentities::Provider))
           .col(string(UserIdentities::ProviderUserId))
+          .col(string(UserIdentities::Email).null())
+          .col(json(UserIdentities::Profile).null())
           .col(date_time(UserIdentities::CreatedAt))
           .col(date_time(UserIdentities::UpdatedAt))
+          .index(
+            Index::create()
+              .name("idx-user_identities-provider-subject-unique")
+              .table(UserIdentities::Table)
+              .col(UserIdentities::Provider)
+              .col(UserIdentities::ProviderUserId)
+              .unique(),
+          )
           .foreign_key(
             ForeignKey::create()
               .name("fk-user_identities-user_id")
               .from(UserIdentities::Table, UserIdentities::UserId)
               .to(Users::Table, Users::Id)
-              .on_delete(ForeignKeyAction::Cascade)
-              .on_update(ForeignKeyAction::Cascade),
-          )
-          .foreign_key(
-            ForeignKey::create()
-              .name("fk-user_identities-provider_id")
-              .from(UserIdentities::Table, UserIdentities::ProviderId)
-              .to(OauthProviders::Table, OauthProviders::Id)
               .on_delete(ForeignKeyAction::Cascade)
               .on_update(ForeignKeyAction::Cascade),
           )
@@ -448,6 +492,9 @@ impl MigrationTrait for Migration {
       .await?;
     manager
       .drop_table(Table::drop().table(UserIdentities::Table).to_owned())
+      .await?;
+    manager
+      .drop_table(Table::drop().table(ModerationProviders::Table).to_owned())
       .await?;
     manager
       .drop_table(Table::drop().table(OauthProviders::Table).to_owned())

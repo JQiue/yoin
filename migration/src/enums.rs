@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use sea_orm_migration::{
   prelude::*,
   sea_orm::{DeriveActiveEnum, EnumIter},
@@ -20,18 +18,36 @@ pub enum CommentStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
-pub enum UserRole {
-  #[sea_orm(string_value = "normal")]
-  Normal,
-  #[sea_orm(string_value = "admin")]
-  Admin,
+pub enum ReactionActorType {
+  #[sea_orm(string_value = "user")]
+  User,
+  #[sea_orm(string_value = "guest")]
+  Guest,
 }
 
-impl Display for UserRole {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      UserRole::Normal => write!(f, "normal"),
-      UserRole::Admin => write!(f, "admin"),
-    }
-  }
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+pub enum ReactionTargetType {
+  #[sea_orm(string_value = "comment")]
+  Comment,
+  #[sea_orm(string_value = "site")]
+  Site,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+pub enum CommentSubscriptionEventType {
+  #[sea_orm(string_value = "reply")]
+  Reply,
+  #[sea_orm(string_value = "mention")]
+  Mention,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+pub enum UserRoleBindingScopeType {
+  #[sea_orm(string_value = "global")]
+  Global,
+  #[sea_orm(string_value = "site")]
+  Site,
 }
