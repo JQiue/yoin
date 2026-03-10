@@ -14,7 +14,6 @@ pub struct UserCreateData {
   pub email: String,
   pub website: String,
   pub avatar: String,
-  pub role: migration::enums::UserRole,
   pub datetime: DateTime,
 }
 
@@ -26,7 +25,6 @@ pub struct UserUpdateData {
   pub email: Option<String>,
   pub website: Option<String>,
   pub avatar: Option<String>,
-  pub role: Option<migration::enums::UserRole>,
   pub datetime: DateTime,
 }
 
@@ -71,7 +69,6 @@ impl UserRepository {
       password: Set(data.password),
       email: Set(data.email),
       avatar: Set(data.avatar),
-      role: Set(data.role),
       website: Set(data.website),
       created_at: Set(data.datetime),
       updated_at: Set(data.datetime),
@@ -100,9 +97,6 @@ impl UserRepository {
     }
     if let Some(avatar) = data.avatar {
       user.avatar = Set(avatar);
-    }
-    if let Some(role) = data.role {
-      user.role = Set(role);
     }
     user.update(self.conn).await
   }
