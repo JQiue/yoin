@@ -9,7 +9,7 @@ use axum::{
   http::{HeaderMap, StatusCode, header},
   middleware::{self, from_extractor, from_extractor_with_state},
   response::{IntoResponse, Response},
-  routing::{delete, get, post},
+  routing::{delete, get, patch, post},
 };
 use migration::enums::UserRoleBindingScopeType;
 use sea_orm::DatabaseConnection;
@@ -21,7 +21,7 @@ use crate::{
   entity::sites::SiteConfig,
   error::{AppError, ToAppError},
   extractor::{OptionnalAuth, RemoteIp, RequireAuth},
-  handler::{auth, comment, health, site, user},
+  handler::{auth, comment, health, moderation, reaction, site, subscription, user},
   helper::RateLimiter,
   rbac::{bootstrap::bootstrap_rbac, permissions::roles::SUPER_ADMIN},
   repository::Repository,
@@ -154,6 +154,7 @@ fn create_router(state: Arc<AppState>) -> Router {
     .route("/health", get(health::health_check))
     .route("/auth/register", post(auth::register))
     .route("/auth/login", post(auth::login))
+    .route("/auth/external/exchange", post(auth::external_exchange))
     .route("/auth/oauth/{provider}/start", get(auth::oauth_start))
     .route("/auth/oauth/{provider}/callback", get(auth::oauth_callback))
     .route("/comments", post(comment::create).get(comment::list))
@@ -165,11 +166,32 @@ fn create_router(state: Arc<AppState>) -> Router {
   let private_routes = Router::new()
     .route("/users/me", get(user::profile).patch(user::update_profile))
     .route("/comments/{id}", delete(comment::delete))
+    .route("/comment-subscriptions", get(subscription::list).post(subscription::create))
+    .route("/comment-subscriptions/{id}", delete(subscription::delete))
+    .route("/reactions", post(reaction::create))
+    .route("/reactions/{id}", delete(reaction::delete))
     .route(
       "/sites",
       post(site::create).get(site::list).patch(site::update),
     )
     .route("/admin/oauth/providers", post(auth::create_oauth_provider))
+    .route(
+      "/admin/moderation/providers",
+      get(moderation::list_providers).post(moderation::create_provider),
+    )
+    .route(
+      "/admin/moderation/providers/{id}",
+      patch(moderation::update_provider),
+    )
+    .route("/admin/comments/pending", get(moderation::list_pending_comments))
+    .route(
+      "/admin/comments/{id}/approve",
+      patch(moderation::approve_comment),
+    )
+    .route(
+      "/admin/comments/{id}/reject",
+      patch(moderation::reject_comment),
+    )
     .route_layer(from_extractor_with_state::<RequireAuth, Arc<AppState>>(
       Arc::clone(&state),
     ));

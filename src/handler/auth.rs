@@ -70,6 +70,24 @@ pub async fn login(
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ExternalExchangePayload {
+  pub provider: String,
+  pub token: String,
+}
+
+pub async fn external_exchange(
+  State(state): State<Arc<AppState>>,
+  AppJson(payload): AppJson<ExternalExchangePayload>,
+) -> Result<ApiResponse<UserWithToken>, AppError> {
+  Ok(ApiResponse::success(
+    state
+      .service
+      .external_auth_exchange(payload, &state.jwt_key)
+      .await?,
+  ))
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateOauthProviderPayload {
   pub provider_code: String,
   pub client_id: String,

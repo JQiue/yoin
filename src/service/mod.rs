@@ -1,6 +1,9 @@
 mod comment;
+mod moderation;
 mod oauth;
+mod reaction;
 mod site;
+mod subscription;
 mod user;
 
 use migration::enums::UserRoleBindingScopeType;
