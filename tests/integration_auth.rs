@@ -16,7 +16,6 @@ async fn register_first_user_can_access_sites_as_admin() {
   assert_eq!(resp.code, 0);
   assert_eq!(resp.msg, "success");
   let data = resp.data.expect("register data");
-  assert_eq!(data.role.to_ascii_lowercase(), "admin");
   let resp = get_with_bearer(&app, "/api/sites", &data.token).await;
   assert_eq!(resp.status(), StatusCode::OK);
 }

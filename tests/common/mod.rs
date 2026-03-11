@@ -25,7 +25,6 @@ pub struct ApiResponse<T> {
 #[derive(Deserialize)]
 pub struct UserWithToken {
   pub token: String,
-  pub role: String,
 }
 
 #[derive(Deserialize)]

@@ -53,9 +53,34 @@ async fn anonymous_comment_allowed_when_site_enables_it() {
 
   let body: ApiResponse<CommentView> = read_json(resp).await;
   let comment = body.data.expect("comment");
-  assert_eq!(comment.content, "hello world");
+  assert_eq!(comment.content, "<p>hello world</p>\n");
   assert_eq!(comment.nickname, "guest");
   assert_eq!(comment.thread_id, None);
+}
+
+#[tokio::test]
+async fn create_comment_returns_html_content() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-markdown@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+  let site = create_site(&app, &admin.token, "MarkdownComments", true, 0)
+    .await
+    .data
+    .expect("site");
+
+  let resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site.id, "**hello** from markdown", None),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+
+  let body: ApiResponse<CommentView> = read_json(resp).await;
+  let comment = body.data.expect("comment");
+  assert!(comment.content.contains("<strong>hello</strong>"));
 }
 
 #[tokio::test]
@@ -105,7 +130,7 @@ async fn authenticated_user_comment_uses_profile_nickname() {
   let body: ApiResponse<CommentView> = read_json(resp).await;
   let comment = body.data.expect("comment");
   assert_eq!(comment.nickname, "tester");
-  assert_eq!(comment.content, "member comment");
+  assert_eq!(comment.content, "<p>member comment</p>\n");
 }
 
 #[tokio::test]
@@ -137,6 +162,36 @@ async fn reply_comment_sets_thread_id_and_parent_id() {
   let reply = reply_body.data.expect("reply");
   assert_eq!(reply.parent_id, Some(root.id));
   assert_eq!(reply.thread_id, Some(root.id));
+}
+
+#[tokio::test]
+async fn reply_parent_must_belong_to_same_site_and_page() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-cross-site@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+  let site_a = create_site(&app, &admin.token, "SiteA", true, 0)
+    .await
+    .data
+    .expect("site a");
+  let site_b = create_site(&app, &admin.token, "SiteB", true, 0)
+    .await
+    .data
+    .expect("site b");
+
+  let root_resp =
+    post_json(&app, "/api/comments", comment_payload(site_a.id, "root comment", None)).await;
+  let root_body: ApiResponse<CommentView> = read_json(root_resp).await;
+  let root = root_body.data.expect("root");
+
+  let resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site_b.id, "invalid cross site reply", Some(root.id)),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]
