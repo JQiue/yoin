@@ -4,6 +4,16 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 fn main() {
+  println!("cargo:rerun-if-changed=build.rs");
+  println!("cargo:rerun-if-changed=ui/package.json");
+  println!("cargo:rerun-if-changed=ui/pnpm-lock.yaml");
+  println!("cargo:rerun-if-changed=ui/tsconfig.json");
+  println!("cargo:rerun-if-changed=ui/rsbuild.config.ts");
+  println!("cargo:rerun-if-changed=ui/postcss.config.ts");
+  println!("cargo:rerun-if-changed=ui/biome.json");
+  println!("cargo:rerun-if-changed=ui/src");
+  println!("cargo:rerun-if-env-changed=YOIN_SKIP_UI_BUILD");
+
   let subscriber = FmtSubscriber::builder()
     .with_max_level(Level::INFO)
     .finish();
