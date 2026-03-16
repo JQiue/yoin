@@ -147,6 +147,13 @@ impl CommentRepository {
     Ok((comments, total, total_pages))
   }
 
+  pub async fn find_pending(&self) -> Result<Vec<comments::Model>, DbErr> {
+    Comments::find()
+      .filter(comments::Column::Status.eq(CommentStatus::Pending))
+      .all(self.conn)
+      .await
+  }
+
   pub async fn soft_delete(&self, comment: comments::Model) -> Result<comments::Model, DbErr> {
     comments::ActiveModel {
       id: Set(comment.id),

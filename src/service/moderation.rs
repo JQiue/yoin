@@ -1,6 +1,6 @@
 use super::AppService;
 use crate::{
-  error::AppError,
+  error::{AppError, ToAppError},
   handler::{
     comment::CommentView,
     moderation::{
@@ -30,7 +30,17 @@ impl AppService {
   }
 
   pub async fn list_pending_comments(&self) -> Result<Vec<CommentView>, AppError> {
-    todo!()
+    Ok(
+      self
+        .repo
+        .comment()
+        .find_pending()
+        .await
+        .with_op("find pending comments")?
+        .into_iter()
+        .map(CommentView::from_model)
+        .collect::<Vec<CommentView>>(),
+    )
   }
 
   pub async fn approve_comment(&self, _id: i64) -> Result<(), AppError> {
