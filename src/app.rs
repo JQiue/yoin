@@ -5,8 +5,7 @@ use std::{
 
 use axum::{
   Router,
-  body::Body,
-  http::{HeaderMap, StatusCode, header},
+  http::StatusCode,
   middleware::{self, from_extractor, from_extractor_with_state},
   response::{IntoResponse, Response},
   routing::{delete, get, patch, post},
@@ -21,7 +20,7 @@ use crate::{
   entity::sites::SiteConfig,
   error::{AppError, ToAppError},
   extractor::{OptionnalAuth, RemoteIp, RequireAuth},
-  handler::{auth, comment, health, moderation, reaction, site, subscription, user},
+  handler::{auth, comment, health, js, moderation, reaction, site, subscription, user},
   helper::RateLimiter,
   rbac::{bootstrap::bootstrap_rbac, permissions::roles::SUPER_ADMIN},
   repository::Repository,
@@ -119,36 +118,6 @@ impl AppState {
   }
 }
 
-async fn handle_js(headers: HeaderMap) -> impl IntoResponse {
-  let js = include_str!("../ui/dist/index.js");
-
-  #[cfg(debug_assertions)]
-  let (etag, cache_ctrl): (Option<&str>, &str) = (None, "no-store, must-revalidate");
-
-  #[cfg(not(debug_assertions))]
-  let (etag, cache_ctrl) = (
-    Some(concat!("\"", env!("CARGO_PKG_VERSION"), "\"")),
-    "no-cache",
-  );
-
-  if let Some(current_etag) = etag
-    && let Some(if_none_match) = headers.get(header::IF_NONE_MATCH)
-    && if_none_match == current_etag
-  {
-    return StatusCode::NOT_MODIFIED.into_response();
-  }
-
-  let mut builder = Response::builder()
-    .header(header::CONTENT_TYPE, "application/javascript")
-    .header(header::CACHE_CONTROL, cache_ctrl);
-
-  if let Some(current_etag) = etag {
-    builder = builder.header(header::ETAG, current_etag);
-  }
-
-  builder.body(Body::from(js)).unwrap().into_response()
-}
-
 fn create_router(state: Arc<AppState>) -> Router {
   let public_routes = Router::new()
     .route("/health", get(health::health_check))
@@ -166,7 +135,10 @@ fn create_router(state: Arc<AppState>) -> Router {
   let private_routes = Router::new()
     .route("/users/me", get(user::profile).patch(user::update_profile))
     .route("/comments/{id}", delete(comment::delete))
-    .route("/comment-subscriptions", get(subscription::list).post(subscription::create))
+    .route(
+      "/comment-subscriptions",
+      get(subscription::list).post(subscription::create),
+    )
     .route("/comment-subscriptions/{id}", delete(subscription::delete))
     .route("/reactions", post(reaction::create))
     .route("/reactions/{id}", delete(reaction::delete))
@@ -183,7 +155,10 @@ fn create_router(state: Arc<AppState>) -> Router {
       "/admin/moderation/providers/{id}",
       patch(moderation::update_provider),
     )
-    .route("/admin/comments/pending", get(moderation::list_pending_comments))
+    .route(
+      "/admin/comments/pending",
+      get(moderation::list_pending_comments),
+    )
     .route(
       "/admin/comments/{id}/approve",
       patch(moderation::approve_comment),
@@ -202,7 +177,8 @@ fn create_router(state: Arc<AppState>) -> Router {
     .route_layer(from_extractor::<RemoteIp>());
 
   Router::new()
-    .route("/static/yoin.js", get(handle_js))
+    .route("/static/client.js", get(js::handle_client_js))
+    .route("/static/admin.js", get(js::handle_admin_js))
     .nest("/api", api_routes)
     .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()))
     .layer(middleware::map_response(common_error_interceptor))
