@@ -2,9 +2,11 @@ use sea_orm_migration::{
   prelude::*,
   sea_orm::{DeriveActiveEnum, EnumIter},
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+#[serde(rename_all = "lowercase")]
 pub enum CommentStatus {
   #[sea_orm(string_value = "pending")]
   Pending,
