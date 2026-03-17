@@ -57,6 +57,38 @@ impl CommentRepository {
     active_comment.insert(self.conn).await
   }
 
+  pub async fn find_all_paged(
+    &self,
+    page_size: u64,
+    page_offset: u64,
+    sort: &str,
+    status: Option<CommentStatus>,
+  ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
+    let (sort_col, sort_ord) = match sort {
+      "created_asc" => (comments::Column::CreatedAt, Order::Asc),
+      "created_desc" => (comments::Column::CreatedAt, Order::Desc),
+      "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
+      "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
+      "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
+      "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
+      _ => (comments::Column::CreatedAt, Order::Desc),
+    };
+    let mut paginator = Comments::find();
+
+    if let Some(status) = status {
+      paginator = paginator.filter(comments::Column::Status.eq(status));
+    }
+
+    let paginator = paginator
+      .order_by(sort_col, sort_ord)
+      .paginate(self.conn, page_size);
+    let total = paginator.num_items().await?;
+    let total_pages = (total as f64 / page_size as f64).ceil() as u64;
+    let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
+    let comments = paginator.fetch_page(page_idx).await?;
+    Ok((comments, total, total_pages))
+  }
+
   pub async fn find_by_id(&self, id: i64) -> Result<Option<comments::Model>, DbErr> {
     Comments::find_by_id(id).one(self.conn).await
   }
@@ -175,6 +207,17 @@ impl CommentRepository {
       .set(comments::ActiveModel {
         status: Set(CommentStatus::Deleted),
         deleted_at: Set(Some(utc_now().naive_utc())),
+        ..Default::default()
+      })
+      .exec(self.conn)
+      .await
+  }
+
+  pub async fn update_status(&self, id: i64, status: CommentStatus) -> Result<UpdateResult, DbErr> {
+    Comments::update_many()
+      .filter(comments::Column::Id.eq(id))
+      .set(comments::ActiveModel {
+        status: Set(status),
         ..Default::default()
       })
       .exec(self.conn)
