@@ -1,4 +1,4 @@
-import { storage } from "../helper";
+import { storage } from "@/shared/helper";
 import { http } from "./client";
 import type { Login } from "./types";
 

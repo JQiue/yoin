@@ -1,5 +1,5 @@
-import { storage } from "../helper";
-import { useConfigStore } from "../store/useConfigStore";
+import { storage } from "@/shared/helper";
+import { useConfigStore } from "@/store/useConfigStore";
 import type { Method, RequestConfig, ResData } from "./types";
 
 function getApiBase() {
@@ -27,7 +27,9 @@ async function baseRequest<T>(
 
 	if (params) {
 		Object.keys(params).forEach((key) => {
-			fullUrl.searchParams.append(key, String(params[key]));
+			const value = params[key];
+			if (value == null) return;
+			fullUrl.searchParams.append(key, String(value));
 		});
 	}
 
@@ -57,6 +59,8 @@ export const http = {
 		baseRequest<T>(url, "POST", { ...config, data }),
 	put: <T>(url: string, data?: unknown, config?: RequestConfig) =>
 		baseRequest<T>(url, "PUT", { ...config, data }),
+	patch: <T>(url: string, data?: unknown, config?: RequestConfig) =>
+		baseRequest<T>(url, "PATCH", { ...config, data }),
 	delete: <T>(url: string, config?: RequestConfig) =>
 		baseRequest<T>(url, "DELETE", config),
 };

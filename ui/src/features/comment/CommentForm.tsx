@@ -1,13 +1,13 @@
 import type { TargetedEvent, TargetedSubmitEvent } from "preact";
 import { useEffect, useState } from "preact/compat";
-import { sendComment } from "../../api/comment";
-import type { Comment } from "../../api/types";
-import { storage } from "../../helper";
+import { sendComment } from "@/shared/api/comment";
+import type { Comment } from "@/shared/api/types";
+import { storage } from "../../shared/helper";
 import { useAutoResizeTextarea } from "../../hook/useAutoResizeTextarea";
 import { useStoredUser } from "../../hook/useStoredUser";
 import { useCommentStore, useConfigStore, useCommentFormStore } from "../../store";
 import Login from "../auth/Login";
-import type { CommentForm } from "../../store/type";
+import type { CommentForm } from "../../store/types";
 import CommentIdentityBar from "./CommentIdentityBar";
 import CommentComposer from "./CommentComposer";
 import CommentSubmitStatus from "./CommentSubmitStatus";
@@ -66,6 +66,11 @@ export default (props: Props) => {
 		e.preventDefault();
 		setSubmitting(true);
 		setSubmitStatus({ type: "", msg: "" });
+		if (config.site_id == null) {
+			setSubmitStatus({ type: "error", msg: "缺少站点配置，暂时无法发表评论" });
+			setSubmitting(false);
+			return;
+		}
 
 		try {
 			const resData = await sendComment(

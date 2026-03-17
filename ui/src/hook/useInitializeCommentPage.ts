@@ -1,5 +1,5 @@
 import { useEffect } from "preact/compat";
-import { storage } from "../helper";
+import { storage } from "../shared/helper";
 import { useCommentFormStore, useCommentStore } from "../store";
 
 export const useInitializeCommentPage = () => {

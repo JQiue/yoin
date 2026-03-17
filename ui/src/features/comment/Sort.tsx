@@ -1,4 +1,4 @@
-import { useCommentStore } from "@/src/store";
+import { useCommentStore } from "@/store";
 
 export default () => {
 	const { sort, changeSort, isLoading } = useCommentStore();

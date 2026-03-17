@@ -1,10 +1,11 @@
 import { render } from "preact";
 import App from "./App";
-import type { Option } from "./index.d";
-import { useConfigStore } from "./store/useConfigStore";
-import "./styles/global.css";
+import type { Option } from "./types";
+import { useConfigStore } from "@/store/useConfigStore";
+import '@/styles/base.css';
+import '@/styles/client.css';
 
-export default class Yoin {
+export default class Admin {
 	private container: HTMLElement | null = null;
 
 	constructor(options: Option) {

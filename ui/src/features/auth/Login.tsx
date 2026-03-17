@@ -1,8 +1,8 @@
 import type { TargetedEvent, TargetedSubmitEvent } from "preact";
 import { useState } from "preact/hooks";
-import Icon from "../../components/Icon";
+import Icon from "../../shared/components/Icon";
 import { useAuthForm, type LoginInput } from "../../hook/useAuthForm";
-import { Button } from "../../components/Button";
+import { Button } from "../../shared/components/Button";
 
 interface Props {
   onSuccess: () => void;

@@ -1,8 +1,7 @@
 import { create } from "zustand";
-import type { Option } from "../index.d";
-import type { ConfigState } from "./type";
+import type { AppConfig, ConfigState } from "./types";
 
 export const useConfigStore = create<ConfigState>((set) => ({
-	config: {} as Option,
+	config: {} as AppConfig,
 	setConfig: (options) => set({ config: options }),
 }));

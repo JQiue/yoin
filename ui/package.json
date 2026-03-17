@@ -3,15 +3,27 @@
 	"version": "0.0.1",
 	"type": "module",
 	"files": [
-		"dist/index.d.ts",
-		"dist/index.js"
+		"dist/client",
+		"dist/admin"
 	],
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"exports": {
+		"./client": {
+			"types": "./dist/client/index.d.ts",
+			"default": "./dist/client/client.js"
+		},
+		"./admin": {
+			"types": "./dist/admin/index.d.ts",
+			"default": "./dist/admin/admin.js"
+		}
+	},
 	"scripts": {
-		"build": "rsbuild build",
-		"dev": "rsbuild dev --open",
-		"preview": "rsbuild preview",
+		"build": "rsbuild build --environment client,admin",
+		"build:client": "rsbuild build --environment client",
+		"dev:client": "rsbuild dev --environment client --open",
+		"preview:client": "rsbuild preview --environment client",
+		"build:admin": "rsbuild build --environment admin",
+		"dev:admin": "rsbuild dev --environment admin --open",
+		"preview:admin": "rsbuild preview --environment admin",
 		"biome": "biome check --write",
 		"build:analyze": "BUNDLE_ANALYZE=true rsbuild build"
 	},

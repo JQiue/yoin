@@ -1,5 +1,5 @@
 import { useState } from "preact/compat";
-import { storage } from "../helper";
+import { storage } from "../shared/helper";
 
 export interface StoredUser {
 	nickname: string;

@@ -1,6 +1,6 @@
-import { Button } from "@/src/components/Button";
-import type { StoredUser } from "@/src/hook/useStoredUser";
-import type { CommentForm } from "@/src/store/type";
+import { Button } from "@/shared/components/Button";
+import type { StoredUser } from "@/hook/useStoredUser";
+import type { CommentForm } from "@/store/types";
 import type { TargetedEvent } from "preact";
 
 interface Props {

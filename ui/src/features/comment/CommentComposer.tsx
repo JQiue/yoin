@@ -1,6 +1,6 @@
-import { Button } from "@/src/components/Button";
-import Icon from "@/src/components/Icon";
-import type { StoredUser } from "@/src/hook/useStoredUser";
+import { Button } from "@/shared/components/Button";
+import Icon from "@/shared/components/Icon";
+import type { StoredUser } from "@/hook/useStoredUser";
 import type { RefObject, TargetedEvent } from "preact";
 
 interface Props {

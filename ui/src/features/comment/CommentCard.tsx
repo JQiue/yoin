@@ -1,9 +1,9 @@
-import type { Comment } from "../../api/types";
-import { fetchCommentReplies } from "../../api/comment";
+import type { Comment } from "@/shared/api/types";
+import { fetchCommentReplies } from "@/shared/api/comment";
 import CommentForm from "./CommentForm";
-import { formatDate } from "../../helper";
+import { formatDate } from "../../shared/helper";
 import { useCommentStore, useConfigStore } from "../../store";
-import { Button } from "../../components/Button";
+import { Button } from "../../shared/components/Button";
 import CommentList from "./CommentList";
 import { useEffect, useState } from "preact/hooks";
 
@@ -91,6 +91,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
 
 	const handleLoadMoreReplies = async () => {
 		if (isLoadingReplies) return;
+		if (config.site_id == null) return;
 		const nextPage = replyPage + 1;
 		setIsLoadingReplies(true);
 		try {

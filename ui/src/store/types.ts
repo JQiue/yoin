@@ -1,9 +1,14 @@
-import type { Comment } from "../api/types";
-import type { Option } from "../index.d";
+import type { Comment } from "@/shared/api/types";
+
+export interface AppConfig {
+	containerId: string;
+	api_base?: string;
+	site_id?: number;
+}
 
 export interface ConfigState {
-	config: Option;
-	setConfig: (options: Option) => void;
+	config: AppConfig;
+	setConfig: (options: AppConfig) => void;
 }
 
 export interface CommentForm {
