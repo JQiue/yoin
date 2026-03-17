@@ -1,3 +1,4 @@
+pub mod admin;
 mod comment;
 mod moderation;
 mod oauth;

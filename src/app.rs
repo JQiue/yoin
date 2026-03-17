@@ -20,7 +20,7 @@ use crate::{
   entity::sites::SiteConfig,
   error::{AppError, ToAppError},
   extractor::{OptionnalAuth, RemoteIp, RequireAuth},
-  handler::{auth, comment, health, js, moderation, reaction, site, subscription, user},
+  handler::{admin, auth, comment, health, js, moderation, reaction, site, subscription, user},
   helper::RateLimiter,
   rbac::{bootstrap::bootstrap_rbac, permissions::roles::SUPER_ADMIN},
   repository::Repository,
@@ -155,18 +155,15 @@ fn create_router(state: Arc<AppState>) -> Router {
       "/admin/moderation/providers/{id}",
       patch(moderation::update_provider),
     )
+    .route("/admin/me/capabilities", get(admin::me_capabilities))
+    .route("/admin/rbac/roles", get(admin::list_roles))
+    .route("/admin/rbac/permissions", get(admin::list_permissions))
     .route(
-      "/admin/comments/pending",
-      get(moderation::list_pending_comments),
+      "/admin/rbac/user-role-bindings",
+      get(admin::list_user_role_bindings),
     )
-    .route(
-      "/admin/comments/{id}/approve",
-      patch(moderation::approve_comment),
-    )
-    .route(
-      "/admin/comments/{id}/reject",
-      patch(moderation::reject_comment),
-    )
+    .route("/admin/comments", get(admin::list_comments))
+    .route("/admin/comments/{id}", patch(admin::update_comment_status))
     .route_layer(from_extractor_with_state::<RequireAuth, Arc<AppState>>(
       Arc::clone(&state),
     ));

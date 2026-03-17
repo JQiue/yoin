@@ -31,6 +31,10 @@ pub struct UserRoleBindingRepository {
 }
 
 impl UserRoleBindingRepository {
+  pub async fn find_all(&self) -> Result<Vec<user_role_bindings::Model>, DbErr> {
+    UserRoleBindings::find().all(self.conn).await
+  }
+
   pub async fn find_by_id(&self, id: i64) -> Result<Option<user_role_bindings::Model>, DbErr> {
     UserRoleBindings::find_by_id(id).one(self.conn).await
   }

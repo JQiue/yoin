@@ -7,8 +7,7 @@ use crate::{
   app::AppState,
   error::AppError,
   extractor::{AppJson, RequireAuth},
-  handler::comment::CommentView,
-  rbac::permissions::codes::{COMMENT_MODERATE, MODERATION_PROVIDER_MANAGE},
+  rbac::permissions::codes::MODERATION_PROVIDER_MANAGE,
   response::ApiResponse,
 };
 
@@ -80,45 +79,9 @@ pub async fn update_provider(
     .require_global_permission(require_auth.user_id, MODERATION_PROVIDER_MANAGE)
     .await?;
   Ok(ApiResponse::success(
-    state.service.update_moderation_provider(id, payload).await?,
+    state
+      .service
+      .update_moderation_provider(id, payload)
+      .await?,
   ))
-}
-
-pub async fn list_pending_comments(
-  State(state): State<Arc<AppState>>,
-  require_auth: RequireAuth,
-) -> Result<ApiResponse<Vec<CommentView>>, AppError> {
-  state
-    .service
-    .require_global_permission(require_auth.user_id, COMMENT_MODERATE)
-    .await?;
-  Ok(ApiResponse::success(
-    state.service.list_pending_comments().await?,
-  ))
-}
-
-pub async fn approve_comment(
-  State(state): State<Arc<AppState>>,
-  require_auth: RequireAuth,
-  Path(id): Path<i64>,
-) -> Result<ApiResponse<()>, AppError> {
-  state
-    .service
-    .require_global_permission(require_auth.user_id, COMMENT_MODERATE)
-    .await?;
-  state.service.approve_comment(id).await?;
-  Ok(ApiResponse::success(()))
-}
-
-pub async fn reject_comment(
-  State(state): State<Arc<AppState>>,
-  require_auth: RequireAuth,
-  Path(id): Path<i64>,
-) -> Result<ApiResponse<()>, AppError> {
-  state
-    .service
-    .require_global_permission(require_auth.user_id, COMMENT_MODERATE)
-    .await?;
-  state.service.reject_comment(id).await?;
-  Ok(ApiResponse::success(()))
 }
