@@ -6,26 +6,26 @@ interface UserInfo {
 }
 
 interface StorageSchema {
-	"yoin:token": string;
-	"yoin:user_info": UserInfo;
-	"yoin:comment_draft": string;
+  "yoin:token": string;
+  "yoin:user_info": UserInfo;
+  "yoin:comment_draft": string;
 }
 
 export const storage = {
-	set<K extends keyof StorageSchema>(key: K, value: StorageSchema[K]): void {
-		localStorage.setItem(key, JSON.stringify(value));
-	},
+  set<K extends keyof StorageSchema>(key: K, value: StorageSchema[K]): void {
+    localStorage.setItem(key, JSON.stringify(value));
+  },
 
-	get<K extends keyof StorageSchema>(key: K): StorageSchema[K] | null {
-		const data = localStorage.getItem(key);
-		return data ? JSON.parse(data) : null;
-	},
+  get<K extends keyof StorageSchema>(key: K): StorageSchema[K] | null {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  },
 
-	remove<K extends keyof StorageSchema>(key: K): void {
-		localStorage.removeItem(key);
-	},
+  remove<K extends keyof StorageSchema>(key: K): void {
+    localStorage.removeItem(key);
+  },
 
-	clear(): void {
-		localStorage.clear();
-	},
+  clear(): void {
+    localStorage.clear();
+  },
 };

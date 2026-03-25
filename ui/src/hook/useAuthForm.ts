@@ -1,7 +1,8 @@
 import type { TargetedSubmitEvent } from "preact";
-import { storage } from "@/shared/helper";
-import { login, register } from "@/shared/api/auth";
 import { useState } from "preact/compat";
+import { login, register } from "@/shared/api/auth";
+import type { Login } from "@/shared/api/types";
+import { storage } from "@/shared/helper";
 
 export interface LoginInput {
   email: string;
@@ -14,11 +15,11 @@ export interface NewUserInput extends LoginInput {
   website: string;
 }
 
-export const useAuthForm = (onSuccess?: ()=>void) => {
+export const useAuthForm = (onSuccess?: () => void) => {
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ type: "", msg: "" });
   const [isLoginView, setIsLoginView] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<Login | null>(null);
 
   const toggleView = () => {
     setSubmitStatus({ type: "", msg: "" });
@@ -27,7 +28,7 @@ export const useAuthForm = (onSuccess?: ()=>void) => {
 
   const handleSubmit = async (
     e: TargetedSubmitEvent<HTMLFormElement>,
-    data: NewUserInput | LoginInput
+    data: NewUserInput | LoginInput,
   ) => {
     e.preventDefault();
     setSubmitting(true);
@@ -59,7 +60,7 @@ export const useAuthForm = (onSuccess?: ()=>void) => {
           regData.email,
           regData.password,
           regData.nickname,
-          regData.website
+          regData.website,
         );
         if (resData.code === 0) {
           setSubmitStatus({ type: "success", msg: "注册成功，请登录" });
@@ -67,8 +68,9 @@ export const useAuthForm = (onSuccess?: ()=>void) => {
           setSubmitStatus({ type: "error", msg: resData.msg });
         }
       }
-    } catch (error: any) {
-      setSubmitStatus({ type: "error", msg: error.toString() });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      setSubmitStatus({ type: "error", msg });
     } finally {
       setSubmitting(false);
     }
@@ -81,6 +83,6 @@ export const useAuthForm = (onSuccess?: ()=>void) => {
     toggleView,
     handleSubmit,
     setSubmitStatus,
-    user
+    user,
   };
 };
