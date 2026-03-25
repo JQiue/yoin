@@ -1,3 +1,4 @@
+import { Button } from "@/shared/components/Button";
 import { useCommentStore } from "@/store";
 
 export default () => {
@@ -15,19 +16,17 @@ export default () => {
       {tabs.map((tab) => {
         const isActive = sort === tab.value;
         return (
-          <button
-            type="button"
+          <Button
             key={tab.value}
             disabled={isLoading}
+            size="sm"
+            type="button"
+            variant={isActive ? "secondary" : "ghost"}
             onClick={() => !isActive && changeSort(tab.value)}
-            className={`
-              relative px-5 py-1.5 text-xs font-bold transition-all rounded-md
-              ${isActive ? "bg-zinc-100 " : "hover:text-zinc-500 hover:bg-zinc-100"}
-              ${isLoading ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}
-            `}
+            className={`relative font-bold ${isActive ? "bg-zinc-100" : "hover:bg-zinc-100 hover:text-zinc-500"} ${isLoading ? "opacity-30" : ""}`}
           >
             {tab.label}
-          </button>
+          </Button>
         );
       })}
     </nav>

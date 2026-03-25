@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "preact";
+﻿import type { ButtonHTMLAttributes } from "preact";
 
 interface ButtonProps extends ButtonHTMLAttributes {
   variant?: "primary" | "secondary" | "ghost";
@@ -12,10 +12,10 @@ const baseClass =
 
 const variantClassMap = {
   primary:
-    "text-[var(--yo-primary-contrast)] bg-[var(--yo-primary)] hover:bg-[var(--yo-primary-hover)] disabled:bg-zinc-300 disabled:text-zinc-500",
+    "text-(--yo-primary-contrast) bg-(--yo-primary) hover:bg-(--yo-primary-hover) disabled:bg-zinc-300 disabled:text-zinc-500",
   secondary:
-    "bg-[var(--yo-surface-soft)] bg-[var(--yo-surface-soft)] hover:bg-[var(--yo-surface-strong)] disabled:bg-zinc-100 disabled:text-zinc-400",
-  ghost: "text-[var(--yo-text-muted)] bg-transparent hover:text-zinc-900",
+    "bg-(--yo-surface-soft) bg-(--yo-surface-soft) hover:bg-(--yo-surface-strong) disabled:bg-zinc-100 disabled:text-zinc-400",
+  ghost: "text-(--yo-text-muted) bg-transparent hover:text-zinc-900",
 };
 
 const sizeClassMap = {

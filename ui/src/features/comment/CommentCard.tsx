@@ -165,14 +165,16 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
           )}
           {hasMoreReplies ? (
             <div className="mt-2 ml-11 sm:ml-14">
-              <button
+              <Button
                 type="button"
-                className="text-xs text-zinc-500 hover:text-zinc-900"
-                onClick={handleLoadMoreReplies}
                 disabled={isLoadingReplies}
+                onClick={handleLoadMoreReplies}
+                size="sm"
+                variant="ghost"
+                className="px-0 py-0 text-zinc-500 hover:text-zinc-900"
               >
                 {isLoadingReplies ? "加载中..." : "查看更多回复"}
-              </button>
+              </Button>
             </div>
           ) : null}
         </div>

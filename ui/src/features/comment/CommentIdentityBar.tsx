@@ -69,13 +69,15 @@ export default ({
             退出登录
           </Button>
         ) : (
-          <button
+          <Button
             type="button"
-            className="shrink-0 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+            className="shrink-0 text-zinc-500 hover:text-zinc-900"
             onClick={onLoginClick}
+            size="sm"
+            variant="ghost"
           >
             登录
-          </button>
+          </Button>
         )}
       </div>
       {currentUser ? null : (
