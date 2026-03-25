@@ -1,7 +1,7 @@
 import type { TargetedEvent } from "preact";
-import type { StoredUser } from "@/hook/useStoredUser";
+import type { StoredUser } from "@/client/hooks/useStoredUser";
+import type { CommentForm } from "@/client/types";
 import { Button } from "@/shared/components/Button";
-import type { CommentForm } from "@/store/types";
 
 interface Props {
   currentUser: StoredUser | null;

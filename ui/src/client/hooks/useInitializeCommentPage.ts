@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { useCommentStore, useConfigStore } from "@/store";
+import { getRuntimeConfig } from "@/config/runtime";
+import { useCommentStore } from "@/client/store";
 
 const LOCATION_CHANGE_EVENT = "yoin:locationchange";
 
@@ -68,7 +69,7 @@ const useInitializeComments = (siteId?: number) => {
 };
 
 export const useInitializeCommentPage = () => {
-  const siteId = useConfigStore((state) => state.config.site_id);
+  const siteId = getRuntimeConfig().site_id;
 
   useInitializeComments(siteId);
 };

@@ -1,8 +1,8 @@
 import { create } from "zustand";
+import { getRuntimeConfig } from "@/config/runtime";
 import { deleteComment, fetchCommentsList } from "@/shared/api";
 import type { Comment } from "@/shared/api/types";
-import type { CommentsState } from "@/store/types";
-import { useConfigStore } from "@/store/useConfigStore";
+import type { CommentsState } from "@/client/types";
 
 const removeCommentById = (comments: Comment[], id: number): Comment[] => {
   return comments
@@ -25,7 +25,7 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
   isLoading: false,
   setComments: (comments) => set({ comments }),
   fetchComments: async (pageOffset = 1, append = false) => {
-    const { config } = useConfigStore.getState();
+    const config = getRuntimeConfig();
     const { comments: oldComments, pageSize, sort } = get();
     if (config.site_id == null) {
       return;

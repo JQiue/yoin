@@ -1,16 +1,16 @@
 import type { TargetedEvent } from "preact";
 import { useEffect } from "preact/hooks";
-import Login from "@/features/auth/Login";
-import CommentComposer from "@/features/comment/CommentComposer";
-import CommentIdentityBar from "@/features/comment/CommentIdentityBar";
-import CommentSubmitStatus from "@/features/comment/CommentSubmitStatus";
-import { useAutoResizeTextarea } from "@/hook/useAutoResizeTextarea";
-import { useCommentForm } from "@/hook/useCommentForm";
-import { useCommentLoginModal } from "@/hook/useCommentLoginModal";
-import { useCommentSubmit } from "@/hook/useCommentSubmit";
-import { useStoredUser } from "@/hook/useStoredUser";
+import Login from "@/client/components/auth/Login";
+import CommentComposer from "@/client/components/comment/CommentComposer";
+import CommentIdentityBar from "@/client/components/comment/CommentIdentityBar";
+import CommentSubmitStatus from "@/client/components/comment/CommentSubmitStatus";
+import { useAutoResizeTextarea } from "@/client/hooks/useAutoResizeTextarea";
+import { useCommentForm } from "@/client/hooks/useCommentForm";
+import { useCommentLoginModal } from "@/client/hooks/useCommentLoginModal";
+import { useCommentSubmit } from "@/client/hooks/useCommentSubmit";
+import { useStoredUser } from "@/client/hooks/useStoredUser";
+import type { CommentForm } from "@/client/types";
 import type { Comment } from "@/shared/api/types";
-import type { CommentForm } from "@/store/types";
 
 interface Props {
   parent_id?: number;

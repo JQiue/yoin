@@ -1,10 +1,9 @@
 import type { Method, RequestConfig, ResData } from "@/shared/api/types";
+import { getRuntimeConfig } from "@/config/runtime";
 import { storage } from "@/shared/helper";
-import { useConfigStore } from "@/store/useConfigStore";
 
 function getApiBase() {
-  const configuredBase =
-    useConfigStore.getState().config.api_base?.trim() || "";
+  const configuredBase = getRuntimeConfig().api_base?.trim() || "";
   return configuredBase.replace(/\/+$/, "");
 }
 

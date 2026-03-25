@@ -1,5 +1,5 @@
 import type { RefObject, TargetedEvent } from "preact";
-import type { StoredUser } from "@/hook/useStoredUser";
+import type { StoredUser } from "@/client/hooks/useStoredUser";
 import { Button } from "@/shared/components/Button";
 import Icon from "@/shared/components/Icon";
 

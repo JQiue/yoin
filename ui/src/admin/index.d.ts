@@ -1,4 +1,3 @@
-export type Option = {
-  containerId: string;
-  api_base?: string;
-};
+import type { RuntimeOptions } from "@/config/types";
+
+export type Option = RuntimeOptions;

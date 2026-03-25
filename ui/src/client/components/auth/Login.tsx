@@ -1,6 +1,6 @@
 import type { TargetedEvent, TargetedSubmitEvent } from "preact";
 import { useState } from "preact/hooks";
-import { type LoginInput, useAuthForm } from "@/hook/useAuthForm";
+import { type LoginInput, useAuthForm } from "@/client/hooks/useAuthForm";
 import { Button } from "@/shared/components/Button";
 import Icon from "@/shared/components/Icon";
 

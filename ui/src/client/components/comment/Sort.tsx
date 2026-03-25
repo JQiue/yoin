@@ -1,5 +1,5 @@
 import { Button } from "@/shared/components/Button";
-import { useCommentStore } from "@/store";
+import { useCommentStore } from "@/client/store";
 
 export default () => {
   const sort = useCommentStore((state) => state.sort);

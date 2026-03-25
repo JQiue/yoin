@@ -1,12 +1,13 @@
 import type { TargetedSubmitEvent } from "preact";
 
 import { useState } from "preact/hooks";
-import type { StoredUser } from "@/hook/useStoredUser";
+import { getRuntimeConfig } from "@/config/runtime";
+import type { StoredUser } from "@/client/hooks/useStoredUser";
 import { sendComment } from "@/shared/api/comment";
 import type { Comment } from "@/shared/api/types";
 import { storage } from "@/shared/helper";
-import { useCommentStore, useConfigStore } from "@/store";
-import type { CommentForm } from "@/store/types";
+import { useCommentStore } from "@/client/store";
+import type { CommentForm } from "@/client/types";
 
 type SubmitStatus = {
   type: "" | "success" | "error";
@@ -28,7 +29,7 @@ export const useCommentSubmit = ({
   form,
   setField,
 }: UseCommentSubmitOptions) => {
-  const siteId = useConfigStore((state) => state.config.site_id);
+  const siteId = getRuntimeConfig().site_id;
   const fetchComments = useCommentStore((state) => state.fetchComments);
   const { nickname, email, website, content } = form;
 

@@ -1,11 +1,12 @@
 import { useState } from "preact/hooks";
-import CommentForm from "@/features/comment/CommentForm";
-import CommentList from "@/features/comment/CommentList";
-import { useCommentReplies } from "@/hook/useCommentReplies";
+import CommentForm from "@/client/components/comment/CommentForm";
+import CommentList from "@/client/components/comment/CommentList";
+import { useCommentReplies } from "@/client/hooks/useCommentReplies";
+import { getRuntimeConfig } from "@/config/runtime";
 import type { Comment } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 import { formatDate } from "@/shared/helper";
-import { useCommentStore, useConfigStore } from "@/store";
+import { useCommentStore } from "@/client/store";
 
 interface Props {
   comment: Comment;
@@ -44,7 +45,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
   const comments = useCommentStore((state) => state.comments);
   const deleteComment = useCommentStore((state) => state.deleteComment);
   const sort = useCommentStore((state) => state.sort);
-  const siteId = useConfigStore((state) => state.config.site_id);
+  const siteId = getRuntimeConfig().site_id;
   const [isReply, setIsReply] = useState(false);
   const safeWebsite = toSafeHttpUrl(comment.website);
   const {

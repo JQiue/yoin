@@ -1,7 +1,7 @@
 import { render } from "preact";
 import App from "@/admin/App";
+import { setRuntimeConfig } from "@/config/runtime";
 import type { Option } from "@/admin/types";
-import { useConfigStore } from "@/store/useConfigStore";
 import "@/styles/base.css";
 import "@/styles/admin.css";
 
@@ -10,7 +10,7 @@ export default class YoinAdmin {
 
   constructor(options: Option) {
     this.container = document.getElementById(options.containerId);
-    useConfigStore.getState().setConfig(options);
+    setRuntimeConfig(options);
     if (this.container) {
       render(<App />, this.container);
     } else {

@@ -1,4 +1,4 @@
-import CommentCard from "@/features/comment/CommentCard";
+import CommentCard from "@/client/components/comment/CommentCard";
 import type { Comment } from "@/shared/api/types";
 
 interface Props {

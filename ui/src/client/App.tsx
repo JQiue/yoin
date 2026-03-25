@@ -1,10 +1,10 @@
-import CommentForm from "@/features/comment/CommentForm";
-import CommentList from "@/features/comment/CommentList";
-import CommentListFooter from "@/features/comment/CommentListFooter";
-import Sort from "@/features/comment/Sort";
-import { useInfiniteCommentScroll } from "@/hook/useInfiniteCommentScroll";
-import { useInitializeCommentPage } from "@/hook/useInitializeCommentPage";
-import { useCommentStore } from "@/store";
+import CommentForm from "@/client/components/comment/CommentForm";
+import CommentList from "@/client/components/comment/CommentList";
+import CommentListFooter from "@/client/components/comment/CommentListFooter";
+import Sort from "@/client/components/comment/Sort";
+import { useInfiniteCommentScroll } from "@/client/hooks/useInfiniteCommentScroll";
+import { useInitializeCommentPage } from "@/client/hooks/useInitializeCommentPage";
+import { useCommentStore } from "@/client/store";
 
 const App = () => {
   const comments = useCommentStore((state) => state.comments);
