@@ -1,6 +1,6 @@
 import { render } from "preact";
-import App from "./App";
-import type { Option } from "./types";
+import App from "@/admin/App";
+import type { Option } from "@/admin/types";
 import { useConfigStore } from "@/store/useConfigStore";
 import "@/styles/base.css";
 import "@/styles/admin.css";

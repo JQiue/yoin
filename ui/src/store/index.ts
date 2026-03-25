@@ -1,3 +1,3 @@
-export * from "./useCommentStore";
-export * from "./useConfigStore";
-export * from "./useCommentFormStore";
+export * from "@/store/useCommentStore";
+export * from "@/store/useConfigStore";
+export * from "@/store/useCommentFormStore";

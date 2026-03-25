@@ -1,5 +1,5 @@
-import { http } from "./client";
-import type { Comment, Paged } from "./types";
+import { http } from "@/shared/api/client";
+import type { Comment, Paged } from "@/shared/api/types";
 
 export const fetchCommentsList = (
 	site_id: number,

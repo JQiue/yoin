@@ -1,5 +1,5 @@
-import { useState } from "preact/compat";
-import { storage } from "../shared/helper";
+import { useCallback, useState } from "preact/hooks";
+import { storage } from "@/shared/helper";
 
 export interface StoredUser {
 	nickname: string;
@@ -11,7 +11,7 @@ export interface StoredUser {
 export const useStoredUser = () => {
 	const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
 
-	const syncUserFromStorage = () => {
+	const syncUserFromStorage = useCallback(() => {
 		const token = storage.get("yoin:token");
 		const savedUser = storage.get("yoin:user_info");
 		if (token && savedUser) {
@@ -20,13 +20,13 @@ export const useStoredUser = () => {
 		}
 		setCurrentUser(null);
 		return null;
-	};
+	}, []);
 
-	const clearStoredUser = () => {
+	const clearStoredUser = useCallback(() => {
 		storage.remove("yoin:token");
 		storage.remove("yoin:user_info");
 		setCurrentUser(null);
-	};
+	}, []);
 
 	return {
 		currentUser,

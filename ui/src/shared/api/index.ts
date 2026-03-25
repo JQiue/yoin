@@ -1,2 +1,2 @@
-export * from "./admin";
-export * from "./comment";
+export * from "@/shared/api/admin";
+export * from "@/shared/api/comment";

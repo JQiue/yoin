@@ -1,16 +1,15 @@
-import type { TargetedEvent, TargetedSubmitEvent } from "preact";
-import { useEffect, useState } from "preact/compat";
-import { sendComment } from "@/shared/api/comment";
+import type { TargetedEvent } from "preact";
+import { useEffect } from "preact/hooks";
 import type { Comment } from "@/shared/api/types";
-import { storage } from "../../shared/helper";
-import { useAutoResizeTextarea } from "../../hook/useAutoResizeTextarea";
-import { useStoredUser } from "../../hook/useStoredUser";
-import { useCommentStore, useConfigStore, useCommentFormStore } from "../../store";
-import Login from "../auth/Login";
-import type { CommentForm } from "../../store/types";
-import CommentIdentityBar from "./CommentIdentityBar";
-import CommentComposer from "./CommentComposer";
-import CommentSubmitStatus from "./CommentSubmitStatus";
+import { useAutoResizeTextarea } from "@/hook/useAutoResizeTextarea";
+import { useCommentLoginModal } from "@/hook/useCommentLoginModal";
+import { useCommentSubmit } from "@/hook/useCommentSubmit";
+import { useStoredUser } from "@/hook/useStoredUser";
+import Login from "@/features/auth/Login";
+import type { CommentForm } from "@/store/types";
+import CommentIdentityBar from "@/features/comment/CommentIdentityBar";
+import CommentComposer from "@/features/comment/CommentComposer";
+import CommentSubmitStatus from "@/features/comment/CommentSubmitStatus";
 
 interface Props {
 	parent_id?: number;
@@ -19,13 +18,22 @@ interface Props {
 }
 
 export default (props: Props) => {
-	const { config } = useConfigStore();
-	const { nickname, email, content, website, setField } = useCommentFormStore();
-	const { fetchComments } = useCommentStore();
-	const [submitting, setSubmitting] = useState(false);
-	const [submitStatus, setSubmitStatus] = useState({ type: "", msg: "" });
-	const [isLoginModalOpen, setLoginModalOpen] = useState(false);
 	const { currentUser, syncUserFromStorage, clearStoredUser } = useStoredUser();
+	const { isOpen, open, close } = useCommentLoginModal();
+	const {
+		content,
+		nickname,
+		email,
+		website,
+		submitting,
+		submitStatus,
+		setFormField,
+		handleSubmit,
+	} = useCommentSubmit({
+		parentId: props.parent_id,
+		currentUser,
+		onCreated: props.cb,
+	});
 	const textareaRef = useAutoResizeTextarea(content);
 
 	const fields: {
@@ -42,98 +50,36 @@ export default (props: Props) => {
 
 	const handleAuthSuccess = () => {
 		syncUserFromStorage();
-		setLoginModalOpen(false);
+		close();
 	};
 
 	const handleLogout = () => {
 		clearStoredUser();
-		setField("nickname", "");
-		setField("email", "");
-		setField("website", "");
+		setFormField("nickname", "");
+		setFormField("email", "");
+		setFormField("website", "");
 	};
 
 	const handleInputChange = (
 		e: TargetedEvent<HTMLTextAreaElement | HTMLInputElement>,
 	) => {
 		const { name, value } = e.currentTarget;
-		setField(name as keyof CommentForm, value);
-		if (name === "content") {
-			storage.set("yoin:comment_draft", value);
-		}
-	};
-
-	const handleSubmit = async (e: TargetedSubmitEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		setSubmitting(true);
-		setSubmitStatus({ type: "", msg: "" });
-		if (config.site_id == null) {
-			setSubmitStatus({ type: "error", msg: "缺少站点配置，暂时无法发表评论" });
-			setSubmitting(false);
-			return;
-		}
-
-		try {
-			const resData = await sendComment(
-				config.site_id,
-				nickname,
-				email,
-				website,
-				content,
-				location.pathname,
-				props.parent_id,
-			);
-
-			if (resData.code === 0) {
-				setField("content", "");
-				setSubmitStatus({ type: "success", msg: resData.msg });
-				storage.set("yoin:user_info", {
-					nickname,
-					website,
-					email,
-					avatar: currentUser?.avatar,
-				});
-				storage.remove("yoin:comment_draft");
-				fetchComments();
-				props.cb?.(resData.data);
-			}
-		} catch (error: any) {
-			setSubmitStatus({ type: "error", msg: error.toString() });
-		} finally {
-			setSubmitting(false);
-		}
+		setFormField(name as keyof CommentForm, value);
 	};
 
 	useEffect(() => {
 		syncUserFromStorage();
-	}, []);
-
-	useEffect(() => {
-		if (!isLoginModalOpen) return;
-
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Escape") {
-				setLoginModalOpen(false);
-			}
-		};
-
-		document.body.style.overflow = "hidden";
-		window.addEventListener("keydown", onKeyDown);
-
-		return () => {
-			document.body.style.overflow = "";
-			window.removeEventListener("keydown", onKeyDown);
-		};
-	}, [isLoginModalOpen]);
+	}, [syncUserFromStorage]);
 
 	return (
 		<div className="text-sm transition-all">
-			<form className="space-y-3" onSubmit={(e) => handleSubmit(e)}>
+			<form className="space-y-3" onSubmit={handleSubmit}>
 				<CommentIdentityBar
 					currentUser={currentUser}
 					fields={fields}
 					fieldValues={fieldValues}
 					onInputChange={handleInputChange}
-					onLoginClick={() => setLoginModalOpen(true)}
+					onLoginClick={open}
 					onLogout={handleLogout}
 				/>
 				<CommentComposer
@@ -146,10 +92,10 @@ export default (props: Props) => {
 				<CommentSubmitStatus type={submitStatus.type} msg={submitStatus.msg} />
 			</form>
 
-			{isLoginModalOpen && (
+			{isOpen && (
 				<div
 					className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-400/40 backdrop-blur-sm"
-					onClick={() => setLoginModalOpen(false)}
+					onClick={close}
 				>
 					<div
 						className="w-full max-w-sm bg-zinc-50 p-3"

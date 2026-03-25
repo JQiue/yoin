@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { deleteComment, fetchCommentsList } from "@/shared/api";
 import type { Comment } from "@/shared/api/types";
-import type { CommentsState } from "./types";
-import { useConfigStore } from "./useConfigStore";
+import type { CommentsState } from "@/store/types";
+import { useConfigStore } from "@/store/useConfigStore";
 
 const removeCommentById = (comments: Comment[], id: number): Comment[] => {
 	return comments

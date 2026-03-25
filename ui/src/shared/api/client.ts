@@ -1,6 +1,6 @@
 import { storage } from "@/shared/helper";
 import { useConfigStore } from "@/store/useConfigStore";
-import type { Method, RequestConfig, ResData } from "./types";
+import type { Method, RequestConfig, ResData } from "@/shared/api/types";
 
 function getApiBase() {
 	const configuredBase = useConfigStore.getState().config.api_base?.trim() || "";

@@ -2,19 +2,17 @@ import CommentForm from "@/features/comment/CommentForm";
 import CommentList from "@/features/comment/CommentList";
 import CommentListFooter from "@/features/comment/CommentListFooter";
 import Sort from "@/features/comment/Sort";
-import { useInfiniteCommentScroll } from "../hook/useInfiniteCommentScroll";
-import { useInitializeCommentPage } from "../hook/useInitializeCommentPage";
-import { useCommentStore } from "../store";
+import { useInfiniteCommentScroll } from "@/hook/useInfiniteCommentScroll";
+import { useInitializeCommentPage } from "@/hook/useInitializeCommentPage";
+import { useCommentStore } from "@/store";
 
 const App = () => {
-	const {
-		comments,
-		fetchNextPage,
-		total,
-		pageOffset,
-		totalPages,
-		isLoading,
-	} = useCommentStore();
+	const comments = useCommentStore((state) => state.comments);
+	const fetchNextPage = useCommentStore((state) => state.fetchNextPage);
+	const total = useCommentStore((state) => state.total);
+	const pageOffset = useCommentStore((state) => state.pageOffset);
+	const totalPages = useCommentStore((state) => state.totalPages);
+	const isLoading = useCommentStore((state) => state.isLoading);
 
 	useInitializeCommentPage();
 	const sentinelRef = useInfiniteCommentScroll({
@@ -35,7 +33,7 @@ const App = () => {
 					</div>
 					<Sort />
 				</div>
-				<CommentList comments={comments} isReply={false}></CommentList>
+				<CommentList comments={comments}></CommentList>
 				<div ref={sentinelRef} className="mt-2">
 					<CommentListFooter
 						isLoading={isLoading}

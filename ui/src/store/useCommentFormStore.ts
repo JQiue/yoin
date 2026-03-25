@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CommentFormState } from "./types";
+import type { CommentFormState } from "@/store/types";
 
 export const useCommentFormStore = create<CommentFormState>((set) => ({
 	nickname: "",

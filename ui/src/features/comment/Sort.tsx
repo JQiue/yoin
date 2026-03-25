@@ -1,7 +1,9 @@
 import { useCommentStore } from "@/store";
 
 export default () => {
-	const { sort, changeSort, isLoading } = useCommentStore();
+	const sort = useCommentStore((state) => state.sort);
+	const changeSort = useCommentStore((state) => state.changeSort);
+	const isLoading = useCommentStore((state) => state.isLoading);
 
 	const tabs = [
 		{ label: "最新", value: "created_desc" },

@@ -1,4 +1,4 @@
-import { http } from "./client";
+import { http } from "@/shared/api/client";
 import type {
 	AdminCapabilities,
 	CommentForAdmin,
@@ -9,7 +9,7 @@ import type {
 	SiteConfig,
 	UserProfile,
 	UserRoleBindingForAdmin,
-} from "./types";
+} from "@/shared/api/types";
 
 export const fetchAdminProfile = () => {
 	return http.get<UserProfile>("/api/users/me");

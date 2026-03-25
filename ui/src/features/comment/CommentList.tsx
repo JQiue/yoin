@@ -1,9 +1,8 @@
-import CommentCard from "./CommentCard";
+import CommentCard from "@/features/comment/CommentCard";
 import type { Comment } from "@/shared/api/types";
 
 interface Props {
 	comments: Comment[];
-	isReply: boolean;
 	onDeleteComment?: (deletedComment: Comment) => void;
 	onReplyCreated?: (createdComment: Comment) => void;
 }

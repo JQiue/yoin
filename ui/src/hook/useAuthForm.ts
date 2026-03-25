@@ -1,5 +1,5 @@
 import type { TargetedSubmitEvent } from "preact";
-import { storage } from "../shared/helper";
+import { storage } from "@/shared/helper";
 import { login, register } from "@/shared/api/auth";
 import { useState } from "preact/compat";
 

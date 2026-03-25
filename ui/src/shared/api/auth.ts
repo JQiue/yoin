@@ -1,6 +1,6 @@
 import { storage } from "@/shared/helper";
-import { http } from "./client";
-import type { Login } from "./types";
+import { http } from "@/shared/api/client";
+import type { Login } from "@/shared/api/types";
 
 export const login = (
   email: string,

@@ -1,10 +1,10 @@
 import type { Comment } from "@/shared/api/types";
 import { fetchCommentReplies } from "@/shared/api/comment";
-import CommentForm from "./CommentForm";
-import { formatDate } from "../../shared/helper";
-import { useCommentStore, useConfigStore } from "../../store";
-import { Button } from "../../shared/components/Button";
-import CommentList from "./CommentList";
+import CommentForm from "@/features/comment/CommentForm";
+import { formatDate } from "@/shared/helper";
+import { useCommentStore, useConfigStore } from "@/store";
+import { Button } from "@/shared/components/Button";
+import CommentList from "@/features/comment/CommentList";
 import { useEffect, useState } from "preact/hooks";
 
 interface Props {
@@ -40,12 +40,10 @@ const REPLY_PAGE_SIZE = 3;
 
 export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
 	const isRootComment = comment.parent_id == null;
-	const {
-		comments,
-		deleteComment,
-		sort,
-	} = useCommentStore();
-	const { config } = useConfigStore();
+	const comments = useCommentStore((state) => state.comments);
+	const deleteComment = useCommentStore((state) => state.deleteComment);
+	const sort = useCommentStore((state) => state.sort);
+	const siteId = useConfigStore((state) => state.config.site_id);
 	const [isReply, setIsReply] = useState(false);
 	const [replies, setReplies] = useState(comment.replies ?? []);
 	const [hasMoreReplies, setHasMoreReplies] = useState(Boolean(comment.has_more));
@@ -91,7 +89,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
 
 	const handleLoadMoreReplies = async () => {
 		if (isLoadingReplies) return;
-		if (config.site_id == null) return;
+		if (siteId == null) return;
 		const nextPage = replyPage + 1;
 		setIsLoadingReplies(true);
 		try {
@@ -99,7 +97,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
 				data: { items, total_pages, page_offset },
 			} = await fetchCommentReplies(
 				comment.id,
-				config.site_id,
+				siteId,
 				nextPage,
 				REPLY_PAGE_SIZE,
 				location.pathname,
@@ -172,7 +170,6 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
 					{replies.length > 0 && (
 						<CommentList
 							comments={replies}
-							isReply={true}
 							onDeleteComment={handleDeleteReply}
 							onReplyCreated={handleReplyCreated}
 						></CommentList>
