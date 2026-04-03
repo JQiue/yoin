@@ -1,10 +1,11 @@
-mod common;
-
 use axum::http::StatusCode;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use common::{ApiResponse, create_site, post_json, post_json_with_bearer, read_json, register_user, test_app};
+use crate::common::{
+  self, ApiResponse, create_site, post_json, post_json_with_bearer, read_json, register_user,
+  test_app,
+};
 
 #[derive(Deserialize)]
 struct CommentView {
@@ -48,7 +49,12 @@ async fn anonymous_comment_allowed_when_site_enables_it() {
     .data
     .expect("site");
 
-  let resp = post_json(&app, "/api/comments", comment_payload(site.id, "hello world", None)).await;
+  let resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site.id, "hello world", None),
+  )
+  .await;
   assert_eq!(resp.status(), StatusCode::OK);
 
   let body: ApiResponse<CommentView> = read_json(resp).await;
@@ -95,7 +101,12 @@ async fn anonymous_comment_forbidden_when_site_disables_it() {
     .data
     .expect("site");
 
-  let resp = post_json(&app, "/api/comments", comment_payload(site.id, "blocked", None)).await;
+  let resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site.id, "blocked", None),
+  )
+  .await;
   assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
   let body: ApiResponse<Value> = read_json(resp).await;
@@ -145,8 +156,12 @@ async fn reply_comment_sets_thread_id_and_parent_id() {
     .data
     .expect("site");
 
-  let root_resp =
-    post_json(&app, "/api/comments", comment_payload(site.id, "root comment", None)).await;
+  let root_resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site.id, "root comment", None),
+  )
+  .await;
   let root_body: ApiResponse<CommentView> = read_json(root_resp).await;
   let root = root_body.data.expect("root");
 
@@ -180,8 +195,12 @@ async fn reply_parent_must_belong_to_same_site_and_page() {
     .data
     .expect("site b");
 
-  let root_resp =
-    post_json(&app, "/api/comments", comment_payload(site_a.id, "root comment", None)).await;
+  let root_resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site_a.id, "root comment", None),
+  )
+  .await;
   let root_body: ApiResponse<CommentView> = read_json(root_resp).await;
   let root = root_body.data.expect("root");
 
@@ -206,8 +225,12 @@ async fn list_comments_returns_roots_and_replies() {
     .data
     .expect("site");
 
-  let root_resp =
-    post_json(&app, "/api/comments", comment_payload(site.id, "root comment", None)).await;
+  let root_resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site.id, "root comment", None),
+  )
+  .await;
   let root_body: ApiResponse<CommentView> = read_json(root_resp).await;
   let root = root_body.data.expect("root");
 

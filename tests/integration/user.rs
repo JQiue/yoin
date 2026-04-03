@@ -1,10 +1,8 @@
-mod common;
-
 use axum::http::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
 
-use common::{
+use crate::common::{
   ApiResponse, get_with_bearer, patch_json_with_bearer, read_json, register_user, test_app,
 };
 

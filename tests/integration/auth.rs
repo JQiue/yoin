@@ -1,10 +1,8 @@
-mod common;
-
 use axum::{body::Body, http::StatusCode};
 use serde_json::Value;
 
-use common::{
-  ApiResponse, build_request, get_with_bearer, login_user, read_json, register_user, request,
+use crate::common::{
+  self, ApiResponse, build_request, get_with_bearer, login_user, read_json, register_user, request,
   test_app,
 };
 
