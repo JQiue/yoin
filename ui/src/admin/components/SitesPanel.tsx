@@ -94,7 +94,9 @@ export const SitesPanel = ({
             </label>
 
             <label className="block">
-              <span className="text-xs text-(--yo-text-soft)">最大评论长度</span>
+              <span className="text-xs text-(--yo-text-soft)">
+                最大评论长度
+              </span>
               <input
                 type="number"
                 min="1"
@@ -109,7 +111,9 @@ export const SitesPanel = ({
             </label>
 
             <label className="block">
-              <span className="text-xs text-(--yo-text-soft)">评论限流秒数</span>
+              <span className="text-xs text-(--yo-text-soft)">
+                评论限流秒数
+              </span>
               <input
                 type="number"
                 min="0"
@@ -224,7 +228,9 @@ export const SitesPanel = ({
                 <div className="mt-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface) p-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="block">
-                      <span className="text-xs text-(--yo-text-soft)">站点名称</span>
+                      <span className="text-xs text-(--yo-text-soft)">
+                        站点名称
+                      </span>
                       <input
                         type="text"
                         value={siteForm.name}
@@ -236,7 +242,9 @@ export const SitesPanel = ({
                     </label>
 
                     <label className="block">
-                      <span className="text-xs text-(--yo-text-soft)">站点地址</span>
+                      <span className="text-xs text-(--yo-text-soft)">
+                        站点地址
+                      </span>
                       <input
                         type="url"
                         value={siteForm.url}
@@ -248,7 +256,9 @@ export const SitesPanel = ({
                     </label>
 
                     <label className="block">
-                      <span className="text-xs text-(--yo-text-soft)">最大评论长度</span>
+                      <span className="text-xs text-(--yo-text-soft)">
+                        最大评论长度
+                      </span>
                       <input
                         type="number"
                         min="1"
@@ -263,7 +273,9 @@ export const SitesPanel = ({
                     </label>
 
                     <label className="block">
-                      <span className="text-xs text-(--yo-text-soft)">评论限流秒数</span>
+                      <span className="text-xs text-(--yo-text-soft)">
+                        评论限流秒数
+                      </span>
                       <input
                         type="number"
                         min="0"
@@ -299,7 +311,11 @@ export const SitesPanel = ({
                   )}
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" loading={isSavingSite} onClick={onSaveSite}>
+                    <Button
+                      size="sm"
+                      loading={isSavingSite}
+                      onClick={onSaveSite}
+                    >
                       保存配置
                     </Button>
                     <Button

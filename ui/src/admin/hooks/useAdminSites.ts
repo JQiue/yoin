@@ -1,7 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
-import { createAdminSite, fetchAdminSites, updateAdminSite } from "@/shared/api";
-import type { Site, SiteConfig } from "@/shared/api/types";
 import type { SiteFormState } from "@/admin/types";
+import {
+  createAdminSite,
+  fetchAdminSites,
+  updateAdminSite,
+} from "@/shared/api";
+import type { Site, SiteConfig } from "@/shared/api/types";
 
 const emptyCreateSiteForm: SiteFormState = {
   name: "",

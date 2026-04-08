@@ -11,7 +11,8 @@ export const ModerationProvidersPanel = ({ panelClass }: Props) => {
         <div>
           <h2 className="text-xl font-semibold">审核提供者</h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            这里管理评论审核来源，比如 LLM、Akismet，以及后续可能接入的自定义审核器。
+            这里管理评论审核来源，比如
+            LLM、Akismet，以及后续可能接入的自定义审核器。
           </p>
         </div>
         <Button size="sm">新增审核器</Button>
@@ -28,7 +29,8 @@ export const ModerationProvidersPanel = ({ panelClass }: Props) => {
           </ul>
         </div>
         <div className="rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
-          后端管理 API 已经有基础骨架，这里后面可以优先接成第一批真正可用的后台配置页。
+          后端管理 API
+          已经有基础骨架，这里后面可以优先接成第一批真正可用的后台配置页。
         </div>
       </div>
     </section>

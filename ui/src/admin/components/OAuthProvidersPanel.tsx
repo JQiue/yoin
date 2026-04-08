@@ -11,7 +11,8 @@ export const OAuthProvidersPanel = ({ panelClass }: Props) => {
         <div>
           <h2 className="text-xl font-semibold">OAuth 提供者</h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            这里放社交登录与标准 OAuth 配置。后面可以继续接 GitHub、Google、QQ 等提供者的创建与启用流程。
+            这里放社交登录与标准 OAuth 配置。后面可以继续接 GitHub、Google、QQ
+            等提供者的创建与启用流程。
           </p>
         </div>
         <Button size="sm">新增提供者</Button>

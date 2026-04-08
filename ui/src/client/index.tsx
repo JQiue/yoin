@@ -1,7 +1,7 @@
 import { render } from "preact";
 import App from "@/client/App";
-import { setRuntimeConfig } from "@/config/runtime";
 import type { Option } from "@/client/types";
+import { setRuntimeConfig } from "@/config/runtime";
 import "@/styles/base.css";
 import "@/styles/client.css";
 
@@ -12,7 +12,7 @@ export default class YoinClient {
     this.container = document.getElementById(options.containerId);
     setRuntimeConfig(options);
     if (this.container) {
-      this.container.setAttribute('data-yoin', '');
+      this.container.setAttribute("data-yoin", "");
       render(<App />, this.container);
     } else {
       console.error(`Container #${options.containerId} not found.`);

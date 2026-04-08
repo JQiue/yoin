@@ -1,8 +1,8 @@
 import { create } from "zustand";
+import type { CommentsState } from "@/client/types";
 import { getRuntimeConfig } from "@/config/runtime";
 import { deleteComment, fetchCommentsList, vote } from "@/shared/api";
 import type { Comment } from "@/shared/api/types";
-import type { CommentsState } from "@/client/types";
 
 const removeCommentById = (comments: Comment[], id: number): Comment[] => {
   return comments

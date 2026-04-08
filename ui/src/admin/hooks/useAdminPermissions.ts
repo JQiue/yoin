@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import type { AdminTab } from "@/admin/types";
 import {
   fetchAdminCapabilities,
   fetchAdminPermissions,
@@ -11,7 +12,6 @@ import type {
   RoleForAdmin,
   UserRoleBindingForAdmin,
 } from "@/shared/api/types";
-import type { AdminTab } from "@/admin/types";
 
 export const useAdminPermissions = (activeTab: AdminTab) => {
   const [capabilities, setCapabilities] = useState<AdminCapabilities | null>(

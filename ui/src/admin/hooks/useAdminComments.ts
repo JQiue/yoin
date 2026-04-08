@@ -1,7 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
+import type { CommentTab, CommentTabItem } from "@/admin/types";
 import { fetchAdminComments, updateAdminCommentStatus } from "@/shared/api";
 import type { CommentForAdmin, Paged, Site } from "@/shared/api/types";
-import type { CommentTab, CommentTabItem } from "@/admin/types";
 
 const COMMENT_PAGE_SIZE = 20;
 
@@ -35,17 +35,19 @@ function matchesCommentTab(tab: CommentTab, status: CommentForAdmin["status"]) {
 
 export const useAdminComments = (activeTab: string, sites: Site[]) => {
   const [activeCommentTab, setActiveCommentTab] = useState<CommentTab>("all");
-  const [commentsPage, setCommentsPage] = useState<Paged<CommentForAdmin[]> | null>(
-    null,
-  );
-  const [selectedCommentSiteId, setSelectedCommentSiteId] = useState<number | null>(
-    null,
-  );
+  const [commentsPage, setCommentsPage] = useState<Paged<
+    CommentForAdmin[]
+  > | null>(null);
+  const [selectedCommentSiteId, setSelectedCommentSiteId] = useState<
+    number | null
+  >(null);
   const [commentPagePath, setCommentPagePath] = useState("/");
   const [commentPageOffset, setCommentPageOffset] = useState(1);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentsError, setCommentsError] = useState("");
-  const [updatingCommentId, setUpdatingCommentId] = useState<number | null>(null);
+  const [updatingCommentId, setUpdatingCommentId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     if (sites.length === 0) return;
@@ -129,9 +131,12 @@ export const useAdminComments = (activeTab: string, sites: Site[]) => {
           .map((comment) =>
             comment.id === commentId ? { ...comment, status } : comment,
           )
-          .filter((comment) => matchesCommentTab(activeCommentTab, comment.status));
+          .filter((comment) =>
+            matchesCommentTab(activeCommentTab, comment.status),
+          );
         const total =
-          activeCommentTab === "all" || matchesCommentTab(activeCommentTab, status)
+          activeCommentTab === "all" ||
+          matchesCommentTab(activeCommentTab, status)
             ? current.total
             : Math.max(0, current.total - 1);
         const totalPages = Math.max(1, Math.ceil(total / current.page_size));

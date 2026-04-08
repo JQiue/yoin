@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { getRuntimeConfig } from "@/config/runtime";
 import { useCommentStore } from "@/client/store";
+import { getRuntimeConfig } from "@/config/runtime";
 
 const LOCATION_CHANGE_EVENT = "yoin:locationchange";
 

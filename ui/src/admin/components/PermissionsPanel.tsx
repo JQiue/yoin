@@ -37,7 +37,8 @@ export const PermissionsPanel = ({
         <div>
           <h2 className="text-xl font-semibold">权限管理</h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            这里承接 RBAC 的当前能力、角色定义和用户授权关系，先把只读信息真正接上。
+            这里承接 RBAC
+            的当前能力、角色定义和用户授权关系，先把只读信息真正接上。
           </p>
         </div>
         <Button size="sm" variant="secondary" disabled>
@@ -46,7 +47,9 @@ export const PermissionsPanel = ({
       </div>
 
       {isLoadingPermissions ? (
-        <p className="text-sm text-(--yo-text-muted)">正在加载权限管理数据...</p>
+        <p className="text-sm text-(--yo-text-muted)">
+          正在加载权限管理数据...
+        </p>
       ) : permissionsError ? (
         <div className="rounded-lg bg-(--yo-danger-bg) px-4 py-3 text-sm text-(--yo-danger)">
           {permissionsError}
@@ -93,26 +96,28 @@ export const PermissionsPanel = ({
                     </p>
                   ) : (
                     <div className="mt-3 space-y-3">
-                      {sitePermissionEntries.map(([siteId, permissionNames]) => (
-                        <div
-                          key={siteId}
-                          className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface-soft) px-3 py-3"
-                        >
-                          <p className="text-xs text-(--yo-text-soft)">
-                            站点 #{siteId}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {permissionNames.map((permission) => (
-                              <span
-                                key={`${siteId}-${permission}`}
-                                className="rounded-full border border-(--yo-surface-strong) px-2 py-0.5 text-xs text-(--yo-text-muted)"
-                              >
-                                {permission}
-                              </span>
-                            ))}
+                      {sitePermissionEntries.map(
+                        ([siteId, permissionNames]) => (
+                          <div
+                            key={siteId}
+                            className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface-soft) px-3 py-3"
+                          >
+                            <p className="text-xs text-(--yo-text-soft)">
+                              站点 #{siteId}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {permissionNames.map((permission) => (
+                                <span
+                                  key={`${siteId}-${permission}`}
+                                  className="rounded-full border border-(--yo-surface-strong) px-2 py-0.5 text-xs text-(--yo-text-muted)"
+                                >
+                                  {permission}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   )}
                 </div>
@@ -165,7 +170,9 @@ export const PermissionsPanel = ({
               </div>
               <div className="mt-3 space-y-3">
                 {roles.length === 0 ? (
-                  <p className="text-sm text-(--yo-text-muted)">暂无角色数据。</p>
+                  <p className="text-sm text-(--yo-text-muted)">
+                    暂无角色数据。
+                  </p>
                 ) : (
                   roles.map((role) => (
                     <div
@@ -210,7 +217,9 @@ export const PermissionsPanel = ({
                 <p className="text-sm font-medium">权限能力</p>
                 <div className="mt-3 space-y-2">
                   {permissions.length === 0 ? (
-                    <p className="text-sm text-(--yo-text-muted)">暂无权限数据。</p>
+                    <p className="text-sm text-(--yo-text-muted)">
+                      暂无权限数据。
+                    </p>
                   ) : (
                     permissions.map((permission) => (
                       <div
@@ -238,7 +247,9 @@ export const PermissionsPanel = ({
                 <p className="text-sm font-medium">用户授权绑定</p>
                 <div className="mt-3 space-y-2">
                   {roleBindings.length === 0 ? (
-                    <p className="text-sm text-(--yo-text-muted)">暂无授权绑定。</p>
+                    <p className="text-sm text-(--yo-text-muted)">
+                      暂无授权绑定。
+                    </p>
                   ) : (
                     roleBindings.map((binding) => (
                       <div
@@ -258,8 +269,12 @@ export const PermissionsPanel = ({
                           </span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--yo-text-muted)">
-                          <span>创建：{formatLocalDateTime(binding.created_at)}</span>
-                          <span>更新：{formatLocalDateTime(binding.updated_at)}</span>
+                          <span>
+                            创建：{formatLocalDateTime(binding.created_at)}
+                          </span>
+                          <span>
+                            更新：{formatLocalDateTime(binding.updated_at)}
+                          </span>
                         </div>
                       </div>
                     ))

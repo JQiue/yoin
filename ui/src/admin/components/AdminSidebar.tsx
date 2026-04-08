@@ -1,5 +1,5 @@
-import type { UserProfile } from "@/shared/api/types";
 import type { AdminTab, AdminTabItem } from "@/admin/types";
+import type { UserProfile } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 
 interface Props {

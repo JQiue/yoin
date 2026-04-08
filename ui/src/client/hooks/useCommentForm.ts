@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { storage } from "@/shared/helper";
 import type { CommentForm } from "@/client/types";
+import { storage } from "@/shared/helper";
 
 const emptyForm: CommentForm = {
   nickname: "",

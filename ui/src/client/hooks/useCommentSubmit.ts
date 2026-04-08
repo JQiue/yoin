@@ -1,13 +1,13 @@
 import type { TargetedSubmitEvent } from "preact";
 
 import { useState } from "preact/hooks";
-import { getRuntimeConfig } from "@/config/runtime";
 import type { StoredUser } from "@/client/hooks/useStoredUser";
+import { useCommentStore } from "@/client/store";
+import type { CommentForm } from "@/client/types";
+import { getRuntimeConfig } from "@/config/runtime";
 import { sendComment } from "@/shared/api/comment";
 import type { Comment } from "@/shared/api/types";
 import { storage } from "@/shared/helper";
-import { useCommentStore } from "@/client/store";
-import type { CommentForm } from "@/client/types";
 
 type SubmitStatus = {
   type: "" | "success" | "error";

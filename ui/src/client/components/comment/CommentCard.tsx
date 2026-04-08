@@ -2,12 +2,11 @@ import { useState } from "preact/hooks";
 import CommentForm from "@/client/components/comment/CommentForm";
 import CommentList from "@/client/components/comment/CommentList";
 import { useCommentReplies } from "@/client/hooks/useCommentReplies";
+import { useCommentStore } from "@/client/store";
 import { getRuntimeConfig } from "@/config/runtime";
 import type { Comment } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 import { formatDate } from "@/shared/helper";
-import { useCommentStore } from "@/client/store";
-import { vote } from "@/shared/api";
 
 interface Props {
   comment: Comment;
@@ -81,7 +80,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
 
   const handleClickVote = (id: number, type: "up" | "down") => {
     updateCommentVote(id, type);
-  }
+  };
 
   return (
     <div
@@ -122,11 +121,19 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
             dangerouslySetInnerHTML={{ __html: comment.content }}
           ></div>
           <div className="mt-2 flex gap-2 text-xs group">
-            <Button variant="ghost" size="sm" onClick={() => handleClickVote(comment.id, "up")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleClickVote(comment.id, "up")}
+            >
               赞同
               {comment.up_vote || 0}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => handleClickVote(comment.id, "down")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleClickVote(comment.id, "down")}
+            >
               反对
               {comment.down_vote || 0}
             </Button>

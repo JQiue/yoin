@@ -77,7 +77,9 @@ export const CommentsPanel = ({
           <span className="text-xs text-(--yo-text-soft)">站点</span>
           <select
             value={selectedCommentSiteId ?? ""}
-            onChange={(event) => onSelectSite(Number(event.currentTarget.value))}
+            onChange={(event) =>
+              onSelectSite(Number(event.currentTarget.value))
+            }
             className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
           >
             {sites.map((site) => (
@@ -93,7 +95,9 @@ export const CommentsPanel = ({
           <input
             type="text"
             value={commentPagePath}
-            onInput={(event) => onChangePagePath(event.currentTarget.value || "/")}
+            onInput={(event) =>
+              onChangePagePath(event.currentTarget.value || "/")
+            }
             className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
             placeholder="/"
           />
@@ -111,7 +115,9 @@ export const CommentsPanel = ({
               type="button"
               variant={isActive ? "primary" : "secondary"}
               className={`rounded-full whitespace-nowrap ${
-                !isActive ? "text-(--yo-text-muted) hover:bg-(--yo-surface)" : ""
+                !isActive
+                  ? "text-(--yo-text-muted) hover:bg-(--yo-surface)"
+                  : ""
               }`}
             >
               {tab.label}
@@ -122,7 +128,9 @@ export const CommentsPanel = ({
 
       <div className="mb-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) px-4 py-3 text-sm text-(--yo-text-muted)">
         当前视图：
-        <span className="font-medium text-(--yo-text)">{activeCommentTabLabel}</span>
+        <span className="font-medium text-(--yo-text)">
+          {activeCommentTabLabel}
+        </span>
         。状态接口接上后，我们再按真实状态显示对应动作，而不是所有面板都摆同一组按钮。
       </div>
 
@@ -213,8 +221,8 @@ export const CommentsPanel = ({
           {commentsPage && commentsPage.total_pages > 0 && (
             <div className="flex flex-col gap-3 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) px-4 py-3 text-sm text-(--yo-text-muted) sm:flex-row sm:items-center sm:justify-between">
               <p>
-                共 {commentsPage.total} 条，当前第 {commentsPage.page_offset} 页 /
-                共 {commentsPage.total_pages} 页
+                共 {commentsPage.total} 条，当前第 {commentsPage.page_offset} 页
+                / 共 {commentsPage.total_pages} 页
               </p>
               <div className="flex gap-2">
                 <Button

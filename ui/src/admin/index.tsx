@@ -1,7 +1,7 @@
 import { render } from "preact";
 import App from "@/admin/App";
-import { setRuntimeConfig } from "@/config/runtime";
 import type { Option } from "@/admin/types";
+import { setRuntimeConfig } from "@/config/runtime";
 import "@/styles/base.css";
 import "@/styles/admin.css";
 

@@ -1,5 +1,5 @@
-import type { Method, RequestConfig, ResData } from "@/shared/api/types";
 import { getRuntimeConfig } from "@/config/runtime";
+import type { Method, RequestConfig, ResData } from "@/shared/api/types";
 import { storage } from "@/shared/helper";
 
 function getApiBase() {
