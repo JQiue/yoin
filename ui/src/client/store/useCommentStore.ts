@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { getRuntimeConfig } from "@/config/runtime";
-import { deleteComment, fetchCommentsList } from "@/shared/api";
+import { deleteComment, fetchCommentsList, vote } from "@/shared/api";
 import type { Comment } from "@/shared/api/types";
 import type { CommentsState } from "@/client/types";
 
@@ -65,5 +65,33 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
     const { comments, total } = get();
     set({ comments: removeCommentById(comments, id), total: total - 1 });
     await deleteComment(id);
+  },
+  updateCommentVote: async (id: number, type: "up" | "down") => {
+    const { comments } = get();
+    const newComments = comments.map((comment) => {
+      if (comment.id === id) {
+        if (type === "up") {
+          return { ...comment, up_vote: comment.up_vote + 1 };
+        } else {
+          return { ...comment, down_vote: comment.down_vote + 1 };
+        }
+      }
+      if (comment.replies) {
+        const newReplies = comment.replies.map((reply) => {
+          if (reply.id === id) {
+            if (type === "up") {
+              return { ...reply, up_vote: reply.up_vote + 1 };
+            } else {
+              return { ...reply, down_vote: reply.down_vote + 1 };
+            }
+          }
+          return reply;
+        });
+        return { ...comment, replies: newReplies };
+      }
+      return comment;
+    });
+    set({ comments: newComments });
+    await vote(id, type);
   },
 }));

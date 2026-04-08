@@ -61,3 +61,7 @@ export const fetchCommentReplies = (
     },
   });
 };
+
+export const vote = (id: number, type: "up" | "down") => {
+  return http.patch(`/api/comments/${id}/vote/${type}`);
+};

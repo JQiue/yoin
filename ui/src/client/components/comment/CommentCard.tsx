@@ -7,6 +7,7 @@ import type { Comment } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 import { formatDate } from "@/shared/helper";
 import { useCommentStore } from "@/client/store";
+import { vote } from "@/shared/api";
 
 interface Props {
   comment: Comment;
@@ -44,6 +45,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
   const isRootComment = comment.parent_id == null;
   const comments = useCommentStore((state) => state.comments);
   const deleteComment = useCommentStore((state) => state.deleteComment);
+  const updateCommentVote = useCommentStore((state) => state.updateCommentVote);
   const sort = useCommentStore((state) => state.sort);
   const siteId = getRuntimeConfig().site_id;
   const [isReply, setIsReply] = useState(false);
@@ -76,6 +78,10 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
     deleteComment(comment.id);
     onDeleteComment?.(comment);
   };
+
+  const handleClickVote = (id: number, type: "up" | "down") => {
+    updateCommentVote(id, type);
+  }
 
   return (
     <div
@@ -116,11 +122,11 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
             dangerouslySetInnerHTML={{ __html: comment.content }}
           ></div>
           <div className="mt-2 flex gap-2 text-xs group">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => handleClickVote(comment.id, "up")}>
               赞同
               {comment.up_vote || 0}
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => handleClickVote(comment.id, "down")}>
               反对
               {comment.down_vote || 0}
             </Button>

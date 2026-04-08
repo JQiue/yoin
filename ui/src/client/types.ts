@@ -25,4 +25,5 @@ export interface CommentsState {
   fetchNextPage: () => void;
   changeSort: (newSort: string) => void;
   deleteComment: (id: number) => void;
+  updateCommentVote: (id: number, type: "up" | "down") => void;
 }
