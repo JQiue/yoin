@@ -5,13 +5,14 @@ import type { Option } from "@/client/types";
 import "@/styles/base.css";
 import "@/styles/client.css";
 
-export default class Admin {
+export default class YoinClient {
   private container: HTMLElement | null = null;
 
   constructor(options: Option) {
     this.container = document.getElementById(options.containerId);
     setRuntimeConfig(options);
     if (this.container) {
+      this.container.setAttribute('data-yoin', '');
       render(<App />, this.container);
     } else {
       console.error(`Container #${options.containerId} not found.`);

@@ -5,11 +5,11 @@
   word-break: break-word;
 }
 
-.comment-content > :first-child {
+.comment-content> :first-child {
   margin-top: 0;
 }
 
-.comment-content > :last-child {
+.comment-content> :last-child {
   margin-bottom: 0;
 }
 
@@ -83,7 +83,7 @@
   list-style: decimal;
 }
 
-.comment-content li + li {
+.comment-content li+li {
   margin-top: 0.2rem;
 }
 
