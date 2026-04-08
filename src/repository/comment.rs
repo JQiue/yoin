@@ -239,4 +239,24 @@ impl CommentRepository {
       .exec(self.conn)
       .await
   }
+
+  pub async fn update_up_vote(&self, id: i64, up_vote: i32) -> Result<comments::Model, DbErr> {
+    Comments::update(comments::ActiveModel {
+      id: Set(id),
+      up_vote: Set(up_vote),
+      ..Default::default()
+    })
+    .exec(self.conn)
+    .await
+  }
+
+  pub async fn update_down_vote(&self, id: i64, down_vote: i32) -> Result<comments::Model, DbErr> {
+    Comments::update(comments::ActiveModel {
+      id: Set(id),
+      down_vote: Set(down_vote),
+      ..Default::default()
+    })
+    .exec(self.conn)
+    .await
+  }
 }

@@ -5,6 +5,7 @@ use crate::{
 };
 
 impl AppService {
+  /// List comment subscriptions for the given user.
   pub async fn list_comment_subscriptions(
     &self,
     _user_id: i64,
@@ -12,6 +13,7 @@ impl AppService {
     todo!()
   }
 
+  /// Create a comment subscription for the given user.
   pub async fn create_comment_subscription(
     &self,
     _user_id: i64,
@@ -20,6 +22,7 @@ impl AppService {
     todo!()
   }
 
+  /// Delete a comment subscription for the given user.
   pub async fn delete_comment_subscription(
     &self,
     _user_id: i64,

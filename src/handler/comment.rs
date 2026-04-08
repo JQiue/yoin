@@ -159,3 +159,12 @@ pub async fn delete(
     .await?;
   Ok(ApiResponse::success(()))
 }
+
+pub async fn vote(
+  State(state): State<Arc<AppState>>,
+  Path((id, r#type)): Path<(i64, String)>,
+) -> Result<ApiResponse<()>, AppError> {
+  Ok(ApiResponse::success(
+    state.service.update_vote(id, r#type).await?,
+  ))
+}

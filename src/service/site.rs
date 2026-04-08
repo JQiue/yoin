@@ -10,6 +10,9 @@ use crate::{
 };
 
 impl AppService {
+  /// List all sites.
+  ///
+  /// Requires the user to have global `SITE_MANAGE` permission.
   pub async fn list_sites(&self, user_id: i64) -> Result<Vec<SiteView>, AppError> {
     self
       .require_permission(user_id, SITE_MANAGE, UserRoleBindingScopeType::Global, None)
@@ -31,6 +34,7 @@ impl AppService {
     Ok(sites)
   }
 
+  /// Create a new site.
   pub async fn create_site(
     &self,
     user_id: i64,
@@ -59,6 +63,7 @@ impl AppService {
     })
   }
 
+  /// Update an existing site.
   pub async fn update_site(
     &self,
     user_id: i64,

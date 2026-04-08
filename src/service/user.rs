@@ -18,6 +18,7 @@ use crate::{
 };
 
 impl AppService {
+  /// Register a new user and return a signed JWT.
   pub async fn create_user(
     &self,
     nickname: String,
@@ -87,6 +88,7 @@ impl AppService {
     })
   }
 
+  /// Authenticate a user by email/password and return a signed JWT.
   pub async fn login_user(
     &self,
     payload: LoginPayload,
@@ -119,6 +121,7 @@ impl AppService {
     })
   }
 
+  /// Fetch the public profile of a user by id.
   pub async fn fetch_profile(&self, user_id: i64) -> Result<UserProfile, AppError> {
     let user = self
       .repo
@@ -135,6 +138,7 @@ impl AppService {
     })
   }
 
+  /// Update the current user's profile fields and return the updated profile.
   pub async fn update_user_profile(
     &self,
     user_id: i64,

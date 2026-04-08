@@ -19,6 +19,11 @@ pub struct AppService {
 }
 
 impl AppService {
+  /// Check whether `user_id` has `permission_name` for the given scope.
+  ///
+  /// Returns `Ok(true)` if any role binding for the user on the provided scope
+  /// maps to the permission through `role_permission`; otherwise returns
+  /// `Ok(false)`.
   async fn has_permission(
     &self,
     user_id: i64,
@@ -72,6 +77,10 @@ impl AppService {
     Ok(false)
   }
 
+  /// Require `permission_name` for the given scope.
+  ///
+  /// Uses `has_permission` and returns a `forbidden` error when the user does
+  /// not have the required permission.
   async fn require_permission(
     &self,
     user_id: i64,
@@ -92,6 +101,7 @@ impl AppService {
     Ok(())
   }
 
+  /// Check global permission (`UserRoleBindingScopeType::Global`).
   pub async fn has_global_permission(
     &self,
     user_id: i64,
@@ -107,6 +117,7 @@ impl AppService {
       .await
   }
 
+  /// Require global permission (`UserRoleBindingScopeType::Global`).
   pub async fn require_global_permission(
     &self,
     user_id: i64,

@@ -6,13 +6,16 @@ use crate::{
   error::{AppError, ToAppError},
   handler::comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
   helper::generate_avatar,
-  moderation::{
-    self, ModerationInput, provider_codes, types::CommentModerator, LLMModerator,
-  },
+  moderation::{self, LLMModerator, ModerationInput, provider_codes, types::CommentModerator},
   repository::CommentCreateData,
 };
 
 impl AppService {
+  /// Create a new comment or reply.
+  ///
+  /// If `payload.parent_id` is provided, the method validates the parent belongs to
+  /// the same site/page and derives the thread id from it. The initial status is
+  /// set based on whether an enabled moderation provider exists for the site.
   pub async fn create_comment(
     &self,
     user_id: Option<i64>,
@@ -166,6 +169,10 @@ impl AppService {
     Ok(CommentView::from_model(comment))
   }
 
+  /// List root comments for a site/page with pagination.
+  ///
+  /// For each root comment, this also includes up to `reply_limit` preview replies
+  /// per thread (and sets `has_more` accordingly).
   pub async fn list_comments(
     &self,
     qs: ListQueryString,
@@ -225,6 +232,7 @@ impl AppService {
     })
   }
 
+  /// List replies under a specific thread (comment id) with pagination.
   pub async fn list_replies(
     &self,
     id: i64,
@@ -246,6 +254,11 @@ impl AppService {
     })
   }
 
+  /// Soft-delete a comment.
+  ///
+  /// Only the comment owner can delete it. If the comment is a root comment
+  /// (`parent_id` is `None`), the whole thread is deleted; otherwise, only the
+  /// comment is soft-deleted.
   pub async fn delete_comment(&self, user_id: i64, id: i64) -> Result<(), AppError> {
     let comment = self
       .repo
@@ -277,6 +290,39 @@ impl AppService {
         .with_op("delete comment")?;
     }
 
+    Ok(())
+  }
+
+  pub async fn update_vote(&self, id: i64, r#type: String) -> Result<(), AppError> {
+    let comment = self
+      .repo
+      .comment()
+      .find_by_id(id)
+      .await
+      .with_op("find comment by id")?
+      .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+
+    match r#type.as_str() {
+      "up" => {
+        self
+          .repo
+          .comment()
+          .update_up_vote(id, comment.up_vote + 1)
+          .await
+          .with_op("update up_vote by id")?;
+      }
+      "down" => {
+        self
+          .repo
+          .comment()
+          .update_down_vote(id, comment.down_vote + 1)
+          .await
+          .with_op("update down_vote by id")?;
+      }
+      _ => {
+        return Err(AppError::bad_request("Invalid vote type".to_string()));
+      }
+    }
     Ok(())
   }
 }

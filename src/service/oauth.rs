@@ -5,6 +5,7 @@ use crate::{
 };
 
 impl AppService {
+  /// Create an OAuth provider configuration (currently a placeholder).
   pub async fn create_oauth_provider(
     &self,
     _payload: CreateOauthProviderPayload,
@@ -12,6 +13,7 @@ impl AppService {
     Ok(())
   }
 
+  /// Exchange external OAuth credentials for a local user and JWT (TODO).
   pub async fn external_auth_exchange(
     &self,
     _payload: ExternalExchangePayload,

@@ -5,6 +5,9 @@ use crate::{
 };
 
 impl AppService {
+  /// Create a reaction (like/upvote) for a user.
+  ///
+  /// This is currently unimplemented (`todo!()`).
   pub async fn create_reaction(
     &self,
     _user_id: i64,
@@ -14,6 +17,7 @@ impl AppService {
   }
 
   pub async fn delete_reaction(&self, _user_id: i64, _id: i64) -> Result<(), AppError> {
+    // Delete a reaction for a user. (Unimplemented: `todo!()`.)
     todo!()
   }
 }

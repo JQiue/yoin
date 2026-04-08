@@ -13,6 +13,10 @@ use crate::{
 };
 
 impl AppService {
+  /// Get an admin user's capabilities.
+  ///
+  /// This derives both global permissions and per-site permissions by joining
+  /// role bindings with role->permission mappings.
   pub async fn get_admin_capabilities(
     &self,
     user_id: i64,
@@ -74,6 +78,9 @@ impl AppService {
     })
   }
 
+  /// List roles available to an admin user.
+  ///
+  /// Requires the admin to have the `SITE_MANAGE` permission globally.
   pub async fn list_roles_for_admin(&self, user_id: i64) -> Result<Vec<RoleView>, AppError> {
     self.require_global_permission(user_id, SITE_MANAGE).await?;
 
@@ -116,6 +123,9 @@ impl AppService {
     Ok(items)
   }
 
+  /// List all permissions (with descriptions) that an admin can view.
+  ///
+  /// Requires the admin to have the `SITE_MANAGE` permission globally.
   pub async fn list_permissions_for_admin(
     &self,
     user_id: i64,
@@ -141,6 +151,9 @@ impl AppService {
     )
   }
 
+  /// List user-role bindings for the admin, including resolved role names.
+  ///
+  /// Requires the admin to have the `SITE_MANAGE` permission globally.
   pub async fn list_user_role_bindings_for_admin(
     &self,
     user_id: i64,
@@ -181,6 +194,7 @@ impl AppService {
     )
   }
 
+  /// List comments for an admin panel, with pagination and status filtering.
   pub async fn list_comments_for_admin(
     &self,
     user_id: i64,
@@ -205,6 +219,7 @@ impl AppService {
     })
   }
 
+  /// Update the status of a comment from the admin side.
   pub async fn update_comment_status_for_admin(
     &self,
     user_id: i64,
@@ -220,6 +235,10 @@ impl AppService {
     Ok(())
   }
 
+  /// Delete (soft-delete) a comment as an admin.
+  ///
+  /// If the target comment is a root comment (`parent_id` is `None`), the
+  /// whole thread is deleted; otherwise, only the comment is deleted.
   pub async fn delete_comment_for_admin(&self, user_id: i64, id: i64) -> Result<(), AppError> {
     let comment = self
       .repo
