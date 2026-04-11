@@ -198,7 +198,7 @@ pub async fn app(conn: &'static DatabaseConnection, jwt_key: String) -> Result<R
     jwt_key,
     site_config: Mutex::new(HashMap::new()),
     admin_ids: Mutex::new(HashSet::new()),
-    comment_rate_limiter: RateLimiter::new(),
+    comment_rate_limiter: RateLimiter::default(),
     service: AppService {
       repo: Repository::new(conn),
     },

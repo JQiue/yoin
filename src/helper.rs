@@ -15,13 +15,15 @@ pub struct RateLimiter<T> {
   cache: Mutex<HashMap<T, DateTime<Utc>>>,
 }
 
-impl<T: Eq + PartialEq + Hash> RateLimiter<T> {
-  pub fn new() -> Self {
+impl<T> Default for RateLimiter<T> {
+  fn default() -> Self {
     Self {
-      cache: Mutex::new(HashMap::new()),
+      cache: Default::default(),
     }
   }
+}
 
+impl<T: Eq + PartialEq + Hash> RateLimiter<T> {
   pub async fn check_rate_limit(&self, key: T, limit_seconds: i64) -> bool {
     let mut cache = self.cache.lock().await;
     let now = Utc::now();
