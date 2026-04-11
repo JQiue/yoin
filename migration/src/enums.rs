@@ -53,3 +53,12 @@ pub enum UserRoleBindingScopeType {
   #[sea_orm(string_value = "site")]
   Site,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+pub enum ModerationProviderType {
+  #[sea_orm(string_value = "llm")]
+  LLM,
+  #[sea_orm(string_value = "akismet")]
+  AKISMET,
+}

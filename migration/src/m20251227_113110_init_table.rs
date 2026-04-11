@@ -150,12 +150,9 @@ enum ModerationProviders {
   Table,
   Id,
   SiteId,
-  Provider,
+  ProviderKind,
   Enabled,
-  Model,
-  ApiBase,
-  ApiKey,
-  Prompt,
+  Config,
   CreatedAt,
   UpdatedAt,
 }
@@ -230,12 +227,9 @@ impl MigrationTrait for Migration {
           .if_not_exists()
           .col(big_pk_auto(ModerationProviders::Id))
           .col(big_integer(ModerationProviders::SiteId))
-          .col(string(ModerationProviders::Provider))
+          .col(string(ModerationProviders::ProviderKind))
           .col(boolean(ModerationProviders::Enabled).default(true))
-          .col(string(ModerationProviders::Model))
-          .col(string(ModerationProviders::ApiBase))
-          .col(string(ModerationProviders::ApiKey))
-          .col(text(ModerationProviders::Prompt).null())
+          .col(json(ModerationProviders::Config))
           .col(date_time(ModerationProviders::CreatedAt))
           .col(date_time(ModerationProviders::UpdatedAt))
           .foreign_key(

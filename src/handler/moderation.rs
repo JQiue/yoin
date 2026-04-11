@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
+use migration::enums::ModerationProviderType;
 use serde::{Deserialize, Serialize};
 
 use crate::{
   app::AppState,
+  entity::moderation_providers::ModerationProviderConfig,
   error::AppError,
   extractor::{AppJson, RequireAuth},
   rbac::permissions::codes::MODERATION_PROVIDER_MANAGE,
@@ -14,31 +16,34 @@ use crate::{
 #[derive(Debug, Serialize)]
 pub struct ModerationProviderView {
   pub id: i64,
-  pub provider: String,
+  pub provider_kind: ModerationProviderType,
   pub enabled: bool,
-  pub model: Option<String>,
-  pub api_base: Option<String>,
-  pub prompt: Option<String>,
+  pub config: ModerationProviderConfig,
+}
+
+impl ModerationProviderView {
+  pub fn from_model(model: crate::entity::moderation_providers::Model) -> Self {
+    Self {
+      id: model.id,
+      provider_kind: model.provider_kind,
+      enabled: model.enabled,
+      config: model.config,
+    }
+  }
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateModerationProviderPayload {
   pub site_id: i64,
-  pub provider: String,
+  pub provider_kind: ModerationProviderType,
   pub enabled: bool,
-  pub model: Option<String>,
-  pub api_base: Option<String>,
-  pub api_key: Option<String>,
-  pub prompt: Option<String>,
+  pub config: ModerationProviderConfig,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateModerationProviderPayload {
   pub enabled: Option<bool>,
-  pub model: Option<String>,
-  pub api_base: Option<String>,
-  pub api_key: Option<String>,
-  pub prompt: Option<String>,
+  pub config: Option<ModerationProviderConfig>,
 }
 
 pub async fn list_providers(
