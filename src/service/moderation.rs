@@ -1,3 +1,5 @@
+use helpers::time::utc_now;
+
 use super::AppService;
 use crate::{
   error::{AppError, ToAppError},
@@ -7,29 +9,64 @@ use crate::{
       CreateModerationProviderPayload, ModerationProviderView, UpdateModerationProviderPayload,
     },
   },
+  repository::{ModerationProviderCreateData, ModerationProviderUpdateData},
 };
 
 impl AppService {
   /// List moderation providers (TODO).
   pub async fn list_moderation_providers(&self) -> Result<Vec<ModerationProviderView>, AppError> {
-    todo!()
+    let providers = self
+      .repo
+      .moderation_provider()
+      .find_all()
+      .await
+      .with_op("find all moderation providers")?;
+    Ok(
+      providers
+        .into_iter()
+        .map(ModerationProviderView::from_model)
+        .collect(),
+    )
   }
 
   /// Create a moderation provider (TODO).
   pub async fn create_moderation_provider(
     &self,
-    _payload: CreateModerationProviderPayload,
+    payload: CreateModerationProviderPayload,
   ) -> Result<ModerationProviderView, AppError> {
-    todo!()
+    let provider = self
+      .repo
+      .moderation_provider()
+      .create(ModerationProviderCreateData {
+        site_id: payload.site_id,
+        provider_kind: payload.provider_kind,
+        enabled: payload.enabled,
+        config: payload.config,
+        datetime: utc_now().naive_local(),
+      })
+      .await
+      .with_op("insert moderation provider")?;
+    Ok(ModerationProviderView::from_model(provider))
   }
 
   /// Update a moderation provider (TODO).
   pub async fn update_moderation_provider(
     &self,
-    _id: i64,
-    _payload: UpdateModerationProviderPayload,
+    id: i64,
+    payload: UpdateModerationProviderPayload,
   ) -> Result<ModerationProviderView, AppError> {
-    todo!()
+    let provider = self
+      .repo
+      .moderation_provider()
+      .update(ModerationProviderUpdateData {
+        id,
+        enabled: payload.enabled,
+        config: payload.config,
+        datetime: utc_now().naive_local(),
+      })
+      .await
+      .with_op("update moderation provider")?;
+    Ok(ModerationProviderView::from_model(provider))
   }
 
   /// List comments that are pending moderation.
