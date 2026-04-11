@@ -3,10 +3,11 @@ use migration::enums::CommentStatus;
 
 use super::AppService;
 use crate::{
+  entity::moderation_providers::ModerationProviderConfig,
   error::{AppError, ToAppError},
   handler::comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
   helper::generate_avatar,
-  moderation::{self, LLMModerator, ModerationInput, provider_codes, types::CommentModerator},
+  moderation::{self, LLMModerator, ModerationInput, types::CommentModerator},
   repository::CommentCreateData,
 };
 
@@ -101,24 +102,17 @@ impl AppService {
         email: payload.email.clone(),
       };
       tokio::spawn(async move {
-        let status = match moderation_provider.provider.as_str() {
-          provider_codes::LLM => {
-            let moderator = if let Some(prompt) = moderation_provider.prompt.clone() {
-              LLMModerator::with_prompt(
-                moderation_provider.model.clone(),
-                moderation_provider.api_key.clone(),
-                prompt,
-                moderation_provider.api_base.clone(),
-              )
-            } else {
-              LLMModerator::new(
-                moderation_provider.model.clone(),
-                moderation_provider.api_key.clone(),
-                moderation_provider.api_base.clone(),
-              )
-            };
-
-            match moderator.check(moderation_input).await {
+        let status = match moderation_provider.config {
+          ModerationProviderConfig::LLM {
+            model,
+            api_base,
+            api_key,
+            rule,
+          } => {
+            match LLMModerator::new(api_base, api_key, model, Some(rule))
+              .check(moderation_input)
+              .await
+            {
               Ok(result) => {
                 tracing::info!(
                   provider = result.provider,
@@ -139,18 +133,10 @@ impl AppService {
               }
             }
           }
-          provider_codes::AKISMET => {
+          ModerationProviderConfig::AKISMET { .. } => {
             tracing::warn!(
               site_id = moderation_provider.site_id,
               "akismet moderation provider configured but not implemented"
-            );
-            CommentStatus::Pending
-          }
-          provider => {
-            tracing::warn!(
-              provider,
-              site_id = moderation_provider.site_id,
-              "unsupported moderation provider"
             );
             CommentStatus::Pending
           }

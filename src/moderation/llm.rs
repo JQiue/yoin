@@ -10,18 +10,20 @@ use serde::Deserialize;
 
 use crate::{
   error::{AppError, ToAppError},
-  moderation::{ModerationDecision, ModerationInput, ModerationResult},
+  moderation::{ModerationDecision, ModerationInput, ModerationResult, types::CommentModerator},
 };
 
 const DEFAULT_PROMPT: &str = r#"You are a comment moderation system.
 Review the user comment and return only JSON.
 
 Rules:
-- decision must be one of: allow, review, reject
-- reject for obvious spam, scams, malicious links, abusive or illegal content
-- review for borderline, ambiguous, or uncertain content
-- allow for normal comments
-- score is a float between 0 and 1 where higher means more risky
+
+score is a float between 0 and 1 where higher means more risky
+decision must be one of: allow, review, reject
+reject for obvious spam, scams, malicious links, abusive or illegal content
+review for borderline, ambiguous, or uncertain content
+allow for normal comments
+{{rule}}
 
 Return exactly:
 {"decision":"allow|review|reject","reason":"short reason","score":0.0}"#;
@@ -42,16 +44,12 @@ struct LlmModerationPayload {
 }
 
 impl LLMModerator {
-  pub fn new(model: String, api_key: String, api_base: String) -> Self {
-    Self {
-      prompt: DEFAULT_PROMPT.to_string(),
-      model,
-      api_key,
-      api_base,
-    }
-  }
-
-  pub fn with_prompt(model: String, api_key: String, prompt: String, api_base: String) -> Self {
+  pub fn new(api_base: String, api_key: String, model: String, rule: Option<String>) -> Self {
+    let prompt = if let Some(rule) = rule {
+      DEFAULT_PROMPT.to_string().replace("{{rule}}", &rule)
+    } else {
+      DEFAULT_PROMPT.to_string().replace("{{rule}}", "")
+    };
     Self {
       prompt,
       model,
@@ -70,7 +68,7 @@ impl LLMModerator {
   }
 }
 
-impl super::types::CommentModerator for LLMModerator {
+impl CommentModerator for LLMModerator {
   async fn check(&self, input: ModerationInput) -> Result<ModerationResult, AppError> {
     let config = OpenAIConfig::new()
       .with_api_key(self.api_key.clone())

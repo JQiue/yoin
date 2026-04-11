@@ -2,7 +2,7 @@ pub mod llm;
 pub mod noop;
 pub mod types;
 
-pub mod provider_codes {
+pub mod provider_kind {
   pub const LLM: &str = "llm";
   pub const AKISMET: &str = "akismet";
 }
