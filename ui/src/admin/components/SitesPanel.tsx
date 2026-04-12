@@ -1,0 +1,338 @@
+import type { SiteFormState } from "@/admin/types";
+import type { Site } from "@/shared/api/types";
+import { Button } from "@/shared/components/Button";
+
+interface Props {
+  panelClass: string;
+  isCreatingSite: boolean;
+  createSiteForm: SiteFormState;
+  createSiteError: string;
+  isSubmittingCreateSite: boolean;
+  isLoadingSites: boolean;
+  sitesError: string;
+  sites: Site[];
+  editingSiteId: number | null;
+  siteForm: SiteFormState | null;
+  siteFormError: string;
+  isSavingSite: boolean;
+  onToggleCreateSite: () => void;
+  onChangeCreateSiteForm: (patch: Partial<SiteFormState>) => void;
+  onCancelCreateSite: () => void;
+  onCreateSite: () => void;
+  onBeginEditSite: (site: Site) => void;
+  onChangeSiteForm: (patch: Partial<SiteFormState>) => void;
+  onCancelEditSite: () => void;
+  onSaveSite: () => void;
+}
+
+export const SitesPanel = ({
+  panelClass,
+  isCreatingSite,
+  createSiteForm,
+  createSiteError,
+  isSubmittingCreateSite,
+  isLoadingSites,
+  sitesError,
+  sites,
+  editingSiteId,
+  siteForm,
+  siteFormError,
+  isSavingSite,
+  onToggleCreateSite,
+  onChangeCreateSiteForm,
+  onCancelCreateSite,
+  onCreateSite,
+  onBeginEditSite,
+  onChangeSiteForm,
+  onCancelEditSite,
+  onSaveSite,
+}: Props) => {
+  return (
+    <section className={panelClass}>
+      <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">站点管理</h2>
+          <p className="mt-1 text-sm text-(--yo-text-muted)">
+            站点列表已经接上，配置修改也可以直接在这里就地保存。
+          </p>
+        </div>
+        <Button size="sm" onClick={onToggleCreateSite}>
+          {isCreatingSite ? "收起表单" : "新建站点"}
+        </Button>
+      </div>
+
+      {isCreatingSite && (
+        <div className="mb-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
+          <h3 className="text-base font-medium">创建新站点</h3>
+          <p className="mt-1 text-sm text-(--yo-text-muted)">
+            先把站点名称、URL 和评论基础限制填好，后面再继续补其它站点级配置。
+          </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="text-xs text-(--yo-text-soft)">站点名称</span>
+              <input
+                type="text"
+                value={createSiteForm.name}
+                onInput={(event) =>
+                  onChangeCreateSiteForm({ name: event.currentTarget.value })
+                }
+                className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs text-(--yo-text-soft)">站点地址</span>
+              <input
+                type="url"
+                value={createSiteForm.url}
+                onInput={(event) =>
+                  onChangeCreateSiteForm({ url: event.currentTarget.value })
+                }
+                className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs text-(--yo-text-soft)">
+                最大评论长度
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={createSiteForm.maxCommentLength}
+                onInput={(event) =>
+                  onChangeCreateSiteForm({
+                    maxCommentLength: event.currentTarget.value,
+                  })
+                }
+                className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs text-(--yo-text-soft)">
+                评论限流秒数
+              </span>
+              <input
+                type="number"
+                min="0"
+                value={createSiteForm.commentLimitSeconds}
+                onInput={(event) =>
+                  onChangeCreateSiteForm({
+                    commentLimitSeconds: event.currentTarget.value,
+                  })
+                }
+                className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+              />
+            </label>
+          </div>
+
+          <label className="mt-4 inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
+            <input
+              type="checkbox"
+              checked={createSiteForm.allowAnonymous}
+              onChange={(event) =>
+                onChangeCreateSiteForm({
+                  allowAnonymous: event.currentTarget.checked,
+                })
+              }
+              className="h-4 w-4 rounded border border-(--yo-surface-strong)"
+            />
+            允许匿名评论
+          </label>
+
+          {createSiteError && (
+            <p className="mt-3 text-sm text-(--yo-danger)">{createSiteError}</p>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              loading={isSubmittingCreateSite}
+              onClick={onCreateSite}
+            >
+              创建站点
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isSubmittingCreateSite}
+              onClick={onCancelCreateSite}
+            >
+              取消
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isLoadingSites ? (
+        <p className="text-sm text-(--yo-text-muted)">正在加载站点列表...</p>
+      ) : sitesError ? (
+        <div className="rounded-lg bg-(--yo-danger-bg) px-4 py-3 text-sm text-(--yo-danger)">
+          {sitesError}
+        </div>
+      ) : sites.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
+          还没有站点，先从这里开始接入你的第一个评论站点。
+        </div>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {sites.map((site) => (
+            <article
+              key={site.id}
+              className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium">{site.name}</h3>
+                  <p className="mt-1 break-all text-sm text-(--yo-text-muted)">
+                    {site.url}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-(--yo-surface) px-2.5 py-1 text-xs text-(--yo-text-muted)">
+                    ID {site.id}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onBeginEditSite(site)}
+                  >
+                    编辑
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p className="text-(--yo-text-soft)">匿名评论</p>
+                  <p className="mt-1 font-medium">
+                    {site.config.allow_anonymous ? "允许" : "关闭"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-(--yo-text-soft)">最大长度</p>
+                  <p className="mt-1 font-medium">
+                    {site.config.max_comment_length}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-(--yo-text-soft)">限流秒数</p>
+                  <p className="mt-1 font-medium">
+                    {site.config.comment_limit_seconds}
+                  </p>
+                </div>
+              </div>
+
+              {editingSiteId === site.id && siteForm && (
+                <div className="mt-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface) p-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs text-(--yo-text-soft)">
+                        站点名称
+                      </span>
+                      <input
+                        type="text"
+                        value={siteForm.name}
+                        onInput={(event) =>
+                          onChangeSiteForm({ name: event.currentTarget.value })
+                        }
+                        className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs text-(--yo-text-soft)">
+                        站点地址
+                      </span>
+                      <input
+                        type="url"
+                        value={siteForm.url}
+                        onInput={(event) =>
+                          onChangeSiteForm({ url: event.currentTarget.value })
+                        }
+                        className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs text-(--yo-text-soft)">
+                        最大评论长度
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={siteForm.maxCommentLength}
+                        onInput={(event) =>
+                          onChangeSiteForm({
+                            maxCommentLength: event.currentTarget.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs text-(--yo-text-soft)">
+                        评论限流秒数
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={siteForm.commentLimitSeconds}
+                        onInput={(event) =>
+                          onChangeSiteForm({
+                            commentLimitSeconds: event.currentTarget.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm outline-none transition-colors focus:border-(--yo-primary)"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="mt-4 inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
+                    <input
+                      type="checkbox"
+                      checked={siteForm.allowAnonymous}
+                      onChange={(event) =>
+                        onChangeSiteForm({
+                          allowAnonymous: event.currentTarget.checked,
+                        })
+                      }
+                      className="h-4 w-4 rounded border border-(--yo-surface-strong)"
+                    />
+                    允许匿名评论
+                  </label>
+
+                  {siteFormError && (
+                    <p className="mt-3 text-sm text-(--yo-danger)">
+                      {siteFormError}
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      loading={isSavingSite}
+                      onClick={onSaveSite}
+                    >
+                      保存配置
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={isSavingSite}
+                      onClick={onCancelEditSite}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+};

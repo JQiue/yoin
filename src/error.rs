@@ -3,7 +3,6 @@ use axum::{
   http::StatusCode,
   response::{IntoResponse, Response},
 };
-use serde_json::json;
 use thiserror::Error;
 
 use crate::response::ApiResponse;
@@ -11,10 +10,7 @@ use crate::response::ApiResponse;
 #[derive(Debug, Error)]
 pub enum AppError {
   #[error("{msg}")]
-  Client {
-    kind: ClientErrorKind,
-    msg: &'static str,
-  },
+  Client { kind: ClientErrorKind, msg: String },
   #[error("Internal error: {msg}")]
   Internal {
     msg: String,
@@ -24,17 +20,30 @@ pub enum AppError {
 
 #[derive(Debug)]
 pub enum ClientErrorKind {
-  BadRequest(i32),   // 400
-  Unauthorized(i32), // 401
-  Forbidden(i32),    // 403
-  NotFound(i32),     // 404
-  Conflict(i32),     // 409
-  RateLimited(i32),  // 429
+  BadRequest(i32),
+  Unauthorized(i32),
+  Forbidden(i32),
+  NotFound(i32),
+  Conflict(i32),
+  UnsupportedMediaType(i32),
+  RateLimited(i32),
 }
 
 impl ClientErrorKind {
-  pub const USER_MODULE: i32 = 100_000;
-  pub const AUTH_MODULE: i32 = 200_000;
+  pub const COMMON_MODULE: i32 = 0;
+  pub const AUTH_MODULE: i32 = 100_000;
+  pub const USER_MODULE: i32 = 200_000;
+  pub const SITE_MODULE: i32 = 300_000;
+  pub const COMMENT_MODULE: i32 = 400_000;
+  pub const MODERATION_MODULE: i32 = 500_000;
+
+  pub fn bad_request() -> Self {
+    Self::BadRequest(Self::COMMON_MODULE + 400)
+  }
+
+  pub fn unsupported_media_type() -> Self {
+    Self::UnsupportedMediaType(Self::COMMON_MODULE + 415)
+  }
 
   pub fn invalid_credentials() -> Self {
     Self::Unauthorized(Self::AUTH_MODULE + 401)
@@ -44,22 +53,83 @@ impl ClientErrorKind {
     Self::NotFound(Self::USER_MODULE + 404)
   }
 
+  pub fn site_not_found() -> Self {
+    Self::NotFound(Self::SITE_MODULE + 404)
+  }
+
+  pub fn comment_not_found() -> Self {
+    Self::NotFound(Self::COMMENT_MODULE + 404)
+  }
+
   pub fn user_already_exists() -> Self {
     Self::Conflict(Self::USER_MODULE + 409)
+  }
+
+  pub fn moderation_provider_not_found() -> Self {
+    Self::NotFound(Self::SITE_MODULE + 404)
   }
 }
 
 impl AppError {
-  pub fn user_not_found(msg: &'static str) -> Self {
+  pub fn bad_request(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::bad_request(),
+      msg,
+    }
+  }
+
+  pub fn forbidden(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::Forbidden(ClientErrorKind::AUTH_MODULE + 403),
+      msg,
+    }
+  }
+
+  pub fn invalid_credentials(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::invalid_credentials(),
+      msg,
+    }
+  }
+
+  pub fn unsupported_media_type(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::unsupported_media_type(),
+      msg,
+    }
+  }
+
+  pub fn user_not_found(msg: String) -> Self {
     Self::Client {
       kind: ClientErrorKind::user_not_found(),
       msg,
     }
   }
 
-  pub fn user_already_exists(msg: &'static str) -> Self {
+  pub fn user_already_exists(msg: String) -> Self {
     Self::Client {
       kind: ClientErrorKind::user_already_exists(),
+      msg,
+    }
+  }
+
+  pub fn site_not_found(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::site_not_found(),
+      msg,
+    }
+  }
+
+  pub fn comment_not_found(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::comment_not_found(),
+      msg,
+    }
+  }
+
+  pub fn moderation_provider_not_found(msg: String) -> Self {
+    Self::Client {
+      kind: ClientErrorKind::moderation_provider_not_found(),
       msg,
     }
   }
@@ -76,14 +146,18 @@ impl IntoResponse for AppError {
           ClientErrorKind::NotFound(code) => (StatusCode::NOT_FOUND, code),
           ClientErrorKind::Conflict(code) => (StatusCode::CONFLICT, code),
           ClientErrorKind::RateLimited(code) => (StatusCode::TOO_MANY_REQUESTS, code),
+          ClientErrorKind::UnsupportedMediaType(code) => (StatusCode::UNSUPPORTED_MEDIA_TYPE, code),
         };
         (status_code, biz_code, msg)
       }
-      AppError::Internal { .. } => (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        500_000,
-        "An internal server error occurred",
-      ),
+      AppError::Internal { .. } => {
+        tracing::error!("Detailed Error: {:?}", self);
+        (
+          StatusCode::INTERNAL_SERVER_ERROR,
+          500_000,
+          "An internal server error occurred".to_string(),
+        )
+      }
     };
     let resp = ApiResponse::<()> {
       code: business_code,

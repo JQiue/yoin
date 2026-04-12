@@ -1,0 +1,16 @@
+services:
+  yoin:
+    image: jqiue/yoin:latest
+    container_name: yoin
+    ports:
+      - "7410:7410"
+    environment:
+      - HOST=0.0.0.0
+      - DATABASE_URL=sqlite:///app/data/yoin.sqlite?mode=rwc
+    volumes:
+      - yoin-db:/app/data
+    restart: always
+
+volumes:
+  yoin-db:
+    driver: local
