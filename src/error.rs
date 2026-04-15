@@ -60,7 +60,7 @@ impl ClientErrorKind {
   }
 
   pub fn moderation_provider_not_found() -> Self {
-    Self::NotFound(error_codes::SITE_MODULE + 404)
+    Self::NotFound(error_codes::MODERATION_MODULE + 404)
   }
 }
 
