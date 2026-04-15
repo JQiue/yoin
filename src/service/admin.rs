@@ -172,7 +172,8 @@ impl AppService {
       .find_all()
       .await
       .with_op("find all roles")?;
-    let role_map: HashMap<i64, String> = roles.into_iter().map(|role| (role.id, role.name)).collect();
+    let role_map: HashMap<i64, String> =
+      roles.into_iter().map(|role| (role.id, role.name)).collect();
 
     Ok(
       bindings
@@ -197,7 +198,7 @@ impl AppService {
   /// List comments for an admin panel, with pagination and status filtering.
   pub async fn list_comments_for_admin(
     &self,
-    user_id: i64,
+    _user_id: i64,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentViewForAdmin>, AppError> {
     let (replies, total, total_pages) = self
@@ -222,7 +223,7 @@ impl AppService {
   /// Update the status of a comment from the admin side.
   pub async fn update_comment_status_for_admin(
     &self,
-    user_id: i64,
+    _user_id: i64,
     id: i64,
     status: CommentStatus,
   ) -> Result<(), AppError> {
@@ -239,7 +240,7 @@ impl AppService {
   ///
   /// If the target comment is a root comment (`parent_id` is `None`), the
   /// whole thread is deleted; otherwise, only the comment is deleted.
-  pub async fn delete_comment_for_admin(&self, user_id: i64, id: i64) -> Result<(), AppError> {
+  pub async fn delete_comment_for_admin(&self, _user_id: i64, id: i64) -> Result<(), AppError> {
     let comment = self
       .repo
       .comment()

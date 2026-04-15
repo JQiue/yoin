@@ -5,6 +5,7 @@ use axum::{
 };
 use thiserror::Error;
 
+use crate::constants::error_codes;
 use crate::response::ApiResponse;
 
 #[derive(Debug, Error)]
@@ -30,43 +31,36 @@ pub enum ClientErrorKind {
 }
 
 impl ClientErrorKind {
-  pub const COMMON_MODULE: i32 = 0;
-  pub const AUTH_MODULE: i32 = 100_000;
-  pub const USER_MODULE: i32 = 200_000;
-  pub const SITE_MODULE: i32 = 300_000;
-  pub const COMMENT_MODULE: i32 = 400_000;
-  pub const MODERATION_MODULE: i32 = 500_000;
-
   pub fn bad_request() -> Self {
-    Self::BadRequest(Self::COMMON_MODULE + 400)
+    Self::BadRequest(error_codes::COMMON_MODULE + 400)
   }
 
   pub fn unsupported_media_type() -> Self {
-    Self::UnsupportedMediaType(Self::COMMON_MODULE + 415)
+    Self::UnsupportedMediaType(error_codes::COMMON_MODULE + 415)
   }
 
   pub fn invalid_credentials() -> Self {
-    Self::Unauthorized(Self::AUTH_MODULE + 401)
+    Self::Unauthorized(error_codes::AUTH_MODULE + 401)
   }
 
   pub fn user_not_found() -> Self {
-    Self::NotFound(Self::USER_MODULE + 404)
+    Self::NotFound(error_codes::USER_MODULE + 404)
   }
 
   pub fn site_not_found() -> Self {
-    Self::NotFound(Self::SITE_MODULE + 404)
+    Self::NotFound(error_codes::SITE_MODULE + 404)
   }
 
   pub fn comment_not_found() -> Self {
-    Self::NotFound(Self::COMMENT_MODULE + 404)
+    Self::NotFound(error_codes::COMMENT_MODULE + 404)
   }
 
   pub fn user_already_exists() -> Self {
-    Self::Conflict(Self::USER_MODULE + 409)
+    Self::Conflict(error_codes::USER_MODULE + 409)
   }
 
   pub fn moderation_provider_not_found() -> Self {
-    Self::NotFound(Self::SITE_MODULE + 404)
+    Self::NotFound(error_codes::SITE_MODULE + 404)
   }
 }
 
@@ -80,7 +74,7 @@ impl AppError {
 
   pub fn forbidden(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::Forbidden(ClientErrorKind::AUTH_MODULE + 403),
+      kind: ClientErrorKind::Forbidden(error_codes::AUTH_MODULE + 403),
       msg,
     }
   }

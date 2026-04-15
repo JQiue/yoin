@@ -9,24 +9,10 @@ use async_openai::{
 use serde::Deserialize;
 
 use crate::{
+  constants::moderation::LLM_DEFAULT_PROMPT,
   error::{AppError, ToAppError},
   moderation::{ModerationDecision, ModerationInput, ModerationResult, types::CommentModerator},
 };
-
-const DEFAULT_PROMPT: &str = r#"You are a comment moderation system.
-Review the user comment and return only JSON.
-
-Rules:
-
-score is a float between 0 and 1 where higher means more risky
-decision must be one of: allow, review, reject
-reject for obvious spam, scams, malicious links, abusive or illegal content
-review for borderline, ambiguous, or uncertain content
-allow for normal comments
-{{rule}}
-
-Return exactly:
-{"decision":"allow|review|reject","reason":"short reason","score":0.0}"#;
 
 #[derive(Debug)]
 pub struct LLMModerator {
@@ -46,9 +32,9 @@ struct LlmModerationPayload {
 impl LLMModerator {
   pub fn new(api_base: String, api_key: String, model: String, rule: Option<String>) -> Self {
     let prompt = if let Some(rule) = rule {
-      DEFAULT_PROMPT.to_string().replace("{{rule}}", &rule)
+      LLM_DEFAULT_PROMPT.to_string().replace("{{rule}}", &rule)
     } else {
-      DEFAULT_PROMPT.to_string().replace("{{rule}}", "")
+      LLM_DEFAULT_PROMPT.to_string().replace("{{rule}}", "")
     };
     Self {
       prompt,

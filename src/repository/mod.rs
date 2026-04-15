@@ -5,9 +5,9 @@ pub mod permission;
 pub mod role;
 pub mod role_permission;
 pub mod site;
+pub mod user;
 pub mod user_identity;
 pub mod user_role_binding;
-pub mod user;
 
 pub use comment::{CommentCreateData, CommentRepository};
 pub use moderation_provider::{
@@ -20,11 +20,11 @@ pub use permission::{PermissionCreateData, PermissionRepository, PermissionUpdat
 pub use role::{RoleCreateData, RoleRepository, RoleUpdateData};
 pub use role_permission::{RolePermissionCreateData, RolePermissionRepository};
 pub use site::{SiteCreateData, SiteRepository, SiteUpdateData};
+pub use user::{UserCreateData, UserRepository, UserUpdateData};
 pub use user_identity::{UserIdentityCreateData, UserIdentityRepository, UserIdentityUpdateData};
 pub use user_role_binding::{
   UserRoleBindingCreateData, UserRoleBindingRepository, UserRoleBindingUpdateData,
 };
-pub use user::{UserCreateData, UserRepository, UserUpdateData};
 
 #[rustfmt::skip]
 use sea_orm::DatabaseConnection;

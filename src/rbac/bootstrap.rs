@@ -3,47 +3,18 @@ use migration::enums::UserRoleBindingScopeType;
 use sea_orm::entity::prelude::DateTime;
 
 use crate::{
+  constants::rbac::{roles, SYSTEM_PERMISSIONS, SYSTEM_ROLES, SUPER_ADMIN_PERMISSION_CODES, SITE_ADMIN_PERMISSION_CODES, MODERATOR_PERMISSION_CODES},
   error::{AppError, ToAppError},
-  rbac::permissions::{codes, roles},
   repository::{
     PermissionCreateData, Repository, RoleCreateData, RolePermissionCreateData,
     UserRoleBindingCreateData,
   },
 };
 
-const SYSTEM_PERMISSIONS: [(&str, &str); 5] = [
-  (codes::SITE_MANAGE, "Manage sites"),
-  (codes::COMMENT_MODERATE, "Moderate comments"),
-  (codes::COMMENT_DELETE_ANY, "Delete any comment"),
-  (codes::OAUTH_PROVIDER_MANAGE, "Manage OAuth providers"),
-  (
-    codes::MODERATION_PROVIDER_MANAGE,
-    "Manage moderation providers",
-  ),
-];
-
-const SYSTEM_ROLES: [(&str, Option<&str>); 3] = [
-  (roles::SUPER_ADMIN, Some("System super administrator")),
-  (roles::SITE_ADMIN, Some("Site administrator")),
-  (roles::MODERATOR, Some("Comment moderator")),
-];
-
-const SUPER_ADMIN_PERMISSION_CODES: [&str; 5] = [
-  codes::SITE_MANAGE,
-  codes::COMMENT_MODERATE,
-  codes::COMMENT_DELETE_ANY,
-  codes::OAUTH_PROVIDER_MANAGE,
-  codes::MODERATION_PROVIDER_MANAGE,
-];
-
-const SITE_ADMIN_PERMISSION_CODES: [&str; 3] = [
-  codes::SITE_MANAGE,
-  codes::OAUTH_PROVIDER_MANAGE,
-  codes::MODERATION_PROVIDER_MANAGE,
-];
-
-const MODERATOR_PERMISSION_CODES: [&str; 2] = [codes::COMMENT_MODERATE, codes::COMMENT_DELETE_ANY];
-
+/// 🚀 Bootstrap RBAC
+///
+#[doc = "docs"]
+#[doc = include_str!("../docs/bootstrap_rbac.md")]
 pub async fn bootstrap_rbac(repo: &Repository) -> Result<(), AppError> {
   let datetime = utc_now().naive_utc();
 
@@ -87,9 +58,27 @@ pub async fn bootstrap_rbac(repo: &Repository) -> Result<(), AppError> {
     }
   }
 
-  ensure_role_permissions(repo, roles::SUPER_ADMIN, &SUPER_ADMIN_PERMISSION_CODES, datetime).await?;
-  ensure_role_permissions(repo, roles::SITE_ADMIN, &SITE_ADMIN_PERMISSION_CODES, datetime).await?;
-  ensure_role_permissions(repo, roles::MODERATOR, &MODERATOR_PERMISSION_CODES, datetime).await?;
+  ensure_role_permissions(
+    repo,
+    roles::SUPER_ADMIN,
+    &SUPER_ADMIN_PERMISSION_CODES,
+    datetime,
+  )
+  .await?;
+  ensure_role_permissions(
+    repo,
+    roles::SITE_ADMIN,
+    &SITE_ADMIN_PERMISSION_CODES,
+    datetime,
+  )
+  .await?;
+  ensure_role_permissions(
+    repo,
+    roles::MODERATOR,
+    &MODERATOR_PERMISSION_CODES,
+    datetime,
+  )
+  .await?;
 
   Ok(())
 }

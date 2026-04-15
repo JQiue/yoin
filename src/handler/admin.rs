@@ -9,6 +9,7 @@ use crate::{
   entity::comments,
   error::AppError,
   extractor::{AppJson, RequireAuth},
+  rbac::permissions::codes::MODERATION_PROVIDER_MANAGE,
   response::ApiResponse,
 };
 
@@ -112,7 +113,10 @@ pub async fn list_roles(
   require_auth: RequireAuth,
 ) -> Result<ApiResponse<Vec<RoleView>>, AppError> {
   Ok(ApiResponse::success(
-    state.service.list_roles_for_admin(require_auth.user_id).await?,
+    state
+      .service
+      .list_roles_for_admin(require_auth.user_id)
+      .await?,
   ))
 }
 
@@ -165,6 +169,10 @@ pub async fn list_comments(
   require_auth: RequireAuth,
   Query(qs): Query<ListQueryString>,
 ) -> Result<ApiResponse<PageResponse<CommentViewForAdmin>>, AppError> {
+  state
+    .service
+    .require_global_permission(require_auth.user_id, MODERATION_PROVIDER_MANAGE)
+    .await?;
   Ok(ApiResponse::success(
     state
       .service

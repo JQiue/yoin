@@ -1,3 +1,10 @@
+//! Application service layer.
+//!
+//! This module aggregates the various domain services (admin, comment,
+//! moderation, oauth, etc.) that implement business logic on top of the
+//! repository layer. Each submodule provides a set of async operations used by
+//! the HTTP handlers.
+
 pub mod admin;
 mod comment;
 mod moderation;
