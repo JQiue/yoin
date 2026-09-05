@@ -32,8 +32,8 @@ pub enum ReactionActorType {
 pub enum ReactionTargetType {
   #[sea_orm(string_value = "comment")]
   Comment,
-  #[sea_orm(string_value = "site")]
-  Site,
+  #[sea_orm(string_value = "page")]
+  Page,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]

@@ -8,11 +8,14 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
   #[sea_orm(primary_key)]
   pub id: i64,
+  pub site_id: i64,
+  pub target_type: ReactionTargetType,
+  pub comment_id: Option<i64>,
+  pub page_path: String,
   pub actor_type: ReactionActorType,
   pub actor_id: String,
-  pub target_type: ReactionTargetType,
-  pub target_id: String,
   pub r#type: String,
+  pub target_key: String,
   pub created_at: DateTime,
 }
 
