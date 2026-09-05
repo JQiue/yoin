@@ -2,6 +2,18 @@ import { getRuntimeConfig } from "@/config/runtime";
 import type { Method, RequestConfig, ResData } from "@/shared/api/types";
 import { storage } from "@/shared/helper";
 
+const GUEST_ID_HEADER = "x-yoin-guest-id";
+
+function getGuestId() {
+  const existing = storage.get("yoin:guest_id");
+  if (existing) return existing;
+  const created =
+    globalThis.crypto?.randomUUID?.().replaceAll("-", "") ??
+    `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+  storage.set("yoin:guest_id", created);
+  return created;
+}
+
 function getApiBase() {
   const configuredBase = getRuntimeConfig().api_base?.trim() || "";
   return configuredBase.replace(/\/+$/, "");
@@ -35,15 +47,20 @@ async function baseRequest<T>(
 
   const response = await fetch(fullUrl.toString(), {
     method,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${storage.get("yoin:token") || ""}`,
+      [GUEST_ID_HEADER]: getGuestId(),
       ...headers,
     },
     body: data ? JSON.stringify(data) : undefined,
     ...rest,
   });
-  // console.log(response);
+  const serverGuestId = response.headers.get(GUEST_ID_HEADER);
+  if (serverGuestId) {
+    storage.set("yoin:guest_id", serverGuestId);
+  }
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
     throw new Error(errorBody.msg || `网络错误: ${response.status}`);

@@ -1,6 +1,7 @@
 import CommentForm from "@/client/components/comment/CommentForm";
 import CommentList from "@/client/components/comment/CommentList";
 import CommentListFooter from "@/client/components/comment/CommentListFooter";
+import ReactionBar from "@/client/components/comment/ReactionBar";
 import Sort from "@/client/components/comment/Sort";
 import { useInfiniteCommentScroll } from "@/client/hooks/useInfiniteCommentScroll";
 import { useInitializeCommentPage } from "@/client/hooks/useInitializeCommentPage";
@@ -13,6 +14,10 @@ const App = () => {
   const pageOffset = useCommentStore((state) => state.pageOffset);
   const totalPages = useCommentStore((state) => state.totalPages);
   const isLoading = useCommentStore((state) => state.isLoading);
+  const pageReactions = useCommentStore((state) => state.pageReactions);
+  const updatePageReaction = useCommentStore(
+    (state) => state.updatePageReaction,
+  );
 
   useInitializeCommentPage();
   const sentinelRef = useInfiniteCommentScroll({
@@ -25,6 +30,9 @@ const App = () => {
   return (
     <div className="min-h-screen py-6 px-4 bg-app-bg">
       <CommentForm />
+      <div className="mt-3">
+        <ReactionBar summary={pageReactions} onSelect={updatePageReaction} />
+      </div>
       <div className="my-3 flex items-center justify-between pb-2">
         <div className="flex items-center space-x-2">
           <span className="h-5 w-1 border-l-4 border-zinc-800"></span>

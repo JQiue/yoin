@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import CommentForm from "@/client/components/comment/CommentForm";
 import CommentList from "@/client/components/comment/CommentList";
+import ReactionBar from "@/client/components/comment/ReactionBar";
 import { useCommentReplies } from "@/client/hooks/useCommentReplies";
 import { useCommentStore } from "@/client/store";
 import { getRuntimeConfig } from "@/config/runtime";
@@ -44,7 +45,9 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
   const isRootComment = comment.parent_id == null;
   const comments = useCommentStore((state) => state.comments);
   const deleteComment = useCommentStore((state) => state.deleteComment);
-  const updateCommentVote = useCommentStore((state) => state.updateCommentVote);
+  const updateCommentReaction = useCommentStore(
+    (state) => state.updateCommentReaction,
+  );
   const sort = useCommentStore((state) => state.sort);
   const siteId = getRuntimeConfig().site_id;
   const [isReply, setIsReply] = useState(false);
@@ -78,8 +81,8 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
     onDeleteComment?.(comment);
   };
 
-  const handleClickVote = (id: number, type: "up" | "down") => {
-    updateCommentVote(id, type);
+  const handleSelectReaction = (reaction: string) => {
+    updateCommentReaction(comment.id, reaction);
   };
 
   return (
@@ -120,23 +123,11 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
             className="w-full mt-2 comment-content "
             dangerouslySetInnerHTML={{ __html: comment.content }}
           ></div>
-          <div className="mt-2 flex gap-2 text-xs group">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleClickVote(comment.id, "up")}
-            >
-              赞同
-              {comment.up_vote || 0}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleClickVote(comment.id, "down")}
-            >
-              反对
-              {comment.down_vote || 0}
-            </Button>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs group">
+            <ReactionBar
+              summary={comment.reactions}
+              onSelect={handleSelectReaction}
+            />
             <Button
               className="invisible group-hover:visible"
               variant="ghost"

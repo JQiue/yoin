@@ -46,16 +46,20 @@ export type Comment = {
   nickname: string;
   website: string;
   content: string;
-  up_vote: number;
-  down_vote: number;
   device: string;
   location: string;
   avatar: string;
   created_at: string;
   is_anonymous: boolean;
   is_private: boolean;
+  reactions: ReactionSummary;
   replies?: Comment[];
   has_more?: boolean;
+};
+
+export type ReactionSummary = {
+  counts: Record<string, number>;
+  my_reaction: string | null;
 };
 
 export type Login = {
@@ -73,8 +77,6 @@ export type CommentForAdmin = {
   nickname: string;
   website: string;
   content: string;
-  up_vote: number;
-  down_vote: number;
   device: string;
   location: string;
   avatar: string;

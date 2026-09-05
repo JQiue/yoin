@@ -1,8 +1,37 @@
 import { create } from "zustand";
 import type { CommentsState } from "@/client/types";
 import { getRuntimeConfig } from "@/config/runtime";
-import { deleteComment, fetchCommentsList, vote } from "@/shared/api";
-import type { Comment } from "@/shared/api/types";
+import {
+  deleteComment,
+  fetchCommentsList,
+  fetchReactions,
+  upsertReaction,
+} from "@/shared/api";
+import type { Comment, ReactionSummary } from "@/shared/api/types";
+
+const emptyReactions = (): ReactionSummary => ({
+  counts: {},
+  my_reaction: null,
+});
+
+const mapCommentById = (
+  comments: Comment[],
+  id: number,
+  updater: (comment: Comment) => Comment,
+): Comment[] => {
+  return comments.map((comment) => {
+    if (comment.id === id) {
+      return updater(comment);
+    }
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: mapCommentById(comment.replies, id, updater),
+      };
+    }
+    return comment;
+  });
+};
 
 const removeCommentById = (comments: Comment[], id: number): Comment[] => {
   return comments
@@ -23,6 +52,7 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
   totalPages: 0,
   sort: "created_desc",
   isLoading: false,
+  pageReactions: emptyReactions(),
   setComments: (comments) => set({ comments }),
   fetchComments: async (pageOffset = 1, append = false) => {
     const config = getRuntimeConfig();
@@ -66,32 +96,42 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
     set({ comments: removeCommentById(comments, id), total: total - 1 });
     await deleteComment(id);
   },
-  updateCommentVote: async (id: number, type: "up" | "down") => {
-    const { comments } = get();
-    const newComments = comments.map((comment) => {
-      if (comment.id === id) {
-        if (type === "up") {
-          return { ...comment, up_vote: comment.up_vote + 1 };
-        } else {
-          return { ...comment, down_vote: comment.down_vote + 1 };
-        }
-      }
-      if (comment.replies) {
-        const newReplies = comment.replies.map((reply) => {
-          if (reply.id === id) {
-            if (type === "up") {
-              return { ...reply, up_vote: reply.up_vote + 1 };
-            } else {
-              return { ...reply, down_vote: reply.down_vote + 1 };
-            }
-          }
-          return reply;
-        });
-        return { ...comment, replies: newReplies };
-      }
-      return comment;
+  updateCommentReaction: async (id: number, reaction: string) => {
+    const config = getRuntimeConfig();
+    if (config.site_id == null) return;
+    const { data } = await upsertReaction(
+      config.site_id,
+      "comment",
+      location.pathname,
+      reaction,
+      id,
+    );
+    set({
+      comments: mapCommentById(get().comments, id, (comment) => ({
+        ...comment,
+        reactions: data,
+      })),
     });
-    set({ comments: newComments });
-    await vote(id, type);
+  },
+  fetchPageReactions: async () => {
+    const config = getRuntimeConfig();
+    if (config.site_id == null) return;
+    const { data } = await fetchReactions(
+      config.site_id,
+      "page",
+      location.pathname,
+    );
+    set({ pageReactions: data });
+  },
+  updatePageReaction: async (reaction: string) => {
+    const config = getRuntimeConfig();
+    if (config.site_id == null) return;
+    const { data } = await upsertReaction(
+      config.site_id,
+      "page",
+      location.pathname,
+      reaction,
+    );
+    set({ pageReactions: data });
   },
 }));

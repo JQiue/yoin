@@ -9,6 +9,7 @@ interface StorageSchema {
   "yoin:token": string;
   "yoin:user_info": UserInfo;
   "yoin:comment_draft": string;
+  "yoin:guest_id": string;
 }
 
 export const storage = {

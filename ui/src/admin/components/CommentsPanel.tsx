@@ -179,8 +179,6 @@ export const CommentsPanel = ({
                     {comment.website && <span>主页：{comment.website}</span>}
                     {comment.device && <span>设备：{comment.device}</span>}
                     {comment.location && <span>地区：{comment.location}</span>}
-                    <span>赞同：{comment.up_vote}</span>
-                    <span>反对：{comment.down_vote}</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap justify-end gap-1">

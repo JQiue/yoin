@@ -1,5 +1,5 @@
 import { http } from "@/shared/api/client";
-import type { Comment, Paged } from "@/shared/api/types";
+import type { Comment, Paged, ReactionSummary } from "@/shared/api/types";
 
 export const fetchCommentsList = (
   site_id: number,
@@ -43,6 +43,38 @@ export const deleteComment = (id: number) => {
   return http.delete(`/api/comments/${id}`);
 };
 
+export const upsertReaction = (
+  site_id: number,
+  target_type: "comment" | "page",
+  page_path: string,
+  reaction: string,
+  comment_id?: number,
+) => {
+  return http.post<ReactionSummary>("/api/reactions", {
+    site_id,
+    target_type,
+    page_path,
+    reaction,
+    comment_id,
+  });
+};
+
+export const fetchReactions = (
+  site_id: number,
+  target_type: "comment" | "page",
+  page_path: string,
+  comment_id?: number,
+) => {
+  return http.get<ReactionSummary>("/api/reactions", {
+    params: {
+      site_id,
+      target_type,
+      page_path,
+      comment_id,
+    },
+  });
+};
+
 export const fetchCommentReplies = (
   id: number,
   site_id: number,
@@ -60,8 +92,4 @@ export const fetchCommentReplies = (
       sort,
     },
   });
-};
-
-export const vote = (id: number, type: "up" | "down") => {
-  return http.patch(`/api/comments/${id}/vote/${type}`);
 };

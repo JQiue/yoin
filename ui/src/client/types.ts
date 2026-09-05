@@ -1,5 +1,5 @@
 import type { RuntimeOptions } from "@/config/types";
-import type { Comment } from "@/shared/api/types";
+import type { Comment, ReactionSummary } from "@/shared/api/types";
 
 export type Option = RuntimeOptions & {
   site_id: number;
@@ -25,5 +25,8 @@ export interface CommentsState {
   fetchNextPage: () => void;
   changeSort: (newSort: string) => void;
   deleteComment: (id: number) => void;
-  updateCommentVote: (id: number, type: "up" | "down") => void;
+  updateCommentReaction: (id: number, reaction: string) => void;
+  pageReactions: ReactionSummary;
+  fetchPageReactions: () => void;
+  updatePageReaction: (reaction: string) => void;
 }
