@@ -10,14 +10,13 @@ use http_body_util::BodyExt;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-
 use yoin::{app::app, db::migrate};
 
 pub const TEST_JWT_KEY: &str = "test_jwt_key_123456789012345678901234567890";
 
 #[derive(Deserialize)]
 pub struct ApiResponse<T> {
-  pub code: i32,
+  pub code: String,
   pub msg: String,
   pub data: Option<T>,
 }

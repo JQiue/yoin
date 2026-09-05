@@ -5,8 +5,10 @@ export interface RequestConfig extends Omit<RequestInit, "method"> {
   data?: unknown;
 }
 
+export const SUCCESS_CODE = "ok";
+
 export interface ResData<T> {
-  code: number;
+  code: string;
   msg: string;
   data: T;
 }

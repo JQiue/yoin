@@ -38,35 +38,25 @@ export const useAuthForm = (onSuccess?: () => void) => {
       if (isLoginView) {
         const loginData = data as LoginInput;
         const resData = await login(loginData.email, loginData.password);
-        if (resData.code === 0) {
-          storage.set("yoin:token", resData.data.token);
-          storage.set("yoin:user_info", {
-            nickname: resData.data.nickname,
-            website: resData.data.website,
-            email: resData.data.email,
-            avatar: resData.data.avatar,
-          });
-          setUser(resData.data);
-          setSubmitStatus({ type: "success", msg: "登录成功" });
-          if (onSuccess) {
-            onSuccess();
-          }
-        } else {
-          setSubmitStatus({ type: "error", msg: resData.msg });
-        }
+        storage.set("yoin:token", resData.data.token);
+        storage.set("yoin:user_info", {
+          nickname: resData.data.nickname,
+          website: resData.data.website,
+          email: resData.data.email,
+          avatar: resData.data.avatar,
+        });
+        setUser(resData.data);
+        setSubmitStatus({ type: "success", msg: "登录成功" });
+        onSuccess?.();
       } else {
         const regData = data as NewUserInput;
-        const resData = await register(
+        await register(
           regData.email,
           regData.password,
           regData.nickname,
           regData.website,
         );
-        if (resData.code === 0) {
-          setSubmitStatus({ type: "success", msg: "注册成功，请登录" });
-        } else {
-          setSubmitStatus({ type: "error", msg: resData.msg });
-        }
+        setSubmitStatus({ type: "success", msg: "注册成功，请登录" });
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);

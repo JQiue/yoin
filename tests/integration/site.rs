@@ -1,12 +1,12 @@
 use axum::http::StatusCode;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use yoin::entity::sites::SiteConfig;
 
 use crate::common::{
   ApiResponse, get_with_bearer, patch_json_with_bearer, post_json_with_bearer, read_json,
   register_user, test_app,
 };
-use yoin::entity::sites::SiteConfig;
 
 #[derive(Deserialize)]
 struct SiteView {
@@ -42,7 +42,7 @@ async fn admin_can_create_site() {
   assert_eq!(resp.status(), StatusCode::OK);
 
   let body: ApiResponse<SiteView> = read_json(resp).await;
-  assert_eq!(body.code, 0);
+  assert_eq!(body.code, "ok");
   let site = body.data.expect("site data");
   assert_eq!(site.name, "Docs");
   assert_eq!(site.url, "https://example.com");
@@ -129,7 +129,7 @@ async fn normal_user_cannot_create_site() {
   assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
   let body: ApiResponse<Value> = read_json(resp).await;
-  assert_ne!(body.code, 0);
+  assert_eq!(body.code, "forbidden");
 }
 
 #[tokio::test]
@@ -175,7 +175,7 @@ async fn normal_user_cannot_update_site() {
   assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
   let body: ApiResponse<Value> = read_json(resp).await;
-  assert_ne!(body.code, 0);
+  assert_eq!(body.code, "forbidden");
 }
 
 #[tokio::test]

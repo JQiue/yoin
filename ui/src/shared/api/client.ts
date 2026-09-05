@@ -1,5 +1,10 @@
 import { getRuntimeConfig } from "@/config/runtime";
-import type { Method, RequestConfig, ResData } from "@/shared/api/types";
+import {
+  type Method,
+  type RequestConfig,
+  type ResData,
+  SUCCESS_CODE,
+} from "@/shared/api/types";
 import { storage } from "@/shared/helper";
 
 const GUEST_ID_HEADER = "x-yoin-guest-id";
@@ -66,7 +71,11 @@ async function baseRequest<T>(
     throw new Error(errorBody.msg || `网络错误: ${response.status}`);
   }
 
-  return response.json();
+  const body = (await response.json()) as ResData<T>;
+  if (body.code !== SUCCESS_CODE) {
+    throw new Error(body.msg || `业务错误: ${body.code}`);
+  }
+  return body;
 }
 
 export const http = {

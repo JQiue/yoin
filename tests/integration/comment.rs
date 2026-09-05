@@ -114,7 +114,7 @@ async fn anonymous_comment_forbidden_when_site_disables_it() {
   assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
   let body: ApiResponse<Value> = read_json(resp).await;
-  assert_ne!(body.code, "0");
+  assert_eq!(body.code, "forbidden");
 }
 
 #[tokio::test]

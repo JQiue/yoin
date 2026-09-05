@@ -68,19 +68,17 @@ export const useCommentSubmit = ({
         parentId,
       );
 
-      if (resData.code === 0) {
-        setField("content", "");
-        setSubmitStatus({ type: "success", msg: resData.msg });
-        storage.set("yoin:user_info", {
-          nickname,
-          website,
-          email,
-          avatar: currentUser?.avatar,
-        });
-        storage.remove("yoin:comment_draft");
-        await fetchComments();
-        onCreated?.(resData.data);
-      }
+      setField("content", "");
+      setSubmitStatus({ type: "success", msg: resData.msg });
+      storage.set("yoin:user_info", {
+        nickname,
+        website,
+        email,
+        avatar: currentUser?.avatar,
+      });
+      storage.remove("yoin:comment_draft");
+      await fetchComments();
+      onCreated?.(resData.data);
     } catch (error) {
       setSubmitStatus({
         type: "error",
