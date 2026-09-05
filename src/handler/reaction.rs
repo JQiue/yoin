@@ -1,45 +1,60 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::{Query, State};
 use serde::{Deserialize, Serialize};
 
 use crate::{
   app::AppState,
   error::AppError,
-  extractor::{AppJson, RequireAuth},
+  extractor::{AppJson, OptionnalAuth},
   response::ApiResponse,
 };
 
 #[derive(Debug, Deserialize)]
-pub struct CreateReactionPayload {
+pub struct UpsertReactionPayload {
+  pub site_id: i64,
   pub target_type: String,
-  pub target_id: i64,
+  pub comment_id: Option<i64>,
+  pub page_path: String,
   pub reaction: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListReactionsQuery {
+  pub site_id: i64,
+  pub target_type: String,
+  pub comment_id: Option<i64>,
+  pub page_path: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct ReactionView {
-  pub id: i64,
-  pub target_type: String,
-  pub target_id: i64,
-  pub reaction: String,
+pub struct ReactionSummaryView {
+  pub counts: std::collections::BTreeMap<String, u64>,
+  pub my_reaction: Option<String>,
 }
 
-pub async fn create(
+pub async fn upsert(
   State(state): State<Arc<AppState>>,
-  require_auth: RequireAuth,
-  AppJson(payload): AppJson<CreateReactionPayload>,
-) -> Result<ApiResponse<ReactionView>, AppError> {
+  optional_auth: OptionnalAuth,
+  AppJson(payload): AppJson<UpsertReactionPayload>,
+) -> Result<ApiResponse<ReactionSummaryView>, AppError> {
   Ok(ApiResponse::success(
-    state.service.create_reaction(require_auth.user_id, payload).await?,
+    state
+      .service
+      .upsert_reaction(optional_auth.user_id, payload)
+      .await?,
   ))
 }
 
-pub async fn delete(
+pub async fn list(
   State(state): State<Arc<AppState>>,
-  require_auth: RequireAuth,
-  Path(id): Path<i64>,
-) -> Result<ApiResponse<()>, AppError> {
-  state.service.delete_reaction(require_auth.user_id, id).await?;
-  Ok(ApiResponse::success(()))
+  optional_auth: OptionnalAuth,
+  Query(qs): Query<ListReactionsQuery>,
+) -> Result<ApiResponse<ReactionSummaryView>, AppError> {
+  Ok(ApiResponse::success(
+    state
+      .service
+      .list_reactions(optional_auth.user_id, qs)
+      .await?,
+  ))
 }

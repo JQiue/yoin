@@ -2,6 +2,7 @@ pub mod comment;
 pub mod moderation_provider;
 pub mod oauth_provider;
 pub mod permission;
+pub mod reaction;
 pub mod role;
 pub mod role_permission;
 pub mod site;
@@ -17,6 +18,7 @@ pub use oauth_provider::{
   OauthProviderCreateData, OauthProviderRepository, OauthProviderUpdateData,
 };
 pub use permission::{PermissionCreateData, PermissionRepository, PermissionUpdateData};
+pub use reaction::{ReactionCreateData, ReactionRepository};
 pub use role::{RoleCreateData, RoleRepository, RoleUpdateData};
 pub use role_permission::{RolePermissionCreateData, RolePermissionRepository};
 pub use site::{SiteCreateData, SiteRepository, SiteUpdateData};
@@ -48,6 +50,10 @@ impl Repository {
 
   pub fn comment(&self) -> CommentRepository {
     CommentRepository { conn: self.conn }
+  }
+
+  pub fn reaction(&self) -> ReactionRepository {
+    ReactionRepository { conn: self.conn }
   }
 
   pub fn oauth_provider(&self) -> OauthProviderRepository {

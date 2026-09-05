@@ -1,11 +1,4 @@
-pub mod error_codes {
-  pub const COMMON_MODULE: i32 = 0;
-  pub const AUTH_MODULE: i32 = 100_000;
-  pub const USER_MODULE: i32 = 200_000;
-  pub const SITE_MODULE: i32 = 300_000;
-  pub const COMMENT_MODULE: i32 = 400_000;
-  pub const MODERATION_MODULE: i32 = 500_000;
-}
+pub mod error_codes;
 
 pub mod rbac {
   pub mod codes {
@@ -55,6 +48,10 @@ pub mod rbac {
 
   pub const MODERATOR_PERMISSION_CODES: [&str; 2] =
     [codes::COMMENT_MODERATE, codes::COMMENT_DELETE_ANY];
+}
+
+pub mod reaction {
+  pub const ALLOWED_TYPES: [&str; 5] = ["👍", "❤️", "😄", "🎉", "👎"];
 }
 
 pub mod moderation {

@@ -128,7 +128,7 @@ fn create_router(state: Arc<AppState>) -> Router {
     .route("/auth/oauth/{provider}/callback", get(auth::oauth_callback))
     .route("/comments", post(comment::create).get(comment::list))
     .route("/comments/{id}/replies", get(comment::list_replies))
-    .route("/comments/{id}/vote/{type}", patch(comment::vote))
+    .route("/reactions", post(reaction::upsert).get(reaction::list))
     .route_layer(from_extractor_with_state::<OptionnalAuth, Arc<AppState>>(
       state.clone(),
     ));
@@ -141,8 +141,6 @@ fn create_router(state: Arc<AppState>) -> Router {
       get(subscription::list).post(subscription::create),
     )
     .route("/comment-subscriptions/{id}", delete(subscription::delete))
-    .route("/reactions", post(reaction::create))
-    .route("/reactions/{id}", delete(reaction::delete))
     .route(
       "/sites",
       post(site::create).get(site::list).patch(site::update),
