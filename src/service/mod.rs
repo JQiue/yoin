@@ -139,4 +139,25 @@ impl AppService {
       )
       .await
   }
+
+  /// Check site permission, falling back to the same permission on the global scope.
+  pub async fn has_site_permission(
+    &self,
+    user_id: i64,
+    permission_name: &str,
+    site_id: i64,
+  ) -> Result<bool, AppError> {
+    if self.has_global_permission(user_id, permission_name).await? {
+      return Ok(true);
+    }
+
+    self
+      .has_permission(
+        user_id,
+        permission_name,
+        UserRoleBindingScopeType::Site,
+        Some(&site_id.to_string()),
+      )
+      .await
+  }
 }

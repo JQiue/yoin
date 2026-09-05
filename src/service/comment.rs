@@ -8,10 +8,18 @@ use crate::{
   handler::comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
   helper::generate_avatar,
   moderation::{self, LLMModerator, ModerationInput, types::CommentModerator},
+  rbac::permissions::codes::SITE_MANAGE,
   repository::CommentCreateData,
 };
 
 impl AppService {
+  async fn can_manage_site(&self, user_id: Option<i64>, site_id: i64) -> Result<bool, AppError> {
+    match user_id {
+      Some(id) => self.has_site_permission(id, SITE_MANAGE, site_id).await,
+      None => Ok(false),
+    }
+  }
+
   /// Create a new comment or reply.
   ///
   /// If `payload.parent_id` is provided, the method validates the parent belongs to
@@ -41,6 +49,10 @@ impl AppService {
         return Err(AppError::bad_request(
           "Parent comment is not available for reply".to_string(),
         ));
+      }
+
+      if parent.is_private && !self.can_manage_site(user_id, payload.site_id).await? {
+        return Err(AppError::comment_not_found("Comment not found".to_string()));
       }
 
       Some(parent.thread_id.unwrap_or(parent.id))
@@ -90,8 +102,8 @@ impl AppService {
         status: initial_status,
         location,
         is_sticky: false,
-        is_anonymous: false,
-        is_private: false,
+        is_anonymous: payload.is_anonymous,
+        is_private: payload.is_private,
         datetime: utc_now().naive_utc(),
       })
       .await
@@ -154,7 +166,8 @@ impl AppService {
       });
     }
 
-    Ok(CommentView::from_model(comment))
+    let reveal_identity = self.can_manage_site(user_id, comment.site_id).await?;
+    Ok(CommentView::from_model(comment, reveal_identity))
   }
 
   /// List root comments for a site/page with pagination.
@@ -163,8 +176,10 @@ impl AppService {
   /// per thread (and sets `has_more` accordingly).
   pub async fn list_comments(
     &self,
+    user_id: Option<i64>,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
+    let include_private = self.can_manage_site(user_id, qs.site_id).await?;
     let (roots, total, total_pages) = self
       .repo
       .comment()
@@ -174,6 +189,7 @@ impl AppService {
         qs.page_size,
         qs.page_offset,
         &qs.sort,
+        include_private,
       )
       .await
       .with_op("query comments")?;
@@ -182,17 +198,17 @@ impl AppService {
     let preview_replies = self
       .repo
       .comment()
-      .find_preview_replies_by_thread_ids(root_ids, reply_limit)
+      .find_preview_replies_by_thread_ids(root_ids, reply_limit, include_private)
       .await
       .with_op("find all replies by thread ids")?;
     let items = roots
       .into_iter()
       .map(|root| {
-        let mut view = CommentView::from_model(root);
+        let mut view = CommentView::from_model(root, include_private);
         let mut thread_replies: Vec<CommentView> = preview_replies
           .iter()
           .filter(|r| r.thread_id == Some(view.id))
-          .map(|r| CommentView::from_model(r.clone()))
+          .map(|r| CommentView::from_model(r.clone(), include_private))
           .collect();
 
         if thread_replies.len() > reply_limit {
@@ -223,16 +239,28 @@ impl AppService {
   /// List replies under a specific thread (comment id) with pagination.
   pub async fn list_replies(
     &self,
+    user_id: Option<i64>,
     id: i64,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
+    let include_private = self.can_manage_site(user_id, qs.site_id).await?;
     let (replies, total, total_pages) = self
       .repo
       .comment()
-      .find_thread_replies_paged(id, qs.site_id, &qs.page_path, qs.page_size, qs.page_offset)
+      .find_thread_replies_paged(
+        id,
+        qs.site_id,
+        &qs.page_path,
+        qs.page_size,
+        qs.page_offset,
+        include_private,
+      )
       .await
       .with_op("query replies")?;
-    let items: Vec<CommentView> = replies.into_iter().map(CommentView::from_model).collect();
+    let items: Vec<CommentView> = replies
+      .into_iter()
+      .map(|comment| CommentView::from_model(comment, include_private))
+      .collect();
     Ok(PageResponse {
       items,
       page_size: qs.page_size,

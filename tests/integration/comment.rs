@@ -13,7 +13,11 @@ struct CommentView {
   thread_id: Option<i64>,
   parent_id: Option<i64>,
   nickname: String,
+  website: String,
+  avatar: String,
   content: String,
+  is_anonymous: bool,
+  is_private: bool,
 }
 
 #[derive(Deserialize)]
@@ -110,7 +114,7 @@ async fn anonymous_comment_forbidden_when_site_disables_it() {
   assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
   let body: ApiResponse<Value> = read_json(resp).await;
-  assert_ne!(body.code, 0);
+  assert_ne!(body.code, "0");
 }
 
 #[tokio::test]
@@ -262,4 +266,132 @@ async fn list_comments_returns_roots_and_replies() {
   assert_eq!(page.total, 1);
   assert_eq!(page.total_pages, 1);
   assert_eq!(page.items.len(), 1);
+}
+
+fn comment_payload_with_flags(
+  site_id: i64,
+  content: &str,
+  parent_id: Option<i64>,
+  is_anonymous: bool,
+  is_private: bool,
+) -> Value {
+  json!({
+    "site_id": site_id,
+    "nickname": "guest",
+    "website": "https://guest.example.com",
+    "content": content,
+    "page_path": "/post/hello",
+    "email": "guest@example.com",
+    "parent_id": parent_id,
+    "is_anonymous": is_anonymous,
+    "is_private": is_private
+  })
+}
+
+async fn list_comments(
+  app: &axum::Router,
+  site_id: i64,
+  token: Option<&str>,
+) -> PageResponse<CommentView> {
+  let uri = format!(
+    "/api/comments?site_id={}&page_path=%2Fpost%2Fhello&page_size=10&page_offset=1&sort=created_desc",
+    site_id
+  );
+  let resp = if let Some(token) = token {
+    common::get_with_bearer(app, &uri, token).await
+  } else {
+    common::request(
+      app,
+      common::build_request("GET", &uri, axum::body::Body::empty()),
+    )
+    .await
+  };
+  assert_eq!(resp.status(), StatusCode::OK);
+  let body: ApiResponse<PageResponse<CommentView>> = read_json(resp).await;
+  body.data.expect("page")
+}
+
+#[tokio::test]
+async fn anonymous_comment_hides_identity_from_guests() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-anonymous@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+  let site = create_site(&app, &admin.token, "AnonymousComments", true, 0)
+    .await
+    .data
+    .expect("site");
+  let user = register_user(&app, "anon-member@example.com", "secret123")
+    .await
+    .data
+    .expect("user");
+
+  let resp = post_json_with_bearer(
+    &app,
+    "/api/comments",
+    &user.token,
+    comment_payload_with_flags(site.id, "hidden identity", None, true, false),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let created: ApiResponse<CommentView> = read_json(resp).await;
+  let created = created.data.expect("comment");
+  assert!(created.is_anonymous);
+  assert_eq!(created.nickname, "匿名");
+  assert_eq!(created.website, "");
+  assert_eq!(created.avatar, "");
+
+  let guest_page = list_comments(&app, site.id, None).await;
+  assert_eq!(guest_page.total, 1);
+  assert_eq!(guest_page.items[0].nickname, "匿名");
+  assert_eq!(guest_page.items[0].website, "");
+  assert_eq!(guest_page.items[0].avatar, "");
+  assert!(guest_page.items[0].is_anonymous);
+
+  let admin_page = list_comments(&app, site.id, Some(&admin.token)).await;
+  assert_eq!(admin_page.total, 1);
+  assert_eq!(admin_page.items[0].nickname, "tester");
+  assert!(admin_page.items[0].is_anonymous);
+}
+
+#[tokio::test]
+async fn private_comment_is_hidden_from_guests() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-private@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+  let site = create_site(&app, &admin.token, "PrivateComments", true, 0)
+    .await
+    .data
+    .expect("site");
+
+  let resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload_with_flags(site.id, "only owner", None, false, true),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let created: ApiResponse<CommentView> = read_json(resp).await;
+  let created = created.data.expect("comment");
+  assert!(created.is_private);
+
+  let guest_page = list_comments(&app, site.id, None).await;
+  assert_eq!(guest_page.total, 0);
+  assert!(guest_page.items.is_empty());
+
+  let admin_page = list_comments(&app, site.id, Some(&admin.token)).await;
+  assert_eq!(admin_page.total, 1);
+  assert_eq!(admin_page.items[0].id, created.id);
+  assert!(admin_page.items[0].is_private);
+
+  let reply_resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site.id, "cannot see parent", Some(created.id)),
+  )
+  .await;
+  assert_eq!(reply_resp.status(), StatusCode::NOT_FOUND);
 }

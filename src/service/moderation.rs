@@ -79,7 +79,7 @@ impl AppService {
         .await
         .with_op("find pending comments")?
         .into_iter()
-        .map(CommentView::from_model)
+        .map(|comment| CommentView::from_model(comment, true))
         .collect::<Vec<CommentView>>(),
     )
   }

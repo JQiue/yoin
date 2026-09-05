@@ -97,6 +97,14 @@ impl CommentRepository {
     Comments::find_by_id(id).one(self.conn).await
   }
 
+  fn exclude_private(query: Select<Comments>, include_private: bool) -> Select<Comments> {
+    if include_private {
+      query
+    } else {
+      query.filter(comments::Column::IsPrivate.eq(false))
+    }
+  }
+
   pub async fn find_roots_paged(
     &self,
     site_id: i64,
@@ -104,6 +112,7 @@ impl CommentRepository {
     page_size: u64,
     page_offset: u64,
     sort: &str,
+    include_private: bool,
   ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
     let (sort_col, sort_ord) = match sort {
       "created_asc" => (comments::Column::CreatedAt, Order::Asc),
@@ -114,13 +123,16 @@ impl CommentRepository {
       "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
       _ => (comments::Column::CreatedAt, Order::Desc),
     };
-    let paginator = Comments::find()
-      .filter(comments::Column::SiteId.eq(site_id))
-      .filter(comments::Column::PagePath.eq(page_path))
-      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
-      .filter(comments::Column::ParentId.is_null())
-      .order_by(sort_col, sort_ord)
-      .paginate(self.conn, page_size);
+    let paginator = Self::exclude_private(
+      Comments::find()
+        .filter(comments::Column::SiteId.eq(site_id))
+        .filter(comments::Column::PagePath.eq(page_path))
+        .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
+        .filter(comments::Column::ParentId.is_null()),
+      include_private,
+    )
+    .order_by(sort_col, sort_ord)
+    .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
     let total_pages = (total as f64 / page_size as f64).ceil() as u64;
     let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
@@ -132,15 +144,19 @@ impl CommentRepository {
     &self,
     thread_ids: Vec<i64>,
     per_thread_limit: usize,
+    include_private: bool,
   ) -> Result<Vec<comments::Model>, DbErr> {
-    let all = Comments::find()
-      .filter(comments::Column::ThreadId.is_in(thread_ids))
-      .filter(comments::Column::ParentId.is_not_null())
-      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
-      .order_by(comments::Column::ThreadId, Order::Asc)
-      .order_by(comments::Column::CreatedAt, Order::Asc)
-      .all(self.conn)
-      .await?;
+    let all = Self::exclude_private(
+      Comments::find()
+        .filter(comments::Column::ThreadId.is_in(thread_ids))
+        .filter(comments::Column::ParentId.is_not_null())
+        .filter(comments::Column::Status.is_in([CommentStatus::Approved])),
+      include_private,
+    )
+    .order_by(comments::Column::ThreadId, Order::Asc)
+    .order_by(comments::Column::CreatedAt, Order::Asc)
+    .all(self.conn)
+    .await?;
 
     let mut counts = std::collections::HashMap::<i64, usize>::new();
     let mut preview = Vec::new();
@@ -168,14 +184,18 @@ impl CommentRepository {
     page_path: &str,
     page_size: u64,
     page_offset: u64,
+    include_private: bool,
   ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
-    let paginator = Comments::find()
-      .filter(comments::Column::SiteId.eq(site_id))
-      .filter(comments::Column::ThreadId.eq(thread_id))
-      .filter(comments::Column::PagePath.eq(page_path))
-      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
-      .order_by(comments::Column::CreatedAt, Order::Asc)
-      .paginate(self.conn, page_size);
+    let paginator = Self::exclude_private(
+      Comments::find()
+        .filter(comments::Column::SiteId.eq(site_id))
+        .filter(comments::Column::ThreadId.eq(thread_id))
+        .filter(comments::Column::PagePath.eq(page_path))
+        .filter(comments::Column::Status.is_in([CommentStatus::Approved])),
+      include_private,
+    )
+    .order_by(comments::Column::CreatedAt, Order::Asc)
+    .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
     let total_pages = (total as f64 / page_size as f64).ceil() as u64;
     let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };

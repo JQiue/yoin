@@ -52,6 +52,8 @@ export type Comment = {
   location: string;
   avatar: string;
   created_at: string;
+  is_anonymous: boolean;
+  is_private: boolean;
   replies?: Comment[];
   has_more?: boolean;
 };
@@ -78,6 +80,8 @@ export type CommentForAdmin = {
   avatar: string;
   created_at: string;
   updated_at: string;
+  is_anonymous: boolean;
+  is_private: boolean;
   status: "pending" | "approved" | "spam" | "deleted";
   replies?: CommentForAdmin[];
   has_more?: boolean;
