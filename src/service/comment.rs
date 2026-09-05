@@ -90,6 +90,8 @@ impl AppService {
         status: initial_status,
         location,
         is_sticky: false,
+        is_anonymous: false,
+        is_private: false,
         datetime: utc_now().naive_utc(),
       })
       .await

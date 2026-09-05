@@ -21,6 +21,8 @@ pub struct CommentCreateData {
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
+  pub is_anonymous: bool,
+  pub is_private: bool,
   pub status: CommentStatus,
   pub datetime: DateTime,
 }
@@ -44,6 +46,8 @@ impl CommentRepository {
       location: Set(data.location),
       avatar: Set(data.avatar),
       is_sticky: Set(data.is_sticky),
+      is_anonymous: Set(data.is_anonymous),
+      is_private: Set(data.is_private),
       status: Set(data.status),
       created_at: Set(data.datetime),
       updated_at: Set(data.datetime),

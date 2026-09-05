@@ -22,6 +22,8 @@ pub struct Model {
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
+  pub is_anonymous: bool,
+  pub is_private: bool,
   pub up_vote: i32,
   pub down_vote: i32,
   pub created_at: DateTime,

@@ -70,6 +70,8 @@ enum Comments {
   Device,
   Location,
   IsSticky,
+  IsAnonymous,
+  IsPrivate,
   UpVote,
   DownVote,
   CreatedAt,
@@ -297,6 +299,8 @@ impl MigrationTrait for Migration {
           .col(string(Comments::Device))
           .col(string(Comments::Location))
           .col(boolean(Comments::IsSticky).default(false))
+          .col(boolean(Comments::IsAnonymous).default(false))
+          .col(boolean(Comments::IsPrivate).default(false))
           .col(integer(Comments::UpVote).default(0))
           .col(integer(Comments::DownVote).default(0))
           .col(date_time(Comments::CreatedAt))
