@@ -71,10 +71,6 @@ impl CommentRepository {
     let (sort_col, sort_ord) = match sort {
       "created_asc" => (comments::Column::CreatedAt, Order::Asc),
       "created_desc" => (comments::Column::CreatedAt, Order::Desc),
-      "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
-      "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
-      "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
-      "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
       _ => (comments::Column::CreatedAt, Order::Desc),
     };
     let mut paginator = Comments::find();
@@ -117,10 +113,6 @@ impl CommentRepository {
     let (sort_col, sort_ord) = match sort {
       "created_asc" => (comments::Column::CreatedAt, Order::Asc),
       "created_desc" => (comments::Column::CreatedAt, Order::Desc),
-      "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
-      "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
-      "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
-      "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
       _ => (comments::Column::CreatedAt, Order::Desc),
     };
     let paginator = Self::exclude_private(
@@ -262,25 +254,5 @@ impl CommentRepository {
       })
       .exec(self.conn)
       .await
-  }
-
-  pub async fn update_up_vote(&self, id: i64, up_vote: i32) -> Result<comments::Model, DbErr> {
-    Comments::update(comments::ActiveModel {
-      id: Set(id),
-      up_vote: Set(up_vote),
-      ..Default::default()
-    })
-    .exec(self.conn)
-    .await
-  }
-
-  pub async fn update_down_vote(&self, id: i64, down_vote: i32) -> Result<comments::Model, DbErr> {
-    Comments::update(comments::ActiveModel {
-      id: Set(id),
-      down_vote: Set(down_vote),
-      ..Default::default()
-    })
-    .exec(self.conn)
-    .await
   }
 }

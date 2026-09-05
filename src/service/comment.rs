@@ -177,6 +177,7 @@ impl AppService {
   pub async fn list_comments(
     &self,
     user_id: Option<i64>,
+    guest_id: Option<&str>,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
     let include_private = self.can_manage_site(user_id, qs.site_id).await?;
@@ -201,7 +202,7 @@ impl AppService {
       .find_preview_replies_by_thread_ids(root_ids, reply_limit, include_private)
       .await
       .with_op("find all replies by thread ids")?;
-    let items = roots
+    let mut items: Vec<CommentView> = roots
       .into_iter()
       .map(|root| {
         let mut view = CommentView::from_model(root, include_private);
@@ -226,6 +227,13 @@ impl AppService {
         view
       })
       .collect();
+    let actor_id = match user_id {
+      Some(id) => Some(id.to_string()),
+      None => guest_id.map(str::to_string),
+    };
+    self
+      .attach_comment_reactions(&mut items, actor_id.as_deref())
+      .await?;
 
     Ok(PageResponse {
       items,
@@ -240,6 +248,7 @@ impl AppService {
   pub async fn list_replies(
     &self,
     user_id: Option<i64>,
+    guest_id: Option<&str>,
     id: i64,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
@@ -257,10 +266,17 @@ impl AppService {
       )
       .await
       .with_op("query replies")?;
-    let items: Vec<CommentView> = replies
+    let mut items: Vec<CommentView> = replies
       .into_iter()
       .map(|comment| CommentView::from_model(comment, include_private))
       .collect();
+    let actor_id = match user_id {
+      Some(id) => Some(id.to_string()),
+      None => guest_id.map(str::to_string),
+    };
+    self
+      .attach_comment_reactions(&mut items, actor_id.as_deref())
+      .await?;
     Ok(PageResponse {
       items,
       page_size: qs.page_size,
@@ -306,39 +322,6 @@ impl AppService {
         .with_op("delete comment")?;
     }
 
-    Ok(())
-  }
-
-  pub async fn update_vote(&self, id: i64, r#type: String) -> Result<(), AppError> {
-    let comment = self
-      .repo
-      .comment()
-      .find_by_id(id)
-      .await
-      .with_op("find comment by id")?
-      .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
-
-    match r#type.as_str() {
-      "up" => {
-        self
-          .repo
-          .comment()
-          .update_up_vote(id, comment.up_vote + 1)
-          .await
-          .with_op("update up_vote by id")?;
-      }
-      "down" => {
-        self
-          .repo
-          .comment()
-          .update_down_vote(id, comment.down_vote + 1)
-          .await
-          .with_op("update down_vote by id")?;
-      }
-      _ => {
-        return Err(AppError::bad_request("Invalid vote type".to_string()));
-      }
-    }
     Ok(())
   }
 }

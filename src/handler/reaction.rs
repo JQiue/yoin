@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
   app::AppState,
   error::AppError,
-  extractor::{AppJson, OptionnalAuth},
+  extractor::{AppJson, GuestId, OptionnalAuth},
   response::ApiResponse,
 };
 
@@ -27,7 +27,7 @@ pub struct ListReactionsQuery {
   pub page_path: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ReactionSummaryView {
   pub counts: std::collections::BTreeMap<String, u64>,
   pub my_reaction: Option<String>,
@@ -36,12 +36,13 @@ pub struct ReactionSummaryView {
 pub async fn upsert(
   State(state): State<Arc<AppState>>,
   optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   AppJson(payload): AppJson<UpsertReactionPayload>,
 ) -> Result<ApiResponse<ReactionSummaryView>, AppError> {
   Ok(ApiResponse::success(
     state
       .service
-      .upsert_reaction(optional_auth.user_id, payload)
+      .upsert_reaction(optional_auth.user_id, Some(&guest_id.value), payload)
       .await?,
   ))
 }
@@ -49,12 +50,13 @@ pub async fn upsert(
 pub async fn list(
   State(state): State<Arc<AppState>>,
   optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   Query(qs): Query<ListReactionsQuery>,
 ) -> Result<ApiResponse<ReactionSummaryView>, AppError> {
   Ok(ApiResponse::success(
     state
       .service
-      .list_reactions(optional_auth.user_id, qs)
+      .list_reactions(optional_auth.user_id, Some(&guest_id.value), qs)
       .await?,
   ))
 }

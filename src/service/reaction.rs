@@ -5,8 +5,12 @@ use migration::enums::{CommentStatus, ReactionActorType, ReactionTargetType};
 use super::AppService;
 use crate::{
   constants::reaction::ALLOWED_TYPES,
+  entity::reactions,
   error::{AppError, ToAppError},
-  handler::reaction::{ListReactionsQuery, ReactionSummaryView, UpsertReactionPayload},
+  handler::{
+    comment::CommentView,
+    reaction::{ListReactionsQuery, ReactionSummaryView, UpsertReactionPayload},
+  },
   rbac::permissions::codes::SITE_MANAGE,
   repository::ReactionCreateData,
 };
@@ -44,10 +48,16 @@ impl AppService {
     }
   }
 
-  fn actor(user_id: Option<i64>) -> Result<(ReactionActorType, String), AppError> {
+  fn actor(
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
+  ) -> Result<(ReactionActorType, String), AppError> {
     match user_id {
       Some(id) => Ok((ReactionActorType::User, id.to_string())),
-      None => Err(AppError::forbidden("login required to react".to_string())),
+      None => match guest_id {
+        Some(id) if !id.is_empty() => Ok((ReactionActorType::Guest, id.to_string())),
+        _ => Err(AppError::bad_request("guest id is required".to_string())),
+      },
     }
   }
 
@@ -100,7 +110,7 @@ impl AppService {
   }
 
   fn summarize(
-    reactions: Vec<crate::entity::reactions::Model>,
+    reactions: impl IntoIterator<Item = reactions::Model>,
     actor_id: Option<&str>,
   ) -> ReactionSummaryView {
     let mut counts = BTreeMap::new();
@@ -117,9 +127,62 @@ impl AppService {
     }
   }
 
+  pub(crate) async fn attach_comment_reactions(
+    &self,
+    comments: &mut [CommentView],
+    actor_id: Option<&str>,
+  ) -> Result<(), AppError> {
+    fn collect_ids(comments: &[CommentView], ids: &mut Vec<i64>) {
+      for comment in comments {
+        ids.push(comment.id);
+        if let Some(replies) = &comment.replies {
+          collect_ids(replies, ids);
+        }
+      }
+    }
+
+    let mut ids = Vec::new();
+    collect_ids(comments, &mut ids);
+    if ids.is_empty() {
+      return Ok(());
+    }
+    let keys: Vec<String> = ids.iter().map(|id| format!("comment:{id}")).collect();
+    let reactions = self
+      .repo
+      .reaction()
+      .find_all_by_target_keys(&keys)
+      .await
+      .with_op("list reactions by comment ids")?;
+    let mut grouped: BTreeMap<String, Vec<reactions::Model>> = BTreeMap::new();
+    for reaction in reactions {
+      grouped
+        .entry(reaction.target_key.clone())
+        .or_default()
+        .push(reaction);
+    }
+
+    fn apply(
+      comments: &mut [CommentView],
+      grouped: &BTreeMap<String, Vec<reactions::Model>>,
+      actor_id: Option<&str>,
+    ) {
+      for comment in comments {
+        let key = format!("comment:{}", comment.id);
+        comment.reactions =
+          AppService::summarize(grouped.get(&key).cloned().unwrap_or_default(), actor_id);
+        if let Some(replies) = &mut comment.replies {
+          apply(replies, grouped, actor_id);
+        }
+      }
+    }
+    apply(comments, &grouped, actor_id);
+    Ok(())
+  }
+
   pub async fn upsert_reaction(
     &self,
     user_id: Option<i64>,
+    guest_id: Option<&str>,
     payload: UpsertReactionPayload,
   ) -> Result<ReactionSummaryView, AppError> {
     if !ALLOWED_TYPES.contains(&payload.reaction.as_str()) {
@@ -136,7 +199,7 @@ impl AppService {
         &payload.page_path,
       )
       .await?;
-    let (actor_type, actor_id) = Self::actor(user_id)?;
+    let (actor_type, actor_id) = Self::actor(user_id, guest_id)?;
 
     let existing = self
       .repo
@@ -193,6 +256,7 @@ impl AppService {
   pub async fn list_reactions(
     &self,
     user_id: Option<i64>,
+    guest_id: Option<&str>,
     qs: ListReactionsQuery,
   ) -> Result<ReactionSummaryView, AppError> {
     let target_type = Self::parse_target_type(&qs.target_type)?;
@@ -205,7 +269,7 @@ impl AppService {
         &qs.page_path,
       )
       .await?;
-    let actor_id = user_id.map(|id| id.to_string());
+    let actor_id = Self::actor(user_id, guest_id).ok().map(|(_, id)| id);
     let reactions = self
       .repo
       .reaction()

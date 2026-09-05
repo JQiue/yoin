@@ -72,8 +72,6 @@ enum Comments {
   IsSticky,
   IsAnonymous,
   IsPrivate,
-  UpVote,
-  DownVote,
   CreatedAt,
   UpdatedAt,
   DeletedAt,
@@ -304,8 +302,6 @@ impl MigrationTrait for Migration {
           .col(boolean(Comments::IsSticky).default(false))
           .col(boolean(Comments::IsAnonymous).default(false))
           .col(boolean(Comments::IsPrivate).default(false))
-          .col(integer(Comments::UpVote).default(0))
-          .col(integer(Comments::DownVote).default(0))
           .col(date_time(Comments::CreatedAt))
           .col(date_time(Comments::UpdatedAt))
           .col(date_time(Comments::DeletedAt).null())

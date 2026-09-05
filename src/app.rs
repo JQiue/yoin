@@ -19,7 +19,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use crate::{
   entity::sites::SiteConfig,
   error::{AppError, ToAppError},
-  extractor::{OptionnalAuth, RemoteIp, RequireAuth},
+  extractor::{OptionnalAuth, RemoteIp, RequireAuth, ensure_guest_id},
   handler::{admin, auth, comment, health, js, moderation, reaction, site, subscription, user},
   helper::RateLimiter,
   rbac::{bootstrap::bootstrap_rbac, permissions::roles::SUPER_ADMIN},
@@ -170,7 +170,8 @@ fn create_router(state: Arc<AppState>) -> Router {
   let api_routes = Router::new()
     .merge(public_routes)
     .merge(private_routes)
-    .route_layer(from_extractor::<RemoteIp>());
+    .route_layer(from_extractor::<RemoteIp>())
+    .layer(middleware::from_fn(ensure_guest_id));
 
   Router::new()
     .route("/static/client.js", get(js::handle_client_js))

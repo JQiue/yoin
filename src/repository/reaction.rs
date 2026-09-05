@@ -64,6 +64,19 @@ impl ReactionRepository {
       .await
   }
 
+  pub async fn find_all_by_target_keys(
+    &self,
+    target_keys: &[String],
+  ) -> Result<Vec<reactions::Model>, DbErr> {
+    if target_keys.is_empty() {
+      return Ok(Vec::new());
+    }
+    Reactions::find()
+      .filter(reactions::Column::TargetKey.is_in(target_keys.to_vec()))
+      .all(self.conn)
+      .await
+  }
+
   pub async fn update_type(&self, id: i64, r#type: String) -> Result<reactions::Model, DbErr> {
     reactions::ActiveModel {
       id: Set(id),

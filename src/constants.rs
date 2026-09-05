@@ -54,6 +54,13 @@ pub mod reaction {
   pub const ALLOWED_TYPES: [&str; 5] = ["👍", "❤️", "😄", "🎉", "👎"];
 }
 
+pub mod guest {
+  pub const COOKIE_NAME: &str = "yoin_guest_id";
+  pub const HEADER_NAME: &str = "x-yoin-guest-id";
+  pub const ID_MIN_LEN: usize = 8;
+  pub const ID_MAX_LEN: usize = 32;
+}
+
 pub mod moderation {
   pub mod provider_kind {
     pub const LLM: &str = "llm";

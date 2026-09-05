@@ -7,7 +7,8 @@ use crate::{
   app::{AppState, UserKey},
   entity::comments,
   error::AppError,
-  extractor::{AppJson, OptionnalAuth, RemoteIp, RequireAuth},
+  extractor::{AppJson, GuestId, OptionnalAuth, RemoteIp, RequireAuth},
+  handler::reaction::ReactionSummaryView,
   response::ApiResponse,
 };
 
@@ -34,8 +35,6 @@ pub struct CommentView {
   pub nickname: String,
   pub website: String,
   pub content: String,
-  pub up_vote: i32,
-  pub down_vote: i32,
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
@@ -43,6 +42,7 @@ pub struct CommentView {
   pub is_private: bool,
   pub avatar: String,
   pub created_at: String,
+  pub reactions: ReactionSummaryView,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub replies: Option<Vec<CommentView>>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -68,14 +68,13 @@ impl CommentView {
       website,
       content: html_output,
       avatar,
-      up_vote: model.up_vote,
-      down_vote: model.down_vote,
       device: model.device,
       location: model.location,
       is_sticky: model.is_sticky,
       is_anonymous,
       is_private: model.is_private,
       created_at: model.created_at.and_utc().to_rfc3339(),
+      reactions: ReactionSummaryView::default(),
       replies: None,
       has_more: None,
     }
@@ -147,12 +146,13 @@ pub struct PageResponse<T> {
 pub async fn list(
   State(state): State<Arc<AppState>>,
   optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   Query(qs): Query<ListQueryString>,
 ) -> Result<ApiResponse<PageResponse<CommentView>>, AppError> {
   Ok(ApiResponse::success(
     state
       .service
-      .list_comments(optional_auth.user_id, qs)
+      .list_comments(optional_auth.user_id, Some(&guest_id.value), qs)
       .await?,
   ))
 }
@@ -161,13 +161,14 @@ pub async fn list(
 pub async fn list_replies(
   State(state): State<Arc<AppState>>,
   optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   Path(id): Path<i64>,
   Query(qs): Query<ListQueryString>,
 ) -> Result<ApiResponse<PageResponse<CommentView>>, AppError> {
   Ok(ApiResponse::success(
     state
       .service
-      .list_replies(optional_auth.user_id, id, qs)
+      .list_replies(optional_auth.user_id, Some(&guest_id.value), id, qs)
       .await?,
   ))
 }
@@ -182,13 +183,4 @@ pub async fn delete(
     .delete_comment(require_auth.user_id, id)
     .await?;
   Ok(ApiResponse::success(()))
-}
-
-pub async fn vote(
-  State(state): State<Arc<AppState>>,
-  Path((id, r#type)): Path<(i64, String)>,
-) -> Result<ApiResponse<()>, AppError> {
-  Ok(ApiResponse::success(
-    state.service.update_vote(id, r#type).await?,
-  ))
 }

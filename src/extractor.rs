@@ -6,9 +6,17 @@ use std::{
 use axum::{
   Json,
   extract::{ConnectInfo, FromRequest, Request},
+  http::{HeaderMap, HeaderValue, header::COOKIE},
+  middleware::Next,
+  response::Response,
 };
+use helpers::uuid::{Alphabet, nanoid};
 
-use crate::{app::AppState, error::AppError};
+use crate::{
+  app::AppState,
+  constants::guest::{COOKIE_NAME, HEADER_NAME, ID_MAX_LEN, ID_MIN_LEN},
+  error::AppError,
+};
 
 pub struct AppJson<T>(pub T);
 
@@ -57,7 +65,10 @@ fn parse_bearer_user_id(parts: &Parts, jwt_key: &str) -> Result<Option<i64>, Sta
     return Ok(None);
   }
 
-  let token = auth_header.trim_start_matches("Bearer ");
+  let token = auth_header.trim_start_matches("Bearer ").trim();
+  if token.is_empty() {
+    return Ok(None);
+  }
   let data = jwt::verify(token, jwt_key).map_err(|_| StatusCode::UNAUTHORIZED)?;
   Ok(Some(data.claims.data))
 }
@@ -132,5 +143,75 @@ where
     Ok(RemoteIp {
       ip: peer_ip.to_string(),
     })
+  }
+}
+
+#[derive(Clone, Debug)]
+pub struct GuestId {
+  pub value: String,
+  pub is_new: bool,
+}
+
+pub fn is_valid_guest_id(id: &str) -> bool {
+  let len = id.len();
+  (ID_MIN_LEN..=ID_MAX_LEN).contains(&len)
+    && id
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
+  let cookie = headers.get(COOKIE)?.to_str().ok()?;
+  cookie.split(';').find_map(|part| {
+    let part = part.trim();
+    let (key, value) = part.split_once('=')?;
+    (key == name).then(|| value.to_string())
+  })
+}
+
+pub async fn ensure_guest_id(mut req: Request, next: Next) -> Response {
+  let header_id = req
+    .headers()
+    .get(HEADER_NAME)
+    .and_then(|value| value.to_str().ok())
+    .map(str::to_string);
+  let cookie_id = cookie_value(req.headers(), COOKIE_NAME);
+  let (value, is_new) = match header_id.or(cookie_id) {
+    Some(id) if is_valid_guest_id(&id) => (id, false),
+    _ => (nanoid(&Alphabet::DEFAULT, 21), true),
+  };
+
+  req.extensions_mut().insert(GuestId {
+    value: value.clone(),
+    is_new,
+  });
+  let mut res = next.run(req).await;
+
+  if let Ok(header_value) = HeaderValue::from_str(&value) {
+    res.headers_mut().insert(HEADER_NAME, header_value);
+  }
+  if is_new {
+    let cookie = format!("{COOKIE_NAME}={value}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax");
+    if let Ok(header_value) = HeaderValue::from_str(&cookie) {
+      res
+        .headers_mut()
+        .append(axum::http::header::SET_COOKIE, header_value);
+    }
+  }
+  res
+}
+
+impl<S> FromRequestParts<S> for GuestId
+where
+  S: Send + Sync,
+{
+  type Rejection = StatusCode;
+
+  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    parts
+      .extensions
+      .get::<GuestId>()
+      .cloned()
+      .ok_or(StatusCode::INTERNAL_SERVER_ERROR)
   }
 }
