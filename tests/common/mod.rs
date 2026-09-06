@@ -27,6 +27,7 @@ pub struct UserWithToken {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct SiteView {
   pub id: i64,
   pub name: String,
@@ -104,6 +105,15 @@ pub async fn patch_json_with_bearer(
 
 pub async fn get_with_bearer(app: &axum::Router, uri: &str, token: &str) -> Response {
   let mut req = build_request("GET", uri, Body::empty());
+  req.headers_mut().insert(
+    header::AUTHORIZATION,
+    format!("Bearer {}", token).parse().unwrap(),
+  );
+  request(app, req).await
+}
+
+pub async fn delete_with_bearer(app: &axum::Router, uri: &str, token: &str) -> Response {
+  let mut req = build_request("DELETE", uri, Body::empty());
   req.headers_mut().insert(
     header::AUTHORIZATION,
     format!("Bearer {}", token).parse().unwrap(),

@@ -2,11 +2,12 @@ import type { TargetedEvent } from "preact";
 import type { StoredUser } from "@/client/hooks/useStoredUser";
 import type { CommentForm } from "@/client/types";
 import { Button } from "@/shared/components/Button";
+import { guestLabel } from "@/shared/helper";
 
 interface Props {
   currentUser: StoredUser | null;
   fields: {
-    name: keyof Omit<CommentForm, "content">;
+    name: keyof Omit<CommentForm, "content" | "is_private" | "is_anonymous">;
     placeholder: string;
     type: string;
   }[];
@@ -52,14 +53,14 @@ export default ({
         ) : (
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 text-sm font-medium text-zinc-600">
-              匿
+              访
             </span>
             <div className="min-w-0">
               <div className="text-sm font-semibold text-zinc-900">
-                匿名评论
+                {guestLabel()}
               </div>
               <div className="text-xs text-zinc-500">
-                登录后可同步头像和身份
+                未登录访客，填写昵称后可公开显示
               </div>
             </div>
           </div>

@@ -23,11 +23,7 @@ impl AppService {
   }
 
   /// Delete a comment subscription for the given user.
-  pub async fn delete_comment_subscription(
-    &self,
-    _user_id: i64,
-    _id: i64,
-  ) -> Result<(), AppError> {
+  pub async fn delete_comment_subscription(&self, _user_id: i64, _id: i64) -> Result<(), AppError> {
     todo!()
   }
 }

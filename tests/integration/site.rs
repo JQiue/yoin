@@ -5,7 +5,7 @@ use yoin::entity::sites::SiteConfig;
 
 use crate::common::{
   ApiResponse, get_with_bearer, patch_json_with_bearer, post_json_with_bearer, read_json,
-  register_user, test_app,
+  register_user, request, test_app,
 };
 
 #[derive(Deserialize)]
@@ -192,4 +192,134 @@ async fn admin_can_list_sites() {
   let body: ApiResponse<Vec<SiteView>> = read_json(resp).await;
   let sites = body.data.expect("sites");
   assert!(!sites.is_empty());
+}
+
+#[derive(Deserialize)]
+struct PublicSiteConfigView {
+  allow_anonymous: bool,
+  allow_private: bool,
+  max_comment_length: usize,
+  comment_limit_seconds: i64,
+  allowed_reactions: Vec<String>,
+}
+
+#[tokio::test]
+async fn guest_can_read_public_site_config() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-public-config@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+
+  let created = post_json_with_bearer(
+    &app,
+    "/api/sites",
+    &admin.token,
+    json!({
+      "name": "PublicConfig",
+      "url": "https://example.com",
+      "config": {
+        "allow_anonymous": true,
+        "max_comment_length": 2048,
+        "comment_limit_seconds": 10
+      }
+    }),
+  )
+  .await;
+  let created_body: ApiResponse<SiteView> = read_json(created).await;
+  let site = created_body.data.expect("created site");
+
+  let resp = request(
+    &app,
+    crate::common::build_request(
+      "GET",
+      &format!("/api/sites/{}/config", site.id),
+      axum::body::Body::empty(),
+    ),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+
+  let body: ApiResponse<PublicSiteConfigView> = read_json(resp).await;
+  let config = body.data.expect("public config");
+  assert!(config.allow_anonymous);
+  assert!(config.allow_private);
+  assert_eq!(config.max_comment_length, 2048);
+  assert_eq!(config.comment_limit_seconds, 10);
+  assert_eq!(config.allowed_reactions, vec!["👍", "❤️", "😄", "🎉", "👎"]);
+}
+
+#[tokio::test]
+async fn admin_can_update_private_and_reaction_config() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-site-config@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+
+  let created = post_json_with_bearer(
+    &app,
+    "/api/sites",
+    &admin.token,
+    json!({
+      "name": "ConfigSite",
+      "url": "https://config.example.com",
+      "config": {
+        "allow_anonymous": false,
+        "allow_private": false,
+        "max_comment_length": 512,
+        "comment_limit_seconds": 0,
+        "allowed_reactions": ["👍", "👎"]
+      }
+    }),
+  )
+  .await;
+  assert_eq!(created.status(), StatusCode::OK);
+  let created_body: ApiResponse<SiteView> = read_json(created).await;
+  let site = created_body.data.expect("created site");
+  assert!(!site.config.allow_private);
+  assert_eq!(site.config.allowed_reactions, vec!["👍", "👎"]);
+
+  let resp = request(
+    &app,
+    crate::common::build_request(
+      "GET",
+      &format!("/api/sites/{}/config", site.id),
+      axum::body::Body::empty(),
+    ),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let body: ApiResponse<PublicSiteConfigView> = read_json(resp).await;
+  let config = body.data.expect("public config");
+  assert!(!config.allow_anonymous);
+  assert!(!config.allow_private);
+  assert_eq!(config.allowed_reactions, vec!["👍", "👎"]);
+}
+
+#[tokio::test]
+async fn admin_cannot_set_unknown_reaction() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-bad-reaction@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+
+  let resp = post_json_with_bearer(
+    &app,
+    "/api/sites",
+    &admin.token,
+    json!({
+      "name": "BadReaction",
+      "url": "https://bad.example.com",
+      "config": {
+        "allow_anonymous": false,
+        "max_comment_length": 1024,
+        "comment_limit_seconds": 0,
+        "allowed_reactions": ["🔥"]
+      }
+    }),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }

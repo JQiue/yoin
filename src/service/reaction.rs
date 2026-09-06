@@ -4,14 +4,13 @@ use migration::enums::{CommentStatus, ReactionActorType, ReactionTargetType};
 
 use super::AppService;
 use crate::{
-  constants::reaction::ALLOWED_TYPES,
+  constants::reaction,
   entity::reactions,
   error::{AppError, ToAppError},
   handler::{
     comment::CommentView,
     reaction::{ListReactionsQuery, ReactionSummaryView, UpsertReactionPayload},
   },
-  rbac::permissions::codes::SITE_MANAGE,
   repository::ReactionCreateData,
 };
 
@@ -64,6 +63,7 @@ impl AppService {
   async fn ensure_reaction_target_visible(
     &self,
     user_id: Option<i64>,
+    guest_id: Option<&str>,
     site_id: i64,
     target_type: &ReactionTargetType,
     comment_id: Option<i64>,
@@ -95,14 +95,11 @@ impl AppService {
       if !matches!(comment.status, CommentStatus::Approved) {
         return Err(AppError::comment_not_found("Comment not found".to_string()));
       }
-      if comment.is_private {
-        let can_see = match user_id {
-          Some(id) => self.has_site_permission(id, SITE_MANAGE, site_id).await?,
-          None => false,
-        };
-        if !can_see {
-          return Err(AppError::comment_not_found("Comment not found".to_string()));
-        }
+      if !self
+        .can_see_private_comment(&comment, user_id, guest_id)
+        .await?
+      {
+        return Err(AppError::comment_not_found("Comment not found".to_string()));
       }
     }
 
@@ -185,14 +182,33 @@ impl AppService {
     guest_id: Option<&str>,
     payload: UpsertReactionPayload,
   ) -> Result<ReactionSummaryView, AppError> {
-    if !ALLOWED_TYPES.contains(&payload.reaction.as_str()) {
+    if !reaction::is_globally_allowed(&payload.reaction) {
       return Err(AppError::bad_request("invalid reaction".to_string()));
+    }
+
+    let site = self
+      .repo
+      .site()
+      .find_by_id(payload.site_id)
+      .await
+      .with_op("find site by id")?
+      .ok_or_else(|| AppError::site_not_found("Site not found".to_string()))?;
+    if !site
+      .config
+      .allowed_reactions
+      .iter()
+      .any(|item| item == &payload.reaction)
+    {
+      return Err(AppError::bad_request(
+        "reaction not allowed for this site".to_string(),
+      ));
     }
 
     let target_type = Self::parse_target_type(&payload.target_type)?;
     let target_key = self
       .ensure_reaction_target_visible(
         user_id,
+        guest_id,
         payload.site_id,
         &target_type,
         payload.comment_id,
@@ -263,6 +279,7 @@ impl AppService {
     let target_key = self
       .ensure_reaction_target_visible(
         user_id,
+        guest_id,
         qs.site_id,
         &target_type,
         qs.comment_id,

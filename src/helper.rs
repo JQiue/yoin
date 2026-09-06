@@ -74,7 +74,11 @@ impl<'a> OauthService<'a> {
     let provider = match provider {
       "github" => OAuthProvider::Github,
       "qq" => OAuthProvider::QQ,
-      _ => return Err(AppError::bad_request("invalid oauth provider".to_string())),
+      _ => {
+        return Err(AppError::invalid_oauth_provider(
+          "invalid oauth provider".to_string(),
+        ));
+      }
     };
     Ok(Self {
       provider,

@@ -23,9 +23,13 @@ export type Paged<T> = {
 
 export type SiteConfig = {
   allow_anonymous: boolean;
+  allow_private: boolean;
   max_comment_length: number;
   comment_limit_seconds: number;
+  allowed_reactions: string[];
 };
+
+export type PublicSiteConfig = SiteConfig;
 
 export type Site = {
   id: number;
@@ -118,4 +122,67 @@ export type UserRoleBindingForAdmin = {
   scope_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type UserIdentityForAdmin = {
+  id: number;
+  provider: string;
+  provider_user_id: string;
+  email: string | null;
+};
+
+export type UserBindingSummaryForAdmin = {
+  id: number;
+  role_id: number;
+  role_name: string | null;
+  scope_type: "global" | "site";
+  scope_id: string | null;
+};
+
+export type UserForAdmin = {
+  id: number;
+  nickname: string;
+  email: string;
+  website: string;
+  avatar: string;
+  created_at: string;
+  identities: UserIdentityForAdmin[];
+  role_bindings: UserBindingSummaryForAdmin[];
+};
+
+export const GLOBAL_ALLOWED_REACTIONS = ["👍", "❤️", "😄", "🎉", "👎"];
+
+export type ModerationProviderKind = "llm" | "akismet";
+
+export type LlmModerationConfig = {
+  model: string;
+  api_base: string;
+  api_key: string;
+  rule?: string;
+};
+
+export type AkismetModerationConfig = {
+  api_key: string;
+  blog_url: string;
+};
+
+export type ModerationProviderConfig =
+  | LlmModerationConfig
+  | AkismetModerationConfig;
+
+export type ModerationProvider = {
+  id: number;
+  site_id: number;
+  provider_kind: ModerationProviderKind;
+  enabled: boolean;
+  config: ModerationProviderConfig;
+};
+
+export type OauthProvider = {
+  id: number;
+  site_id: number | null;
+  enabled: boolean;
+  provider_code: string;
+  client_id: string;
+  redirect_uri: string;
 };

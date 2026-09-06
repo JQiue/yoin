@@ -7,6 +7,8 @@ const emptyForm: CommentForm = {
   email: "",
   website: "",
   content: "",
+  is_private: false,
+  is_anonymous: false,
 };
 
 export const useCommentForm = (options?: { hydrateDraft?: boolean }) => {
@@ -27,7 +29,10 @@ export const useCommentForm = (options?: { hydrateDraft?: boolean }) => {
     }));
   }, [options?.hydrateDraft]);
 
-  const setField = (name: keyof CommentForm, value: string) => {
+  const setField = <K extends keyof CommentForm>(
+    name: K,
+    value: CommentForm[K],
+  ) => {
     setForm((current) => ({
       ...current,
       [name]: value,

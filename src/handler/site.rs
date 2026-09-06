@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -19,12 +19,30 @@ pub struct SiteView {
   pub url: String,
 }
 
+#[derive(Serialize)]
+pub struct PublicSiteConfigView {
+  pub allow_anonymous: bool,
+  pub allow_private: bool,
+  pub max_comment_length: usize,
+  pub comment_limit_seconds: i64,
+  pub allowed_reactions: Vec<String>,
+}
+
 pub async fn list(
   State(state): State<Arc<AppState>>,
   require_auth: RequireAuth,
 ) -> Result<ApiResponse<Vec<SiteView>>, AppError> {
   Ok(ApiResponse::success(
     state.service.list_sites(require_auth.user_id).await?,
+  ))
+}
+
+pub async fn public_config(
+  State(state): State<Arc<AppState>>,
+  Path(id): Path<i64>,
+) -> Result<ApiResponse<PublicSiteConfigView>, AppError> {
+  Ok(ApiResponse::success(
+    state.service.get_public_site_config(id).await?,
   ))
 }
 
@@ -40,12 +58,14 @@ pub async fn create(
   require_auth: RequireAuth,
   AppJson(payload): AppJson<CreateSitePayload>,
 ) -> Result<ApiResponse<SiteView>, AppError> {
-  Ok(ApiResponse::success(
+  let resp = ApiResponse::success(
     state
       .service
       .create_site(require_auth.user_id, payload)
       .await?,
-  ))
+  );
+  state.preload_configs().await?;
+  Ok(resp)
 }
 
 #[derive(Deserialize)]

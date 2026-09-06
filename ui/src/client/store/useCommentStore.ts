@@ -4,6 +4,7 @@ import { getRuntimeConfig } from "@/config/runtime";
 import {
   deleteComment,
   fetchCommentsList,
+  fetchPublicSiteConfig,
   fetchReactions,
   upsertReaction,
 } from "@/shared/api";
@@ -53,7 +54,14 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
   sort: "created_desc",
   isLoading: false,
   pageReactions: emptyReactions(),
+  siteConfig: null,
   setComments: (comments) => set({ comments }),
+  fetchSiteConfig: async () => {
+    const config = getRuntimeConfig();
+    if (config.site_id == null) return;
+    const { data } = await fetchPublicSiteConfig(config.site_id);
+    set({ siteConfig: data });
+  },
   fetchComments: async (pageOffset = 1, append = false) => {
     const config = getRuntimeConfig();
     const { comments: oldComments, pageSize, sort } = get();

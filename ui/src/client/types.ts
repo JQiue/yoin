@@ -1,5 +1,9 @@
 import type { RuntimeOptions } from "@/config/types";
-import type { Comment, ReactionSummary } from "@/shared/api/types";
+import type {
+  Comment,
+  PublicSiteConfig,
+  ReactionSummary,
+} from "@/shared/api/types";
 
 export type Option = RuntimeOptions & {
   site_id: number;
@@ -10,6 +14,8 @@ export interface CommentForm {
   email: string;
   website: string;
   content: string;
+  is_private: boolean;
+  is_anonymous: boolean;
 }
 
 export interface CommentsState {
@@ -25,8 +31,10 @@ export interface CommentsState {
   fetchNextPage: () => void;
   changeSort: (newSort: string) => void;
   deleteComment: (id: number) => void;
-  updateCommentReaction: (id: number, reaction: string) => void;
+  updateCommentReaction: (id: number, reaction: string) => Promise<void>;
   pageReactions: ReactionSummary;
   fetchPageReactions: () => void;
-  updatePageReaction: (reaction: string) => void;
+  updatePageReaction: (reaction: string) => Promise<void>;
+  siteConfig: PublicSiteConfig | null;
+  fetchSiteConfig: () => void;
 }

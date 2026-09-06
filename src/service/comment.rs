@@ -3,13 +3,13 @@ use migration::enums::CommentStatus;
 
 use super::AppService;
 use crate::{
-  entity::moderation_providers::ModerationProviderConfig,
+  entity::{comments, moderation_providers::ModerationProviderConfig},
   error::{AppError, ToAppError},
   handler::comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
   helper::generate_avatar,
   moderation::{self, LLMModerator, ModerationInput, types::CommentModerator},
   rbac::permissions::codes::SITE_MANAGE,
-  repository::CommentCreateData,
+  repository::{CommentCreateData, CommentListVisibility},
 };
 
 impl AppService {
@@ -20,6 +20,50 @@ impl AppService {
     }
   }
 
+  fn is_comment_author(
+    comment: &comments::Model,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
+  ) -> bool {
+    if let (Some(author_id), Some(viewer_id)) = (comment.user_id, user_id)
+      && author_id == viewer_id
+    {
+      return true;
+    }
+    matches!(
+      (comment.guest_id.as_deref(), guest_id),
+      (Some(author_guest), Some(viewer_guest)) if author_guest == viewer_guest
+    )
+  }
+
+  pub(crate) async fn can_see_private_comment(
+    &self,
+    comment: &comments::Model,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
+  ) -> Result<bool, AppError> {
+    if !comment.is_private {
+      return Ok(true);
+    }
+    if Self::is_comment_author(comment, user_id, guest_id) {
+      return Ok(true);
+    }
+    self.can_manage_site(user_id, comment.site_id).await
+  }
+
+  async fn comment_list_visibility(
+    &self,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
+    site_id: i64,
+  ) -> Result<CommentListVisibility, AppError> {
+    Ok(CommentListVisibility {
+      include_all_private: self.can_manage_site(user_id, site_id).await?,
+      viewer_user_id: user_id,
+      viewer_guest_id: guest_id.filter(|id| !id.is_empty()).map(str::to_string),
+    })
+  }
+
   /// Create a new comment or reply.
   ///
   /// If `payload.parent_id` is provided, the method validates the parent belongs to
@@ -28,6 +72,7 @@ impl AppService {
   pub async fn create_comment(
     &self,
     user_id: Option<i64>,
+    guest_id: Option<&str>,
     payload: CreateCommentPayload,
   ) -> Result<CommentView, AppError> {
     let thread_id = if let Some(parent_id) = payload.parent_id {
@@ -51,7 +96,10 @@ impl AppService {
         ));
       }
 
-      if parent.is_private && !self.can_manage_site(user_id, payload.site_id).await? {
+      if !self
+        .can_see_private_comment(&parent, user_id, guest_id)
+        .await?
+      {
         return Err(AppError::comment_not_found("Comment not found".to_string()));
       }
 
@@ -90,6 +138,11 @@ impl AppService {
       .create(CommentCreateData {
         site_id: payload.site_id,
         user_id,
+        guest_id: if user_id.is_none() {
+          guest_id.filter(|id| !id.is_empty()).map(str::to_string)
+        } else {
+          None
+        },
         thread_id,
         parent_id: payload.parent_id,
         nickname,
@@ -180,7 +233,10 @@ impl AppService {
     guest_id: Option<&str>,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
-    let include_private = self.can_manage_site(user_id, qs.site_id).await?;
+    let visibility = self
+      .comment_list_visibility(user_id, guest_id, qs.site_id)
+      .await?;
+    let reveal_identity = visibility.include_all_private;
     let (roots, total, total_pages) = self
       .repo
       .comment()
@@ -190,7 +246,7 @@ impl AppService {
         qs.page_size,
         qs.page_offset,
         &qs.sort,
-        include_private,
+        &visibility,
       )
       .await
       .with_op("query comments")?;
@@ -199,17 +255,17 @@ impl AppService {
     let preview_replies = self
       .repo
       .comment()
-      .find_preview_replies_by_thread_ids(root_ids, reply_limit, include_private)
+      .find_preview_replies_by_thread_ids(root_ids, reply_limit, &visibility)
       .await
       .with_op("find all replies by thread ids")?;
     let mut items: Vec<CommentView> = roots
       .into_iter()
       .map(|root| {
-        let mut view = CommentView::from_model(root, include_private);
+        let mut view = CommentView::from_model(root, reveal_identity);
         let mut thread_replies: Vec<CommentView> = preview_replies
           .iter()
           .filter(|r| r.thread_id == Some(view.id))
-          .map(|r| CommentView::from_model(r.clone(), include_private))
+          .map(|r| CommentView::from_model(r.clone(), reveal_identity))
           .collect();
 
         if thread_replies.len() > reply_limit {
@@ -252,7 +308,10 @@ impl AppService {
     id: i64,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
-    let include_private = self.can_manage_site(user_id, qs.site_id).await?;
+    let visibility = self
+      .comment_list_visibility(user_id, guest_id, qs.site_id)
+      .await?;
+    let reveal_identity = visibility.include_all_private;
     let (replies, total, total_pages) = self
       .repo
       .comment()
@@ -262,13 +321,13 @@ impl AppService {
         &qs.page_path,
         qs.page_size,
         qs.page_offset,
-        include_private,
+        &visibility,
       )
       .await
       .with_op("query replies")?;
     let mut items: Vec<CommentView> = replies
       .into_iter()
-      .map(|comment| CommentView::from_model(comment, include_private))
+      .map(|comment| CommentView::from_model(comment, reveal_identity))
       .collect();
     let actor_id = match user_id {
       Some(id) => Some(id.to_string()),

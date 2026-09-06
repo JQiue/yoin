@@ -1,5 +1,14 @@
 import { http } from "@/shared/api/client";
-import type { Comment, Paged, ReactionSummary } from "@/shared/api/types";
+import type {
+  Comment,
+  Paged,
+  PublicSiteConfig,
+  ReactionSummary,
+} from "@/shared/api/types";
+
+export const fetchPublicSiteConfig = (site_id: number) => {
+  return http.get<PublicSiteConfig>(`/api/sites/${site_id}/config`);
+};
 
 export const fetchCommentsList = (
   site_id: number,
@@ -27,6 +36,8 @@ export const sendComment = (
   content: string,
   page_path: string,
   parent_id?: number,
+  is_private = false,
+  is_anonymous = false,
 ) => {
   return http.post<Comment>("/api/comments", {
     site_id,
@@ -36,6 +47,8 @@ export const sendComment = (
     page_path,
     email,
     parent_id,
+    is_private,
+    is_anonymous,
   });
 };
 

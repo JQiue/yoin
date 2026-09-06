@@ -84,15 +84,21 @@ impl CommentView {
 pub async fn create(
   State(state): State<Arc<AppState>>,
   optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   remote_ip: RemoteIp,
   AppJson(payload): AppJson<CreateCommentPayload>,
 ) -> Result<ApiResponse<CommentView>, AppError> {
   let site_config = state.get_site_config(payload.site_id).await?;
 
   if !state.is_admin(optional_auth.user_id.unwrap_or(-1)).await {
-    if optional_auth.user_id.is_none() && !site_config.allow_anonymous {
+    if payload.is_anonymous && !site_config.allow_anonymous {
       return Err(AppError::forbidden(
-        "anonymous access not allowed".to_string(),
+        "anonymous comments are not allowed".to_string(),
+      ));
+    }
+    if payload.is_private && !site_config.allow_private {
+      return Err(AppError::forbidden(
+        "private comments are not allowed".to_string(),
       ));
     }
 
@@ -119,7 +125,7 @@ pub async fn create(
   Ok(ApiResponse::success(
     state
       .service
-      .create_comment(optional_auth.user_id, payload)
+      .create_comment(optional_auth.user_id, Some(&guest_id.value), payload)
       .await?,
   ))
 }

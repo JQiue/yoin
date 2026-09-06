@@ -189,6 +189,43 @@ async fn guest_cannot_react_to_private_comment() {
   assert_eq!(admin_resp.status(), StatusCode::OK);
 }
 
+#[tokio::test]
+async fn guest_author_can_react_to_own_private_comment() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-own-private-reaction@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+  let site = create_site(&app, &admin.token, "OwnPrivateReactions", true, 0)
+    .await
+    .data
+    .expect("site");
+
+  let author_guest = "guest-author-react-aaaa";
+  let comment_resp = post_json_with_guest(
+    &app,
+    "/api/comments",
+    author_guest,
+    comment_payload(site.id, "secret", true),
+  )
+  .await;
+  let comment: ApiResponse<CommentView> = read_json(comment_resp).await;
+  let comment = comment.data.expect("comment");
+
+  let resp = post_json_with_guest(
+    &app,
+    "/api/reactions",
+    author_guest,
+    reaction_payload(site.id, comment.id, "👍"),
+  )
+  .await;
+  assert_eq!(resp.status(), StatusCode::OK);
+  let body: ApiResponse<ReactionSummaryView> = read_json(resp).await;
+  let summary = body.data.expect("summary");
+  assert_eq!(summary.counts.get("👍"), Some(&1));
+  assert_eq!(summary.my_reaction.as_deref(), Some("👍"));
+}
+
 fn page_reaction_payload(site_id: i64, reaction: &str) -> Value {
   json!({
     "site_id": site_id,
@@ -316,6 +353,63 @@ async fn guest_can_react_to_page() {
   let summary = body.data.expect("summary");
   assert_eq!(summary.counts.get("🎉"), Some(&1));
   assert_eq!(summary.my_reaction.as_deref(), Some("🎉"));
+}
+
+#[tokio::test]
+async fn site_can_restrict_allowed_reactions() {
+  let app = test_app().await;
+  let admin = register_user(&app, "admin-restricted-reaction@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+  let created = post_json_with_bearer(
+    &app,
+    "/api/sites",
+    &admin.token,
+    json!({
+      "name": "RestrictedReactions",
+      "url": "https://restricted.example.com",
+      "config": {
+        "allow_anonymous": true,
+        "max_comment_length": 1024,
+        "comment_limit_seconds": 0,
+        "allowed_reactions": ["👍"]
+      }
+    }),
+  )
+  .await;
+  let site = read_json::<ApiResponse<crate::common::SiteView>>(created)
+    .await
+    .data
+    .expect("site");
+  let comment_resp = post_json(
+    &app,
+    "/api/comments",
+    comment_payload(site.id, "limited reactions", false),
+  )
+  .await;
+  let comment = read_json::<ApiResponse<CommentView>>(comment_resp)
+    .await
+    .data
+    .expect("comment");
+
+  let ok = post_json_with_bearer(
+    &app,
+    "/api/reactions",
+    &admin.token,
+    reaction_payload(site.id, comment.id, "👍"),
+  )
+  .await;
+  assert_eq!(ok.status(), StatusCode::OK);
+
+  let denied = post_json_with_bearer(
+    &app,
+    "/api/reactions",
+    &admin.token,
+    reaction_payload(site.id, comment.id, "🎉"),
+  )
+  .await;
+  assert_eq!(denied.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]

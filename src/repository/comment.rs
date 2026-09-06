@@ -10,6 +10,7 @@ use crate::entity::{comments, prelude::Comments};
 pub struct CommentCreateData {
   pub site_id: i64,
   pub user_id: Option<i64>,
+  pub guest_id: Option<String>,
   pub thread_id: Option<i64>,
   pub parent_id: Option<i64>,
   pub nickname: String,
@@ -25,6 +26,13 @@ pub struct CommentCreateData {
   pub is_private: bool,
   pub status: CommentStatus,
   pub datetime: DateTime,
+}
+
+#[derive(Clone, Debug)]
+pub struct CommentListVisibility {
+  pub include_all_private: bool,
+  pub viewer_user_id: Option<i64>,
+  pub viewer_guest_id: Option<String>,
 }
 
 pub struct CommentRepository {
@@ -56,6 +64,9 @@ impl CommentRepository {
 
     if let Some(user_id) = data.user_id {
       active_comment.user_id = Set(Some(user_id));
+    }
+    if let Some(guest_id) = data.guest_id {
+      active_comment.guest_id = Set(Some(guest_id));
     }
 
     active_comment.insert(self.conn).await
@@ -93,12 +104,30 @@ impl CommentRepository {
     Comments::find_by_id(id).one(self.conn).await
   }
 
-  fn exclude_private(query: Select<Comments>, include_private: bool) -> Select<Comments> {
-    if include_private {
-      query
-    } else {
-      query.filter(comments::Column::IsPrivate.eq(false))
+  fn apply_visibility(
+    query: Select<Comments>,
+    visibility: &CommentListVisibility,
+  ) -> Select<Comments> {
+    if visibility.include_all_private {
+      return query;
     }
+
+    let mut visible = Condition::any().add(comments::Column::IsPrivate.eq(false));
+    if let Some(user_id) = visibility.viewer_user_id {
+      visible = visible.add(
+        Condition::all()
+          .add(comments::Column::IsPrivate.eq(true))
+          .add(comments::Column::UserId.eq(user_id)),
+      );
+    }
+    if let Some(guest_id) = &visibility.viewer_guest_id {
+      visible = visible.add(
+        Condition::all()
+          .add(comments::Column::IsPrivate.eq(true))
+          .add(comments::Column::GuestId.eq(guest_id)),
+      );
+    }
+    query.filter(visible)
   }
 
   pub async fn find_roots_paged(
@@ -108,20 +137,20 @@ impl CommentRepository {
     page_size: u64,
     page_offset: u64,
     sort: &str,
-    include_private: bool,
+    visibility: &CommentListVisibility,
   ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
     let (sort_col, sort_ord) = match sort {
       "created_asc" => (comments::Column::CreatedAt, Order::Asc),
       "created_desc" => (comments::Column::CreatedAt, Order::Desc),
       _ => (comments::Column::CreatedAt, Order::Desc),
     };
-    let paginator = Self::exclude_private(
+    let paginator = Self::apply_visibility(
       Comments::find()
         .filter(comments::Column::SiteId.eq(site_id))
         .filter(comments::Column::PagePath.eq(page_path))
         .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
         .filter(comments::Column::ParentId.is_null()),
-      include_private,
+      visibility,
     )
     .order_by(sort_col, sort_ord)
     .paginate(self.conn, page_size);
@@ -136,14 +165,14 @@ impl CommentRepository {
     &self,
     thread_ids: Vec<i64>,
     per_thread_limit: usize,
-    include_private: bool,
+    visibility: &CommentListVisibility,
   ) -> Result<Vec<comments::Model>, DbErr> {
-    let all = Self::exclude_private(
+    let all = Self::apply_visibility(
       Comments::find()
         .filter(comments::Column::ThreadId.is_in(thread_ids))
         .filter(comments::Column::ParentId.is_not_null())
         .filter(comments::Column::Status.is_in([CommentStatus::Approved])),
-      include_private,
+      visibility,
     )
     .order_by(comments::Column::ThreadId, Order::Asc)
     .order_by(comments::Column::CreatedAt, Order::Asc)
@@ -176,15 +205,15 @@ impl CommentRepository {
     page_path: &str,
     page_size: u64,
     page_offset: u64,
-    include_private: bool,
+    visibility: &CommentListVisibility,
   ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
-    let paginator = Self::exclude_private(
+    let paginator = Self::apply_visibility(
       Comments::find()
         .filter(comments::Column::SiteId.eq(site_id))
         .filter(comments::Column::ThreadId.eq(thread_id))
         .filter(comments::Column::PagePath.eq(page_path))
         .filter(comments::Column::Status.is_in([CommentStatus::Approved])),
-      include_private,
+      visibility,
     )
     .order_by(comments::Column::CreatedAt, Order::Asc)
     .paginate(self.conn, page_size);

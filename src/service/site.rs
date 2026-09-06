@@ -1,15 +1,59 @@
+use std::collections::BTreeSet;
+
 use helpers::time::utc_now;
 use migration::enums::UserRoleBindingScopeType;
 
 use super::AppService;
 use crate::{
+  constants::reaction,
+  entity::sites::SiteConfig,
   error::{AppError, ToAppError},
-  handler::site::{CreateSitePayload, SiteView, UpdateSitePayload},
+  handler::site::{CreateSitePayload, PublicSiteConfigView, SiteView, UpdateSitePayload},
   rbac::permissions::codes::SITE_MANAGE,
   repository::{SiteCreateData, SiteUpdateData},
 };
 
 impl AppService {
+  fn normalize_site_config(config: SiteConfig) -> Result<SiteConfig, AppError> {
+    let mut seen = BTreeSet::new();
+    let mut allowed_reactions = Vec::with_capacity(config.allowed_reactions.len());
+    for reaction_type in config.allowed_reactions {
+      if !reaction::is_globally_allowed(&reaction_type) {
+        return Err(AppError::bad_request(format!(
+          "invalid reaction: {reaction_type}"
+        )));
+      }
+      if seen.insert(reaction_type.clone()) {
+        allowed_reactions.push(reaction_type);
+      }
+    }
+    Ok(SiteConfig {
+      allowed_reactions,
+      ..config
+    })
+  }
+
+  /// Public site config used by the embeddable widget.
+  pub async fn get_public_site_config(
+    &self,
+    site_id: i64,
+  ) -> Result<PublicSiteConfigView, AppError> {
+    let site = self
+      .repo
+      .site()
+      .find_by_id(site_id)
+      .await
+      .with_op("find site by id")?
+      .ok_or(AppError::site_not_found("Site not found".to_string()))?;
+    Ok(PublicSiteConfigView {
+      allow_anonymous: site.config.allow_anonymous,
+      allow_private: site.config.allow_private,
+      max_comment_length: site.config.max_comment_length,
+      comment_limit_seconds: site.config.comment_limit_seconds,
+      allowed_reactions: site.config.allowed_reactions,
+    })
+  }
+
   /// List all sites.
   ///
   /// Requires the user to have global `SITE_MANAGE` permission.
@@ -44,13 +88,14 @@ impl AppService {
       .require_permission(user_id, SITE_MANAGE, UserRoleBindingScopeType::Global, None)
       .await?;
     let datetime = utc_now().naive_utc();
+    let config = Self::normalize_site_config(payload.config)?;
     let site = self
       .repo
       .site()
       .create(SiteCreateData {
         name: payload.name,
         url: payload.url,
-        config: payload.config,
+        config,
         datetime,
       })
       .await
@@ -79,7 +124,10 @@ impl AppService {
       .await
       .with_op("find site by id")?
       .ok_or(AppError::site_not_found("Site not found".to_string()))?;
-
+    let config = payload
+      .config
+      .map(Self::normalize_site_config)
+      .transpose()?;
     let site = self
       .repo
       .site()
@@ -87,7 +135,7 @@ impl AppService {
         id: site.id,
         name: payload.name,
         url: payload.url,
-        config: payload.config,
+        config,
         datetime: utc_now().naive_utc(),
       })
       .await
