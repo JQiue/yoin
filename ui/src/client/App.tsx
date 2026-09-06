@@ -29,9 +29,13 @@ const App = () => {
 
   return (
     <div className="min-h-screen py-6 px-4 bg-app-bg">
-      <CommentForm />
+      <ReactionBar
+        summary={pageReactions}
+        onSelect={updatePageReaction}
+        spread
+      />
       <div className="mt-3">
-        <ReactionBar summary={pageReactions} onSelect={updatePageReaction} />
+        <CommentForm />
       </div>
       <div className="my-3 flex items-center justify-between pb-2">
         <div className="flex items-center space-x-2">

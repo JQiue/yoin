@@ -82,12 +82,12 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
   };
 
   const handleSelectReaction = (reaction: string) => {
-    updateCommentReaction(comment.id, reaction);
+    return updateCommentReaction(comment.id, reaction);
   };
 
   return (
     <div
-      className={`-mx-4 px-4 py-3 rounded-md transition-all hover:bg-zinc-100 ${comment.parent_id ? "ml-8 sm:ml-12" : ""}`}
+      className={`group -mx-4 px-4 py-3 rounded-md transition-all hover:bg-zinc-100 ${comment.parent_id ? "ml-8 sm:ml-12" : ""}`}
     >
       <div className="flex items-start gap-2.5">
         <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full`}>
@@ -118,15 +118,27 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
             </span>
             <span>{formatDate(comment.created_at)}</span>
             <span>{comment.location || "LOCAL"}</span>
+            {comment.is_anonymous ? (
+              <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                匿名
+              </span>
+            ) : null}
+            {comment.is_private ? (
+              <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                私密
+              </span>
+            ) : null}
           </div>
           <div
             className="w-full mt-2 comment-content "
             dangerouslySetInnerHTML={{ __html: comment.content }}
           ></div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs group">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <ReactionBar
               summary={comment.reactions}
               onSelect={handleSelectReaction}
+              hideEmpty
+              showPickerOnHover
             />
             <Button
               className="invisible group-hover:visible"
