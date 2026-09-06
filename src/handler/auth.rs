@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query, State};
+use axum::{
+  extract::{Path, Query, State},
+  response::Html,
+};
 use helpers::jwt;
 use serde::{Deserialize, Serialize};
 
@@ -172,6 +175,11 @@ pub async fn update_oauth_provider(
 }
 
 #[derive(Serialize)]
+pub struct PublicOauthProviderView {
+  pub provider_code: String,
+}
+
+#[derive(Serialize)]
 pub struct OauthStartPayload {
   pub auth_url: String,
 }
@@ -179,6 +187,14 @@ pub struct OauthStartPayload {
 #[derive(Debug, Serialize, Deserialize)]
 struct OauthJWTClaims {
   provider: String,
+}
+
+pub async fn list_public_oauth_providers(
+  State(state): State<Arc<AppState>>,
+) -> Result<ApiResponse<Vec<PublicOauthProviderView>>, AppError> {
+  Ok(ApiResponse::success(
+    state.service.list_public_oauth_providers().await?,
+  ))
 }
 
 pub async fn oauth_start(
@@ -208,7 +224,7 @@ pub async fn oauth_callback(
   State(state): State<Arc<AppState>>,
   Path(provider): Path<String>,
   Query(qs): Query<OauthCallbackQueryString>,
-) -> Result<ApiResponse<()>, AppError> {
+) -> Result<Html<String>, AppError> {
   let provider_config = state.service.get_oauth_provider_config(&provider).await?;
   let token_data = jwt::verify::<OauthJWTClaims>(&qs.state, &state.jwt_key)
     .map_err(|_| AppError::forbidden("token invalid or expired".to_string()))?;
@@ -222,7 +238,43 @@ pub async fn oauth_callback(
   oauth.config.client_secret = &provider_config.client_secret;
   oauth.config.redirect_uri = &provider_config.redirect_uri;
   oauth.config.code = &qs.code;
-  let access_token = oauth.exchange_code();
-  let _user_profile = oauth.fetch_profile(access_token)?;
-  Ok(ApiResponse::success(()))
+  let access_token = oauth.exchange_code()?;
+  let profile = oauth.fetch_profile(access_token)?;
+  let user = state
+    .service
+    .login_or_register_oauth_user(&provider, profile, &state.jwt_key)
+    .await?;
+  Ok(Html(oauth_callback_page(&user)))
+}
+
+fn oauth_callback_page(user: &UserWithToken) -> String {
+  let payload = serde_json::to_string(user)
+    .unwrap_or_else(|_| "{}".to_string())
+    .replace('<', "\\u003c");
+  format!(
+    r#"<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Yoin</title>
+  </head>
+  <body>
+    <script type="application/json" id="yoin-oauth">{payload}</script>
+    <script>
+      (function () {{
+        var node = document.getElementById("yoin-oauth");
+        var payload = {{}};
+        try {{
+          payload = JSON.parse(node && node.textContent ? node.textContent : "{{}}");
+        }} catch (error) {{}}
+        if (window.opener) {{
+          window.opener.postMessage({{ type: "yoin-oauth", payload: payload }}, "*");
+        }}
+        window.close();
+      }})();
+    </script>
+    <p>Signed in. You can close this window.</p>
+  </body>
+</html>"#
+  )
 }

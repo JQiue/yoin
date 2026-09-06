@@ -11,7 +11,10 @@ use crate::{
     PageResponse, PermissionView, RoleView, UserBindingSummaryView, UserIdentityView,
     UserRoleBindingView, UserView,
   },
-  rbac::permissions::{codes::SITE_MANAGE, roles::SUPER_ADMIN},
+  rbac::permissions::{
+    codes::{COMMENT_MODERATE, SITE_MANAGE},
+    roles::SUPER_ADMIN,
+  },
   repository::{RolePermissionCreateData, UserRoleBindingCreateData},
 };
 
@@ -566,13 +569,24 @@ impl AppService {
   /// List comments for an admin panel, with pagination and status filtering.
   pub async fn list_comments_for_admin(
     &self,
-    _user_id: i64,
+    user_id: i64,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentViewForAdmin>, AppError> {
+    self
+      .require_site_permission(user_id, COMMENT_MODERATE, qs.site_id)
+      .await?;
+    let page_path = qs.page_path.trim();
     let (replies, total, total_pages) = self
       .repo
       .comment()
-      .find_all_paged(qs.page_size, qs.page_offset, &qs.sort, qs.status)
+      .find_all_paged(
+        qs.site_id,
+        Some(page_path),
+        qs.page_size,
+        qs.page_offset,
+        &qs.sort,
+        qs.status,
+      )
       .await
       .with_op("query replies")?;
     let items = replies
@@ -583,18 +597,28 @@ impl AppService {
       items,
       page_size: qs.page_size,
       page_offset: qs.page_offset,
-      total_pages,
       total,
+      total_pages,
     })
   }
 
   /// Update the status of a comment from the admin side.
   pub async fn update_comment_status_for_admin(
     &self,
-    _user_id: i64,
+    user_id: i64,
     id: i64,
     status: CommentStatus,
   ) -> Result<(), AppError> {
+    let comment = self
+      .repo
+      .comment()
+      .find_by_id(id)
+      .await
+      .with_op("find comment by id")?
+      .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+    self
+      .require_site_permission(user_id, COMMENT_MODERATE, comment.site_id)
+      .await?;
     self
       .repo
       .comment()

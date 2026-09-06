@@ -1,10 +1,11 @@
 use axum::http::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
+use yoin::helper::OauthProfile;
 
 use crate::common::{
-  ApiResponse, get_with_bearer, patch_json_with_bearer, post_json_with_bearer, read_json,
-  register_user, test_app,
+  ApiResponse, TEST_JWT_KEY, get_with_bearer, patch_json_with_bearer, post_json_with_bearer,
+  read_json, register_user, test_app, test_service,
 };
 
 #[derive(Deserialize)]
@@ -115,4 +116,126 @@ async fn oauth_start_uses_enabled_provider_from_db() {
     .to_string();
   assert!(auth_url.contains("client_id=client-id"));
   assert!(auth_url.contains("github.com/login/oauth/authorize"));
+}
+
+#[tokio::test]
+async fn public_oauth_providers_omit_secrets_and_disabled_entries() {
+  let app = test_app().await;
+  let admin = register_user(&app, "oauth-public@example.com", "secret123")
+    .await
+    .data
+    .expect("admin");
+
+  let empty = crate::common::request(
+    &app,
+    crate::common::build_request(
+      "GET",
+      "/api/auth/oauth/providers",
+      axum::body::Body::empty(),
+    ),
+  )
+  .await;
+  assert_eq!(empty.status(), StatusCode::OK);
+  let empty_body: ApiResponse<Vec<serde_json::Value>> = read_json(empty).await;
+  assert!(empty_body.data.expect("providers").is_empty());
+
+  let _ = post_json_with_bearer(
+    &app,
+    "/api/admin/oauth/providers",
+    &admin.token,
+    json!({
+      "provider_code": "github",
+      "client_id": "client-id",
+      "client_secret": "client-secret",
+      "redirect_uri": "http://localhost:7410/api/auth/oauth/github/callback"
+    }),
+  )
+  .await;
+  let _ = post_json_with_bearer(
+    &app,
+    "/api/admin/oauth/providers",
+    &admin.token,
+    json!({
+      "provider_code": "qq",
+      "enabled": false,
+      "client_id": "qq-id",
+      "client_secret": "qq-secret",
+      "redirect_uri": "http://localhost:7410/api/auth/oauth/qq/callback"
+    }),
+  )
+  .await;
+
+  let listed = crate::common::request(
+    &app,
+    crate::common::build_request(
+      "GET",
+      "/api/auth/oauth/providers",
+      axum::body::Body::empty(),
+    ),
+  )
+  .await;
+  assert_eq!(listed.status(), StatusCode::OK);
+  let listed_body: ApiResponse<Vec<serde_json::Value>> = read_json(listed).await;
+  let providers = listed_body.data.expect("providers");
+  assert_eq!(providers.len(), 1);
+  assert_eq!(providers[0]["provider_code"], "github");
+  assert!(providers[0].get("client_secret").is_none());
+  assert!(providers[0].get("client_id").is_none());
+}
+
+#[tokio::test]
+async fn oauth_login_creates_user_and_reuses_identity() {
+  let service = test_service().await;
+  let profile = OauthProfile {
+    id: "42".to_string(),
+    nickname: "octocat".to_string(),
+    avatar: "https://example.com/octocat.png".to_string(),
+    email: None,
+  };
+
+  let first = service
+    .login_or_register_oauth_user("github", profile.clone(), TEST_JWT_KEY)
+    .await
+    .expect("oauth register");
+  assert_eq!(first.user.nickname, "octocat");
+  assert_eq!(first.user.email, "github+42@oauth.yoin.local");
+  assert!(!first.token.is_empty());
+
+  let second = service
+    .login_or_register_oauth_user("github", profile, TEST_JWT_KEY)
+    .await
+    .expect("oauth login");
+  assert_eq!(second.user.email, first.user.email);
+  assert_eq!(second.user.nickname, first.user.nickname);
+}
+
+#[tokio::test]
+async fn oauth_login_binds_existing_email() {
+  let service = test_service().await;
+  let existing = service
+    .create_user(
+      "tester".to_string(),
+      "".to_string(),
+      "octocat@example.com".to_string(),
+      "secret123".to_string(),
+      TEST_JWT_KEY,
+    )
+    .await
+    .expect("existing user");
+
+  let linked = service
+    .login_or_register_oauth_user(
+      "github",
+      OauthProfile {
+        id: "99".to_string(),
+        nickname: "octocat".to_string(),
+        avatar: "https://example.com/octocat.png".to_string(),
+        email: Some("octocat@example.com".to_string()),
+      },
+      TEST_JWT_KEY,
+    )
+    .await
+    .expect("oauth bind");
+  assert_eq!(linked.user.email, existing.user.email);
+  assert_eq!(linked.user.nickname, existing.user.nickname);
 }

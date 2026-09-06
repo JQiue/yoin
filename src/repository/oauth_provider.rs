@@ -76,6 +76,14 @@ impl OauthProviderRepository {
     query.one(self.conn).await
   }
 
+  pub async fn find_enabled_public(&self) -> Result<Vec<oauth_providers::Model>, DbErr> {
+    OauthProviders::find()
+      .filter(oauth_providers::Column::Enabled.eq(true))
+      .filter(oauth_providers::Column::SiteId.is_null())
+      .all(self.conn)
+      .await
+  }
+
   pub async fn create(
     &self,
     data: OauthProviderCreateData,

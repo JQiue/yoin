@@ -74,6 +74,8 @@ impl CommentRepository {
 
   pub async fn find_all_paged(
     &self,
+    site_id: i64,
+    page_path: Option<&str>,
     page_size: u64,
     page_offset: u64,
     sort: &str,
@@ -84,7 +86,11 @@ impl CommentRepository {
       "created_desc" => (comments::Column::CreatedAt, Order::Desc),
       _ => (comments::Column::CreatedAt, Order::Desc),
     };
-    let mut paginator = Comments::find();
+    let mut paginator = Comments::find().filter(comments::Column::SiteId.eq(site_id));
+
+    if let Some(page_path) = page_path.filter(|path| !path.is_empty() && *path != "/") {
+      paginator = paginator.filter(comments::Column::PagePath.eq(page_path));
+    }
 
     if let Some(status) = status {
       paginator = paginator.filter(comments::Column::Status.eq(status));

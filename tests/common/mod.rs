@@ -10,7 +10,10 @@ use http_body_util::BodyExt;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-use yoin::{app::app, db::migrate};
+use yoin::{
+  app::app, db::migrate, rbac::bootstrap::bootstrap_rbac, repository::Repository,
+  service::AppService,
+};
 
 pub const TEST_JWT_KEY: &str = "test_jwt_key_123456789012345678901234567890";
 
@@ -38,6 +41,15 @@ pub struct SiteView {
 pub async fn test_app() -> axum::Router {
   let conn = Box::leak(Box::new(migrate("sqlite::memory:").await.unwrap()));
   app(conn, TEST_JWT_KEY.to_string()).await.unwrap()
+}
+
+pub async fn test_service() -> AppService {
+  let conn = Box::leak(Box::new(migrate("sqlite::memory:").await.unwrap()));
+  let service = AppService {
+    repo: Repository::new(conn),
+  };
+  bootstrap_rbac(&service.repo).await.unwrap();
+  service
 }
 
 pub fn build_request(method: &str, uri: &str, body: Body) -> Request<Body> {

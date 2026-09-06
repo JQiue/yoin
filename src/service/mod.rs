@@ -160,4 +160,23 @@ impl AppService {
       )
       .await
   }
+
+  /// Require a site permission, falling back to the same permission on the global scope.
+  pub async fn require_site_permission(
+    &self,
+    user_id: i64,
+    permission_name: &str,
+    site_id: i64,
+  ) -> Result<(), AppError> {
+    if !self
+      .has_site_permission(user_id, permission_name, site_id)
+      .await?
+    {
+      return Err(AppError::forbidden(format!(
+        "Missing permission: {}",
+        permission_name
+      )));
+    }
+    Ok(())
+  }
 }

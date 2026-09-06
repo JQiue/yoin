@@ -124,6 +124,10 @@ fn create_router(state: Arc<AppState>) -> Router {
     .route("/auth/register", post(auth::register))
     .route("/auth/login", post(auth::login))
     .route("/auth/external/exchange", post(auth::external_exchange))
+    .route(
+      "/auth/oauth/providers",
+      get(auth::list_public_oauth_providers),
+    )
     .route("/auth/oauth/{provider}/start", get(auth::oauth_start))
     .route("/auth/oauth/{provider}/callback", get(auth::oauth_callback))
     .route("/sites/{id}/config", get(site::public_config))
