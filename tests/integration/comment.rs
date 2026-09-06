@@ -5,6 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
+use yoin::constants::comment::{ANONYMOUS_AVATAR, ANONYMOUS_NICKNAME};
 
 use crate::common::{
   self, ApiResponse, create_site, post_json, post_json_with_bearer, read_json, register_user,
@@ -22,6 +23,9 @@ struct CommentView {
   content: String,
   is_anonymous: bool,
   is_private: bool,
+  can_delete: bool,
+  can_pin: bool,
+  is_sticky: bool,
 }
 
 #[derive(Deserialize)]
@@ -378,15 +382,15 @@ async fn anonymous_comment_hides_identity_from_guests() {
   let created: ApiResponse<CommentView> = read_json(resp).await;
   let created = created.data.expect("comment");
   assert!(created.is_anonymous);
-  assert_eq!(created.nickname, "匿名");
+  assert_eq!(created.nickname, ANONYMOUS_NICKNAME);
   assert_eq!(created.website, "");
-  assert_eq!(created.avatar, "");
+  assert_eq!(created.avatar, ANONYMOUS_AVATAR);
 
   let guest_page = list_comments(&app, site.id, None).await;
   assert_eq!(guest_page.total, 1);
-  assert_eq!(guest_page.items[0].nickname, "匿名");
+  assert_eq!(guest_page.items[0].nickname, ANONYMOUS_NICKNAME);
   assert_eq!(guest_page.items[0].website, "");
-  assert_eq!(guest_page.items[0].avatar, "");
+  assert_eq!(guest_page.items[0].avatar, ANONYMOUS_AVATAR);
   assert!(guest_page.items[0].is_anonymous);
 
   let admin_page = list_comments(&app, site.id, Some(&admin.token)).await;

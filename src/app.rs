@@ -137,6 +137,7 @@ fn create_router(state: Arc<AppState>) -> Router {
   let private_routes = Router::new()
     .route("/users/me", get(user::profile).patch(user::update_profile))
     .route("/comments/{id}", delete(comment::delete))
+    .route("/comments/{id}/sticky", patch(comment::set_sticky))
     .route(
       "/comment-subscriptions",
       get(subscription::list).post(subscription::create),

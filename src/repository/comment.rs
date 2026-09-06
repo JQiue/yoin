@@ -104,6 +104,17 @@ impl CommentRepository {
     Comments::find_by_id(id).one(self.conn).await
   }
 
+  pub async fn set_sticky(
+    &self,
+    comment: comments::Model,
+    is_sticky: bool,
+  ) -> Result<comments::Model, DbErr> {
+    let mut active: comments::ActiveModel = comment.into();
+    active.is_sticky = Set(is_sticky);
+    active.updated_at = Set(utc_now().naive_utc());
+    active.update(self.conn).await
+  }
+
   fn apply_visibility(
     query: Select<Comments>,
     visibility: &CommentListVisibility,
@@ -152,6 +163,7 @@ impl CommentRepository {
         .filter(comments::Column::ParentId.is_null()),
       visibility,
     )
+    .order_by_desc(comments::Column::IsSticky)
     .order_by(sort_col, sort_ord)
     .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;

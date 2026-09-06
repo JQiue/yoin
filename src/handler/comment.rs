@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
   app::{AppState, UserKey},
+  constants::comment::{ANONYMOUS_AVATAR, ANONYMOUS_NICKNAME},
   entity::comments,
   error::AppError,
   extractor::{AppJson, GuestId, OptionnalAuth, RemoteIp, RequireAuth},
@@ -42,6 +43,8 @@ pub struct CommentView {
   pub is_private: bool,
   pub avatar: String,
   pub created_at: String,
+  pub can_delete: bool,
+  pub can_pin: bool,
   pub reactions: ReactionSummaryView,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub replies: Option<Vec<CommentView>>,
@@ -50,13 +53,22 @@ pub struct CommentView {
 }
 
 impl CommentView {
-  pub fn from_model(model: comments::Model, reveal_identity: bool) -> Self {
+  pub fn from_model(
+    model: comments::Model,
+    reveal_identity: bool,
+    can_delete: bool,
+    can_pin: bool,
+  ) -> Self {
     let parser = pulldown_cmark::Parser::new(&model.content);
     let mut html_output = String::new();
     pulldown_cmark::html::push_html(&mut html_output, parser);
     let is_anonymous = model.is_anonymous;
     let (nickname, website, avatar) = if is_anonymous && !reveal_identity {
-      ("匿名".to_string(), String::new(), String::new())
+      (
+        ANONYMOUS_NICKNAME.to_string(),
+        String::new(),
+        ANONYMOUS_AVATAR.to_string(),
+      )
     } else {
       (model.nickname, model.website, model.avatar)
     };
@@ -74,6 +86,8 @@ impl CommentView {
       is_anonymous,
       is_private: model.is_private,
       created_at: model.created_at.and_utc().to_rfc3339(),
+      can_delete,
+      can_pin,
       reactions: ReactionSummaryView::default(),
       replies: None,
       has_more: None,
@@ -189,4 +203,23 @@ pub async fn delete(
     .delete_comment(require_auth.user_id, id)
     .await?;
   Ok(ApiResponse::success(()))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetStickyPayload {
+  pub is_sticky: bool,
+}
+
+pub async fn set_sticky(
+  State(state): State<Arc<AppState>>,
+  require_auth: RequireAuth,
+  Path(id): Path<i64>,
+  AppJson(payload): AppJson<SetStickyPayload>,
+) -> Result<ApiResponse<CommentView>, AppError> {
+  Ok(ApiResponse::success(
+    state
+      .service
+      .set_comment_sticky(require_auth.user_id, id, payload.is_sticky)
+      .await?,
+  ))
 }

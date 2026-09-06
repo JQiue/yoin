@@ -72,6 +72,11 @@ pub mod guest {
   pub const ID_MAX_LEN: usize = 32;
 }
 
+pub mod comment {
+  pub const ANONYMOUS_NICKNAME: &str = "匿名";
+  pub const ANONYMOUS_AVATAR: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='%23e4e4e7'/%3E%3Ccircle cx='32' cy='24' r='10' fill='%2371717a'/%3E%3Cpath d='M12 54c0-11 9-18 20-18s20 7 20 18' fill='%2371717a'/%3E%3C/svg%3E";
+}
+
 pub mod moderation {
   pub mod provider_kind {
     pub const LLM: &str = "llm";

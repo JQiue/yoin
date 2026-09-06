@@ -20,6 +20,13 @@ impl AppService {
     }
   }
 
+  fn can_delete_comment(comment: &comments::Model, user_id: Option<i64>) -> bool {
+    matches!(
+      (comment.user_id, user_id),
+      (Some(author_id), Some(viewer_id)) if author_id == viewer_id
+    )
+  }
+
   fn is_comment_author(
     comment: &comments::Model,
     user_id: Option<i64>,
@@ -220,7 +227,14 @@ impl AppService {
     }
 
     let reveal_identity = self.can_manage_site(user_id, comment.site_id).await?;
-    Ok(CommentView::from_model(comment, reveal_identity))
+    let can_delete = Self::can_delete_comment(&comment, user_id);
+    let can_pin = reveal_identity && comment.parent_id.is_none();
+    Ok(CommentView::from_model(
+      comment,
+      reveal_identity,
+      can_delete,
+      can_pin,
+    ))
   }
 
   /// List root comments for a site/page with pagination.
@@ -261,11 +275,16 @@ impl AppService {
     let mut items: Vec<CommentView> = roots
       .into_iter()
       .map(|root| {
-        let mut view = CommentView::from_model(root, reveal_identity);
+        let can_delete = Self::can_delete_comment(&root, user_id);
+        let can_pin = reveal_identity;
+        let mut view = CommentView::from_model(root, reveal_identity, can_delete, can_pin);
         let mut thread_replies: Vec<CommentView> = preview_replies
           .iter()
           .filter(|r| r.thread_id == Some(view.id))
-          .map(|r| CommentView::from_model(r.clone(), reveal_identity))
+          .map(|r| {
+            let can_delete = Self::can_delete_comment(r, user_id);
+            CommentView::from_model(r.clone(), reveal_identity, can_delete, false)
+          })
           .collect();
 
         if thread_replies.len() > reply_limit {
@@ -327,7 +346,10 @@ impl AppService {
       .with_op("query replies")?;
     let mut items: Vec<CommentView> = replies
       .into_iter()
-      .map(|comment| CommentView::from_model(comment, reveal_identity))
+      .map(|comment| {
+        let can_delete = Self::can_delete_comment(&comment, user_id);
+        CommentView::from_model(comment, reveal_identity, can_delete, false)
+      })
       .collect();
     let actor_id = match user_id {
       Some(id) => Some(id.to_string()),
@@ -382,5 +404,41 @@ impl AppService {
     }
 
     Ok(())
+  }
+
+  pub async fn set_comment_sticky(
+    &self,
+    user_id: i64,
+    id: i64,
+    is_sticky: bool,
+  ) -> Result<CommentView, AppError> {
+    let comment = self
+      .repo
+      .comment()
+      .find_by_id(id)
+      .await
+      .with_op("find comment by id")?
+      .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+
+    if comment.parent_id.is_some() {
+      return Err(AppError::bad_request(
+        "only root comments can be pinned".to_string(),
+      ));
+    }
+
+    if !self.can_manage_site(Some(user_id), comment.site_id).await? {
+      return Err(AppError::forbidden(
+        "you cannot pin comments on this site".to_string(),
+      ));
+    }
+
+    let comment = self
+      .repo
+      .comment()
+      .set_sticky(comment, is_sticky)
+      .await
+      .with_op("set comment sticky")?;
+    let can_delete = Self::can_delete_comment(&comment, Some(user_id));
+    Ok(CommentView::from_model(comment, true, can_delete, true))
   }
 }
