@@ -80,6 +80,12 @@ export const zh: Record<keyof typeof en, string> = {
   "auth.loginSuccess": "登录成功",
   "auth.registerSuccess": "注册成功，请登录",
   "auth.passwordMismatch": "两次密码不一致",
+  "auth.orContinueWith": "或使用以下方式继续",
+  "auth.continueWith": "使用 {provider} 继续",
+  "auth.oauthFailed": "社交登录失败",
+  "auth.oauthPopupBlocked": "请允许弹出窗口后再试",
+  "auth.provider.github": "GitHub",
+  "auth.provider.qq": "QQ",
 
   "admin.loadingProfile": "正在加载管理员信息...",
   "admin.currentIdentity": "当前身份",

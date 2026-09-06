@@ -78,6 +78,12 @@ export const en = {
   "auth.loginSuccess": "Signed in",
   "auth.registerSuccess": "Account created, please sign in",
   "auth.passwordMismatch": "Passwords do not match",
+  "auth.orContinueWith": "or continue with",
+  "auth.continueWith": "Continue with {provider}",
+  "auth.oauthFailed": "Social sign-in failed",
+  "auth.oauthPopupBlocked": "Please allow pop-ups to continue",
+  "auth.provider.github": "GitHub",
+  "auth.provider.qq": "QQ",
 
   "admin.loadingProfile": "Loading admin profile...",
   "admin.currentIdentity": "Signed in as",

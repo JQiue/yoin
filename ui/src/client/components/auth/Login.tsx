@@ -1,9 +1,10 @@
 import type { TargetedEvent, TargetedSubmitEvent } from "preact";
 import { useState } from "preact/hooks";
 import { type LoginInput, useAuthForm } from "@/client/hooks/useAuthForm";
+import type { PublicOauthProvider } from "@/shared/api/auth";
 import { Button } from "@/shared/components/Button";
 import Icon from "@/shared/components/Icon";
-import { useI18n } from "@/shared/i18n";
+import { type MessageKey, useI18n } from "@/shared/i18n";
 
 interface Props {
   onSuccess: () => void;
@@ -14,6 +15,8 @@ export default (props: Props) => {
     isLoginView,
     toggleView,
     handleSubmit,
+    handleOauth,
+    oauthProviders,
     submitStatus,
     submitting,
     setSubmitStatus,
@@ -29,7 +32,9 @@ export default (props: Props) => {
         <LoginForm
           submitStatus={submitStatus}
           submitting={submitting}
+          oauthProviders={oauthProviders}
           onSubmit={handleSubmit}
+          onOauth={handleOauth}
         />
       ) : (
         <RegisterForm
@@ -52,10 +57,24 @@ export default (props: Props) => {
 interface LoginFormProps {
   submitting: boolean;
   submitStatus: { type: string; msg: string };
+  oauthProviders: PublicOauthProvider[];
   onSubmit: (e: TargetedSubmitEvent<HTMLFormElement>, data: LoginInput) => void;
+  onOauth: (provider: string) => void;
 }
 
-const LoginForm = ({ submitting, submitStatus, onSubmit }: LoginFormProps) => {
+function oauthProviderLabel(provider: string, t: (key: MessageKey) => string) {
+  if (provider === "github") return t("auth.provider.github");
+  if (provider === "qq") return t("auth.provider.qq");
+  return provider;
+}
+
+const LoginForm = ({
+  submitting,
+  submitStatus,
+  oauthProviders,
+  onSubmit,
+  onOauth,
+}: LoginFormProps) => {
   const { t } = useI18n();
   const [credentials, setCredentials] = useState<LoginInput>({
     email: "",
@@ -102,6 +121,28 @@ const LoginForm = ({ submitting, submitStatus, onSubmit }: LoginFormProps) => {
       <Button variant="primary" fullWidth type="submit" disabled={submitting}>
         {submitting ? t("auth.signingIn") : t("auth.signIn")}
       </Button>
+      {oauthProviders.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <p className="text-center text-xs text-(--yo-text-muted)">
+            {t("auth.orContinueWith")}
+          </p>
+          {oauthProviders.map((provider) => {
+            const label = oauthProviderLabel(provider.provider_code, t);
+            return (
+              <Button
+                key={provider.provider_code}
+                variant="secondary"
+                fullWidth
+                type="button"
+                disabled={submitting}
+                onClick={() => onOauth(provider.provider_code)}
+              >
+                {t("auth.continueWith", { provider: label })}
+              </Button>
+            );
+          })}
+        </div>
+      )}
     </form>
   );
 };
