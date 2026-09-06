@@ -3,7 +3,10 @@ use migration::enums::UserRoleBindingScopeType;
 use sea_orm::entity::prelude::DateTime;
 
 use crate::{
-  constants::rbac::{roles, SYSTEM_PERMISSIONS, SYSTEM_ROLES, SUPER_ADMIN_PERMISSION_CODES, SITE_ADMIN_PERMISSION_CODES, MODERATOR_PERMISSION_CODES},
+  constants::rbac::{
+    MODERATOR_PERMISSION_CODES, SITE_ADMIN_PERMISSION_CODES, SUPER_ADMIN_PERMISSION_CODES,
+    SYSTEM_PERMISSIONS, SYSTEM_ROLES, roles,
+  },
   error::{AppError, ToAppError},
   repository::{
     PermissionCreateData, Repository, RoleCreateData, RolePermissionCreateData,
@@ -11,7 +14,7 @@ use crate::{
   },
 };
 
-/// 🚀 Bootstrap RBAC
+/// Bootstrap RBAC
 ///
 #[doc = "docs"]
 #[doc = include_str!("../docs/bootstrap_rbac.md")]

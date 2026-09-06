@@ -25,7 +25,7 @@ Routes are nested under `/api` in [src/app.rs](src/app.rs). Static widgets: `/st
 - Infra/DB errors: `.with_op("short operation")` → `AppError::Internal`. Never leak internals to clients.
 - JSON bodies: `AppJson<T>`, not raw `Json<T>`.
 - Auth: Bearer JWT. Public routes use `OptionnalAuth`; private/admin use `RequireAuth`.
-- Permission strings live in [src/constants.rs](src/constants.rs) (`site.manage`, `comment.moderate`, …). First registered user gets global `super_admin` and a default site.
+- Permission strings live in [src/constants/mod.rs](src/constants/mod.rs) (`site.manage`, `comment.moderate`, …). First registered user gets global `super_admin` and a default site.
 
 Do not “fix” `OptionnalAuth` unless the task is a rename.
 

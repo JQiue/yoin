@@ -52,6 +52,17 @@ pub mod rbac {
 
 pub mod reaction {
   pub const ALLOWED_TYPES: [&str; 5] = ["👍", "❤️", "😄", "🎉", "👎"];
+
+  pub fn default_allowed_types() -> Vec<String> {
+    ALLOWED_TYPES
+      .iter()
+      .map(|item| (*item).to_string())
+      .collect()
+  }
+
+  pub fn is_globally_allowed(value: &str) -> bool {
+    ALLOWED_TYPES.contains(&value)
+  }
 }
 
 pub mod guest {

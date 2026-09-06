@@ -9,7 +9,8 @@ pub mod llm;
 pub mod noop;
 pub mod types;
 
-pub use crate::constants::moderation::provider_kind;
 pub use llm::LLMModerator;
 pub use noop::NoopModerator;
 pub use types::{ModerationDecision, ModerationInput, ModerationResult};
+
+pub use crate::constants::moderation::provider_kind;
