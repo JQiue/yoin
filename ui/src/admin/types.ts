@@ -1,4 +1,5 @@
 import type { RuntimeOptions } from "@/config/types";
+import type { MessageKey } from "@/shared/i18n";
 
 export type Option = RuntimeOptions;
 
@@ -15,13 +16,13 @@ export type CommentTab = "all" | "pending" | "spam" | "deleted";
 
 export type AdminTabItem = {
   key: AdminTab;
-  label: string;
-  description: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
 };
 
 export type CommentTabItem = {
   key: CommentTab;
-  label: string;
+  labelKey: MessageKey;
 };
 
 export type SiteFormState = {
@@ -56,37 +57,37 @@ export type ModerationProviderFormState = {
 export const ADMIN_TABS: AdminTabItem[] = [
   {
     key: "sites",
-    label: "站点管理",
-    description: "查看站点配置与评论基础参数。",
+    labelKey: "admin.tab.sites",
+    descriptionKey: "admin.tab.sitesDesc",
   },
   {
     key: "comments",
-    label: "评论管理",
-    description: "处理待审核评论与风险内容。",
+    labelKey: "admin.tab.comments",
+    descriptionKey: "admin.tab.commentsDesc",
   },
   {
     key: "users",
-    label: "用户管理",
-    description: "查看用户、外部身份与当前角色绑定。",
+    labelKey: "admin.tab.users",
+    descriptionKey: "admin.tab.usersDesc",
   },
   {
     key: "permissions",
-    label: "权限管理",
-    description: "编辑角色权限，以及用户在全局或站点上的角色绑定。",
+    labelKey: "admin.tab.permissions",
+    descriptionKey: "admin.tab.permissionsDesc",
   },
   {
     key: "oauthProviders",
-    label: "OAuth 提供者",
-    description: "管理社交登录与 OAuth 配置。",
+    labelKey: "admin.tab.oauth",
+    descriptionKey: "admin.tab.oauthDesc",
   },
   {
     key: "moderationProviders",
-    label: "审核提供者",
-    description: "管理 LLM、Akismet 等审核来源。",
+    labelKey: "admin.tab.moderation",
+    descriptionKey: "admin.tab.moderationDesc",
   },
   {
     key: "externalProviders",
-    label: "外部身份提供者",
-    description: "外部 token exchange 尚未提供管理接口。",
+    labelKey: "admin.tab.external",
+    descriptionKey: "admin.tab.externalDesc",
   },
 ];

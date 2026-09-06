@@ -1,6 +1,7 @@
 import type { SiteFormState } from "@/admin/types";
 import { GLOBAL_ALLOWED_REACTIONS, type Site } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
+import { useI18n } from "@/shared/i18n";
 
 function toggleReaction(current: string[], reaction: string) {
   return current.includes(reaction)
@@ -15,9 +16,12 @@ function ReactionPicker({
   value: string[];
   onChange: (next: string[]) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="mt-4">
-      <p className="text-xs text-(--yo-text-soft)">允许的反应</p>
+      <p className="text-xs text-(--yo-text-soft)">
+        {t("admin.sites.allowedReactions")}
+      </p>
       <div className="mt-2 flex flex-wrap gap-2">
         {GLOBAL_ALLOWED_REACTIONS.map((reaction) => {
           const checked = value.includes(reaction);
@@ -86,23 +90,28 @@ export const SitesPanel = ({
   onCancelEditSite,
   onSaveSite,
 }: Props) => {
+  const { t } = useI18n();
   return (
     <section className={panelClass}>
       <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">站点管理</h2>
+          <h2 className="text-xl font-semibold">{t("admin.sites.title")}</h2>
         </div>
         <Button size="sm" onClick={onToggleCreateSite}>
-          {isCreatingSite ? "收起表单" : "新建站点"}
+          {isCreatingSite ? t("common.collapseForm") : t("admin.sites.create")}
         </Button>
       </div>
 
       {isCreatingSite && (
         <div className="mb-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-          <h3 className="text-base font-medium">创建新站点</h3>
+          <h3 className="text-base font-medium">
+            {t("admin.sites.createTitle")}
+          </h3>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="text-xs text-(--yo-text-soft)">站点名称</span>
+              <span className="text-xs text-(--yo-text-soft)">
+                {t("admin.sites.name")}
+              </span>
               <input
                 type="text"
                 value={createSiteForm.name}
@@ -114,7 +123,9 @@ export const SitesPanel = ({
             </label>
 
             <label className="block">
-              <span className="text-xs text-(--yo-text-soft)">站点地址</span>
+              <span className="text-xs text-(--yo-text-soft)">
+                {t("admin.sites.url")}
+              </span>
               <input
                 type="url"
                 value={createSiteForm.url}
@@ -127,7 +138,7 @@ export const SitesPanel = ({
 
             <label className="block">
               <span className="text-xs text-(--yo-text-soft)">
-                最大评论长度
+                {t("admin.sites.maxLength")}
               </span>
               <input
                 type="number"
@@ -144,7 +155,7 @@ export const SitesPanel = ({
 
             <label className="block">
               <span className="text-xs text-(--yo-text-soft)">
-                评论限流秒数
+                {t("admin.sites.rateLimit")}
               </span>
               <input
                 type="number"
@@ -172,7 +183,7 @@ export const SitesPanel = ({
                 }
                 className="h-4 w-4 rounded border border-(--yo-surface-strong)"
               />
-              允许匿名评论
+              {t("admin.sites.allowAnonymous")}
             </label>
             <label className="inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
               <input
@@ -185,7 +196,7 @@ export const SitesPanel = ({
                 }
                 className="h-4 w-4 rounded border border-(--yo-surface-strong)"
               />
-              允许私密评论
+              {t("admin.sites.allowPrivate")}
             </label>
           </div>
           <ReactionPicker
@@ -205,7 +216,7 @@ export const SitesPanel = ({
               loading={isSubmittingCreateSite}
               onClick={onCreateSite}
             >
-              创建站点
+              {t("admin.sites.createAction")}
             </Button>
             <Button
               size="sm"
@@ -213,21 +224,23 @@ export const SitesPanel = ({
               disabled={isSubmittingCreateSite}
               onClick={onCancelCreateSite}
             >
-              取消
+              {t("common.cancel")}
             </Button>
           </div>
         </div>
       )}
 
       {isLoadingSites ? (
-        <p className="text-sm text-(--yo-text-muted)">正在加载站点列表...</p>
+        <p className="text-sm text-(--yo-text-muted)">
+          {t("admin.sites.loading")}
+        </p>
       ) : sitesError ? (
         <div className="rounded-lg bg-(--yo-danger-bg) px-4 py-3 text-sm text-(--yo-danger)">
           {sitesError}
         </div>
       ) : sites.length === 0 ? (
         <div className="rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
-          还没有站点，先从这里开始接入你的第一个评论站点。
+          {t("admin.sites.empty")}
         </div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
@@ -252,39 +265,54 @@ export const SitesPanel = ({
                     variant="secondary"
                     onClick={() => onBeginEditSite(site)}
                   >
-                    编辑
+                    {t("common.edit")}
                   </Button>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
                 <div>
-                  <p className="text-(--yo-text-soft)">匿名评论</p>
+                  <p className="text-(--yo-text-soft)">
+                    {t("admin.sites.anonymous")}
+                  </p>
                   <p className="mt-1 font-medium">
-                    {site.config.allow_anonymous ? "允许" : "关闭"}
+                    {site.config.allow_anonymous
+                      ? t("admin.sites.allowed")
+                      : t("admin.sites.closed")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-(--yo-text-soft)">私密评论</p>
+                  <p className="text-(--yo-text-soft)">
+                    {t("admin.sites.private")}
+                  </p>
                   <p className="mt-1 font-medium">
-                    {site.config.allow_private ? "允许" : "关闭"}
+                    {site.config.allow_private
+                      ? t("admin.sites.allowed")
+                      : t("admin.sites.closed")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-(--yo-text-soft)">最大长度</p>
+                  <p className="text-(--yo-text-soft)">
+                    {t("admin.sites.maxLengthShort")}
+                  </p>
                   <p className="mt-1 font-medium">
                     {site.config.max_comment_length}
                   </p>
                 </div>
                 <div>
-                  <p className="text-(--yo-text-soft)">限流秒数</p>
+                  <p className="text-(--yo-text-soft)">
+                    {t("admin.sites.rateLimitShort")}
+                  </p>
                   <p className="mt-1 font-medium">
                     {site.config.comment_limit_seconds}
                   </p>
                 </div>
                 <div>
-                  <p className="text-(--yo-text-soft)">反应</p>
+                  <p className="text-(--yo-text-soft)">
+                    {t("admin.sites.reactions")}
+                  </p>
                   <p className="mt-1 font-medium">
-                    {(site.config.allowed_reactions ?? []).join(" ") || "无"}
+                    {(site.config.allowed_reactions ?? []).join(" ") ||
+                      t("common.none")}
                   </p>
                 </div>
               </div>
@@ -294,7 +322,7 @@ export const SitesPanel = ({
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="block">
                       <span className="text-xs text-(--yo-text-soft)">
-                        站点名称
+                        {t("admin.sites.name")}
                       </span>
                       <input
                         type="text"
@@ -308,7 +336,7 @@ export const SitesPanel = ({
 
                     <label className="block">
                       <span className="text-xs text-(--yo-text-soft)">
-                        站点地址
+                        {t("admin.sites.url")}
                       </span>
                       <input
                         type="url"
@@ -322,7 +350,7 @@ export const SitesPanel = ({
 
                     <label className="block">
                       <span className="text-xs text-(--yo-text-soft)">
-                        最大评论长度
+                        {t("admin.sites.maxLength")}
                       </span>
                       <input
                         type="number"
@@ -339,7 +367,7 @@ export const SitesPanel = ({
 
                     <label className="block">
                       <span className="text-xs text-(--yo-text-soft)">
-                        评论限流秒数
+                        {t("admin.sites.rateLimit")}
                       </span>
                       <input
                         type="number"
@@ -367,7 +395,7 @@ export const SitesPanel = ({
                         }
                         className="h-4 w-4 rounded border border-(--yo-surface-strong)"
                       />
-                      允许匿名评论
+                      {t("admin.sites.allowAnonymous")}
                     </label>
                     <label className="inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
                       <input
@@ -380,7 +408,7 @@ export const SitesPanel = ({
                         }
                         className="h-4 w-4 rounded border border-(--yo-surface-strong)"
                       />
-                      允许私密评论
+                      {t("admin.sites.allowPrivate")}
                     </label>
                   </div>
                   <ReactionPicker
@@ -402,7 +430,7 @@ export const SitesPanel = ({
                       loading={isSavingSite}
                       onClick={onSaveSite}
                     >
-                      保存配置
+                      {t("admin.sites.save")}
                     </Button>
                     <Button
                       size="sm"
@@ -410,7 +438,7 @@ export const SitesPanel = ({
                       disabled={isSavingSite}
                       onClick={onCancelEditSite}
                     >
-                      取消
+                      {t("common.cancel")}
                     </Button>
                   </div>
                 </div>

@@ -18,6 +18,7 @@ import { useAdminProfile } from "@/admin/hooks/useAdminProfile";
 import { useAdminSites } from "@/admin/hooks/useAdminSites";
 import { useAdminUsers } from "@/admin/hooks/useAdminUsers";
 import { ADMIN_TABS, type AdminTab } from "@/admin/types";
+import { useI18n } from "@/shared/i18n";
 import { useAdminProviders } from "./hooks/useAdminProviders";
 
 const panelClass =
@@ -26,11 +27,12 @@ const panelClass =
 const App = () => {
   const { profile, isLoadingProfile, profileError, refreshProfile, logout } =
     useAdminProfile();
+  const { t } = useI18n();
 
   if (isLoadingProfile) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-(--yo-bg) text-(--yo-text-muted)">
-        正在加载管理员信息...
+        {t("admin.loadingProfile")}
       </div>
     );
   }
@@ -203,9 +205,9 @@ const AdminDashboard = ({
                 setSiteForm((current) =>
                   current
                     ? {
-                      ...current,
-                      ...patch,
-                    }
+                        ...current,
+                        ...patch,
+                      }
                     : current,
                 )
               }
@@ -276,8 +278,8 @@ const AdminDashboard = ({
               onToggleRolePermission={(role, permissionName) => {
                 const next = role.permission_names.includes(permissionName)
                   ? role.permission_names.filter(
-                    (name) => name !== permissionName,
-                  )
+                      (name) => name !== permissionName,
+                    )
                   : [...role.permission_names, permissionName];
                 void saveRolePermissions(role.id, next);
               }}

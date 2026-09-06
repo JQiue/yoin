@@ -1,3 +1,5 @@
+import { useI18n } from "@/shared/i18n";
+
 interface Props {
   isLoading: boolean;
   pageOffset: number;
@@ -6,14 +8,15 @@ interface Props {
 }
 
 export default ({ isLoading, pageOffset, totalPages, total }: Props) => {
+  const { t } = useI18n();
   const containerClass =
-    "flex justify-center items-center py-8 w-full text-sm text-app-muted";
+    "flex justify-center items-center py-8 w-full text-sm text-(--yo-text-muted)";
 
   if (isLoading) {
     return (
       <div className={containerClass}>
         <svg
-          className="animate-spin -ml-1 mr-3 h-5 w-5 text-app-muted"
+          className="animate-spin -ml-1 mr-3 h-5 w-5 text-(--yo-text-muted)"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -33,7 +36,7 @@ export default ({ isLoading, pageOffset, totalPages, total }: Props) => {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           ></path>
         </svg>
-        <span>正在加载评论...</span>
+        <span>{t("client.loadingComments")}</span>
       </div>
     );
   }
@@ -41,11 +44,11 @@ export default ({ isLoading, pageOffset, totalPages, total }: Props) => {
   if (total === 0) {
     return (
       <div className={containerClass}>
-        <div className="grow border-t border-app-border"></div>
-        <span className="mx-4 text-app-muted select-none">
-          还没有任何评论，来一发吧
+        <div className="grow border-t border-(--yo-surface-strong)"></div>
+        <span className="mx-4 text-(--yo-text-muted) select-none">
+          {t("client.emptyComments")}
         </span>
-        <div className="grow border-t border-app-border"></div>
+        <div className="grow border-t border-(--yo-surface-strong)"></div>
       </div>
     );
   }
@@ -53,9 +56,11 @@ export default ({ isLoading, pageOffset, totalPages, total }: Props) => {
   if (pageOffset >= totalPages) {
     return (
       <div className={containerClass}>
-        <div className="grow border-t border-app-border"></div>
-        <span className="mx-4 text-app-muted select-none">评论已全部加载</span>
-        <div className="grow border-t border-app-border"></div>
+        <div className="grow border-t border-(--yo-surface-strong)"></div>
+        <span className="mx-4 text-(--yo-text-muted) select-none">
+          {t("client.allCommentsLoaded")}
+        </span>
+        <div className="grow border-t border-(--yo-surface-strong)"></div>
       </div>
     );
   }

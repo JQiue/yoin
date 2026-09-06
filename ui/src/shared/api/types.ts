@@ -58,6 +58,9 @@ export type Comment = {
   created_at: string;
   is_anonymous: boolean;
   is_private: boolean;
+  is_sticky: boolean;
+  can_delete: boolean;
+  can_pin: boolean;
   reactions: ReactionSummary;
   replies?: Comment[];
   has_more?: boolean;

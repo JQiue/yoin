@@ -15,6 +15,7 @@ import type {
   RoleForAdmin,
   UserRoleBindingForAdmin,
 } from "@/shared/api/types";
+import { t } from "@/shared/i18n";
 
 export const useAdminPermissions = (activeTab: AdminTab) => {
   const [capabilities, setCapabilities] = useState<AdminCapabilities | null>(
@@ -65,7 +66,9 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
       .catch((error) => {
         if (!alive) return;
         setPermissionsError(
-          error instanceof Error ? error.message : "加载权限管理数据失败",
+          error instanceof Error
+            ? error.message
+            : t("admin.permissions.loadFailed"),
         );
       })
       .finally(() => {
@@ -91,7 +94,9 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
       );
     } catch (error) {
       setPermissionsError(
-        error instanceof Error ? error.message : "保存角色权限失败",
+        error instanceof Error
+          ? error.message
+          : t("admin.permissions.saveFailed"),
       );
     } finally {
       setSavingRoleId(null);
@@ -102,15 +107,15 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
     const userId = Number(bindingForm.userId);
     const roleId = Number(bindingForm.roleId);
     if (!Number.isInteger(userId) || userId <= 0) {
-      setBindingError("请选择用户");
+      setBindingError(t("admin.permissions.needUser"));
       return;
     }
     if (!Number.isInteger(roleId) || roleId <= 0) {
-      setBindingError("请选择角色");
+      setBindingError(t("admin.permissions.needRole"));
       return;
     }
     if (bindingForm.scopeType === "site" && !bindingForm.scopeId) {
-      setBindingError("站点绑定需要选择站点");
+      setBindingError(t("admin.permissions.needSite"));
       return;
     }
 
@@ -132,7 +137,9 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
       });
     } catch (error) {
       setBindingError(
-        error instanceof Error ? error.message : "创建角色绑定失败",
+        error instanceof Error
+          ? error.message
+          : t("admin.permissions.createFailed"),
       );
     } finally {
       setIsCreatingBinding(false);
@@ -147,7 +154,9 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
       setRoleBindings((current) => current.filter((item) => item.id !== id));
     } catch (error) {
       setBindingError(
-        error instanceof Error ? error.message : "删除角色绑定失败",
+        error instanceof Error
+          ? error.message
+          : t("admin.permissions.deleteFailed"),
       );
     } finally {
       setDeletingBindingId(null);

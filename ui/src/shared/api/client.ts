@@ -6,6 +6,7 @@ import {
   SUCCESS_CODE,
 } from "@/shared/api/types";
 import { GUEST_ID_HEADER, getGuestId, storage } from "@/shared/helper";
+import { t } from "@/shared/i18n";
 
 function getApiBase() {
   const configuredBase = getRuntimeConfig().api_base?.trim() || "";
@@ -56,12 +57,14 @@ async function baseRequest<T>(
   }
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.msg || `网络错误: ${response.status}`);
+    throw new Error(
+      errorBody.msg || t("api.networkError", { status: response.status }),
+    );
   }
 
   const body = (await response.json()) as ResData<T>;
   if (body.code !== SUCCESS_CODE) {
-    throw new Error(body.msg || `业务错误: ${body.code}`);
+    throw new Error(body.msg || t("api.businessError", { code: body.code }));
   }
   return body;
 }

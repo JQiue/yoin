@@ -18,6 +18,7 @@ import type {
   OauthProvider,
   Site,
 } from "@/shared/api/types";
+import { t } from "@/shared/i18n";
 
 const emptyCreateOAuthProviderForm: OAuthProviderFormState = {
   providerCode: "github",
@@ -117,7 +118,7 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       .catch((error) => {
         if (!alive) return;
         setOauthProvidersError(
-          error instanceof Error ? error.message : "加载 OAuth 提供者失败",
+          error instanceof Error ? error.message : t("admin.oauth.loadFailed"),
         );
       })
       .finally(() => {
@@ -142,7 +143,9 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       .catch((error) => {
         if (!alive) return;
         setModerationProvidersError(
-          error instanceof Error ? error.message : "加载审核提供者失败",
+          error instanceof Error
+            ? error.message
+            : t("admin.moderation.loadFailed"),
         );
       })
       .finally(() => {
@@ -163,19 +166,19 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
 
   const createOAuthProvider = async () => {
     if (!createOAuthProviderForm.providerCode.trim()) {
-      setCreateOAuthProviderError("提供者代码不能为空");
+      setCreateOAuthProviderError(t("admin.oauth.codeRequired"));
       return;
     }
     if (!createOAuthProviderForm.clientId.trim()) {
-      setCreateOAuthProviderError("Client ID 不能为空");
+      setCreateOAuthProviderError(t("admin.oauth.clientIdRequired"));
       return;
     }
     if (!createOAuthProviderForm.clientSecret.trim()) {
-      setCreateOAuthProviderError("Client Secret 不能为空");
+      setCreateOAuthProviderError(t("admin.oauth.secretRequired"));
       return;
     }
     if (!createOAuthProviderForm.redirectUri.trim()) {
-      setCreateOAuthProviderError("回调地址不能为空");
+      setCreateOAuthProviderError(t("admin.oauth.redirectRequired"));
       return;
     }
 
@@ -194,7 +197,7 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       setCreateOAuthProviderForm(emptyCreateOAuthProviderForm);
     } catch (error) {
       setCreateOAuthProviderError(
-        error instanceof Error ? error.message : "创建 OAuth 提供者失败",
+        error instanceof Error ? error.message : t("admin.oauth.createFailed"),
       );
     } finally {
       setIsSubmittingOAuthProvider(false);
@@ -213,7 +216,7 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       );
     } catch (error) {
       setOauthProvidersError(
-        error instanceof Error ? error.message : "更新 OAuth 提供者失败",
+        error instanceof Error ? error.message : t("admin.oauth.updateFailed"),
       );
     } finally {
       setUpdatingOauthProviderId(null);
@@ -222,12 +225,10 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
 
   const buildModerationConfig = (
     form: ModerationProviderFormState,
-  ):
-    | { error: string; config?: never }
-    | { error?: never; config: ModerationProvider["config"] } => {
+  ): { error: string } | { config: ModerationProvider["config"] } => {
     if (form.providerKind === "llm") {
       if (!form.model.trim() || !form.apiBase.trim() || !form.apiKey.trim()) {
-        return { error: "LLM 审核需要填写模型、API Base 和 API Key" };
+        return { error: t("admin.moderation.llmRequired") };
       }
       return {
         config: {
@@ -239,7 +240,7 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       };
     }
     if (!form.apiKey.trim() || !form.blogUrl.trim()) {
-      return { error: "Akismet 审核需要填写 API Key 和站点地址" };
+      return { error: t("admin.moderation.akismetRequired") };
     }
     return {
       config: {
@@ -252,11 +253,11 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
   const createModerationProvider = async () => {
     const siteId = Number(createModerationProviderForm.siteId);
     if (!Number.isFinite(siteId) || siteId <= 0) {
-      setCreateModerationProviderError("请选择站点");
+      setCreateModerationProviderError(t("admin.moderation.needSiteSelect"));
       return;
     }
     const built = buildModerationConfig(createModerationProviderForm);
-    if (built.error) {
+    if ("error" in built) {
       setCreateModerationProviderError(built.error);
       return;
     }
@@ -278,7 +279,9 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       });
     } catch (error) {
       setCreateModerationProviderError(
-        error instanceof Error ? error.message : "创建审核提供者失败",
+        error instanceof Error
+          ? error.message
+          : t("admin.moderation.createFailed"),
       );
     } finally {
       setIsSubmittingModerationProvider(false);
@@ -302,7 +305,7 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       return;
     }
     const built = buildModerationConfig(moderationProviderForm);
-    if (built.error) {
+    if ("error" in built) {
       setModerationProviderFormError(built.error);
       return;
     }
@@ -325,7 +328,9 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       cancelEditModerationProvider();
     } catch (error) {
       setModerationProviderFormError(
-        error instanceof Error ? error.message : "保存审核提供者失败",
+        error instanceof Error
+          ? error.message
+          : t("admin.moderation.saveFailed"),
       );
     } finally {
       setIsSavingModerationProvider(false);
@@ -346,7 +351,9 @@ export const useAdminProviders = (activeTab: string, sites: Site[]) => {
       );
     } catch (error) {
       setModerationProvidersError(
-        error instanceof Error ? error.message : "更新审核提供者失败",
+        error instanceof Error
+          ? error.message
+          : t("admin.moderation.updateFailed"),
       );
     } finally {
       setIsSavingModerationProvider(false);

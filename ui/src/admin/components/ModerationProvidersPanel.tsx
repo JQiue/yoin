@@ -1,6 +1,7 @@
 import type { ModerationProviderFormState } from "@/admin/types";
 import type { ModerationProvider, Site } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
+import { t } from "@/shared/i18n";
 
 interface Props {
   panelClass: string;
@@ -32,7 +33,10 @@ interface Props {
 }
 
 function siteName(sites: Site[], siteId: number) {
-  return sites.find((site) => site.id === siteId)?.name ?? `站点 #${siteId}`;
+  return (
+    sites.find((site) => site.id === siteId)?.name ??
+    t("admin.moderation.siteN", { id: siteId })
+  );
 }
 
 function configSummary(provider: ModerationProvider) {
@@ -42,7 +46,7 @@ function configSummary(provider: ModerationProvider) {
   if (provider.provider_kind === "akismet" && "blog_url" in provider.config) {
     return provider.config.blog_url;
   }
-  return "配置已保存";
+  return t("admin.moderation.configSaved");
 }
 
 export const ModerationProvidersPanel = ({
@@ -73,9 +77,11 @@ export const ModerationProvidersPanel = ({
     <section className={panelClass}>
       <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">审核提供者</h2>
+          <h2 className="text-xl font-semibold">
+            {t("admin.moderation.title")}
+          </h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            按站点配置 LLM 或 Akismet。API Key 会回显，请只在可信环境使用。
+            {t("admin.moderation.desc")}
           </p>
         </div>
         <Button
@@ -83,19 +89,23 @@ export const ModerationProvidersPanel = ({
           disabled={sites.length === 0}
           onClick={onToggleCreateModerationProvider}
         >
-          {isCreatingModerationProvider ? "收起表单" : "新增审核器"}
+          {isCreatingModerationProvider
+            ? t("common.collapseForm")
+            : t("admin.moderation.add")}
         </Button>
       </div>
 
       {sites.length === 0 && (
         <div className="mb-4 rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
-          请先创建站点，再配置审核提供者。
+          {t("admin.moderation.needSite")}
         </div>
       )}
 
       {isCreatingModerationProvider && sites.length > 0 && (
         <div className="mb-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-          <h3 className="text-base font-medium">创建审核提供者</h3>
+          <h3 className="text-base font-medium">
+            {t("admin.moderation.createTitle")}
+          </h3>
           <ModerationProviderFields
             form={createModerationProviderForm}
             sites={sites}
@@ -113,7 +123,7 @@ export const ModerationProvidersPanel = ({
               loading={isSubmittingModerationProvider}
               onClick={onCreateModerationProvider}
             >
-              创建
+              {t("common.create")}
             </Button>
             <Button
               size="sm"
@@ -121,21 +131,23 @@ export const ModerationProvidersPanel = ({
               disabled={isSubmittingModerationProvider}
               onClick={onCancelCreateModerationProvider}
             >
-              取消
+              {t("common.cancel")}
             </Button>
           </div>
         </div>
       )}
 
       {isLoadingModerationProviders ? (
-        <p className="text-sm text-(--yo-text-muted)">正在加载审核提供者...</p>
+        <p className="text-sm text-(--yo-text-muted)">
+          {t("admin.moderation.loading")}
+        </p>
       ) : moderationProvidersError ? (
         <div className="rounded-lg bg-(--yo-danger-bg) px-4 py-3 text-sm text-(--yo-danger)">
           {moderationProvidersError}
         </div>
       ) : moderationProviders.length === 0 ? (
         <div className="rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
-          还没有审核提供者。
+          {t("admin.moderation.empty")}
         </div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
@@ -162,7 +174,7 @@ export const ModerationProvidersPanel = ({
                     variant="secondary"
                     onClick={() => onBeginEditModerationProvider(provider)}
                   >
-                    编辑
+                    {t("common.edit")}
                   </Button>
                   <Button
                     size="sm"
@@ -170,7 +182,9 @@ export const ModerationProvidersPanel = ({
                     loading={isSavingModerationProvider}
                     onClick={() => onToggleModerationProviderEnabled(provider)}
                   >
-                    {provider.enabled ? "停用" : "启用"}
+                    {provider.enabled
+                      ? t("common.disable")
+                      : t("common.enable")}
                   </Button>
                 </div>
               </div>
@@ -195,7 +209,7 @@ export const ModerationProvidersPanel = ({
                         loading={isSavingModerationProvider}
                         onClick={onSaveModerationProvider}
                       >
-                        保存
+                        {t("common.save")}
                       </Button>
                       <Button
                         size="sm"
@@ -203,7 +217,7 @@ export const ModerationProvidersPanel = ({
                         disabled={isSavingModerationProvider}
                         onClick={onCancelEditModerationProvider}
                       >
-                        取消
+                        {t("common.cancel")}
                       </Button>
                     </div>
                   </div>
@@ -232,7 +246,9 @@ const ModerationProviderFields = ({
       {allowKindChange && (
         <>
           <label className="block">
-            <span className="text-xs text-(--yo-text-soft)">站点</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("common.site")}
+            </span>
             <select
               value={form.siteId}
               onChange={(event) =>
@@ -248,7 +264,9 @@ const ModerationProviderFields = ({
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-(--yo-text-soft)">类型</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("admin.moderation.kind")}
+            </span>
             <select
               value={form.providerKind}
               onChange={(event) =>
@@ -268,7 +286,9 @@ const ModerationProviderFields = ({
       {form.providerKind === "llm" ? (
         <>
           <label className="block">
-            <span className="text-xs text-(--yo-text-soft)">模型</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("admin.moderation.model")}
+            </span>
             <input
               type="text"
               value={form.model}
@@ -279,7 +299,9 @@ const ModerationProviderFields = ({
             />
           </label>
           <label className="block">
-            <span className="text-xs text-(--yo-text-soft)">API Base</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("admin.moderation.apiBase")}
+            </span>
             <input
               type="url"
               value={form.apiBase}
@@ -290,7 +312,9 @@ const ModerationProviderFields = ({
             />
           </label>
           <label className="block">
-            <span className="text-xs text-(--yo-text-soft)">API Key</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("admin.moderation.apiKey")}
+            </span>
             <input
               type="password"
               value={form.apiKey}
@@ -301,7 +325,9 @@ const ModerationProviderFields = ({
             />
           </label>
           <label className="block md:col-span-2">
-            <span className="text-xs text-(--yo-text-soft)">审核规则</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("admin.moderation.rule")}
+            </span>
             <textarea
               value={form.rule}
               onInput={(event) => onChange({ rule: event.currentTarget.value })}
@@ -313,7 +339,9 @@ const ModerationProviderFields = ({
       ) : (
         <>
           <label className="block">
-            <span className="text-xs text-(--yo-text-soft)">API Key</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("admin.moderation.apiKey")}
+            </span>
             <input
               type="password"
               value={form.apiKey}
@@ -324,7 +352,9 @@ const ModerationProviderFields = ({
             />
           </label>
           <label className="block">
-            <span className="text-xs text-(--yo-text-soft)">Blog URL</span>
+            <span className="text-xs text-(--yo-text-soft)">
+              {t("admin.moderation.blogUrl")}
+            </span>
             <input
               type="url"
               value={form.blogUrl}
@@ -346,7 +376,7 @@ const ModerationProviderFields = ({
           }
           className="h-4 w-4 rounded border border-(--yo-surface-strong)"
         />
-        启用
+        {t("common.enable")}
       </label>
     </div>
   );

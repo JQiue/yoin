@@ -1,5 +1,6 @@
 import type { UserForAdmin } from "@/shared/api/types";
 import { formatLocalDateTime } from "@/shared/helper";
+import { useI18n } from "@/shared/i18n";
 
 interface Props {
   panelClass: string;
@@ -14,23 +15,28 @@ export const UsersPanel = ({
   isLoadingUsers,
   usersError,
 }: Props) => {
+  const { t } = useI18n();
   return (
     <section className={panelClass}>
       <div className="mb-4">
-        <h2 className="text-xl font-semibold">用户管理</h2>
+        <h2 className="text-xl font-semibold">{t("admin.users.title")}</h2>
         <p className="mt-1 text-sm text-(--yo-text-muted)">
-          查看注册用户、外部身份映射和当前角色绑定。角色编辑在权限页。
+          {t("admin.users.desc")}
         </p>
       </div>
 
       {isLoadingUsers ? (
-        <p className="text-sm text-(--yo-text-muted)">正在加载用户...</p>
+        <p className="text-sm text-(--yo-text-muted)">
+          {t("admin.users.loading")}
+        </p>
       ) : usersError ? (
         <div className="rounded-lg bg-(--yo-danger-bg) px-4 py-3 text-sm text-(--yo-danger)">
           {usersError}
         </div>
       ) : users.length === 0 ? (
-        <p className="text-sm text-(--yo-text-muted)">暂无用户。</p>
+        <p className="text-sm text-(--yo-text-muted)">
+          {t("admin.users.empty")}
+        </p>
       ) : (
         <div className="space-y-3">
           {users.map((user) => (
@@ -56,15 +62,21 @@ export const UsersPanel = ({
                   ) : null}
                 </div>
                 <p className="text-xs text-(--yo-text-soft)">
-                  注册于 {formatLocalDateTime(user.created_at)}
+                  {t("admin.users.registeredAt", {
+                    time: formatLocalDateTime(user.created_at),
+                  })}
                 </p>
               </div>
 
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div>
-                  <p className="text-xs text-(--yo-text-soft)">角色绑定</p>
+                  <p className="text-xs text-(--yo-text-soft)">
+                    {t("admin.users.roleBindings")}
+                  </p>
                   {user.role_bindings.length === 0 ? (
-                    <p className="mt-2 text-sm text-(--yo-text-muted)">无</p>
+                    <p className="mt-2 text-sm text-(--yo-text-muted)">
+                      {t("common.none")}
+                    </p>
                   ) : (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {user.role_bindings.map((binding) => (
@@ -72,8 +84,11 @@ export const UsersPanel = ({
                           key={binding.id}
                           className="rounded-full border border-(--yo-surface-strong) px-2 py-0.5 text-xs text-(--yo-text-muted)"
                         >
-                          {binding.role_name ?? `角色 #${binding.role_id}`} ·{" "}
-                          {binding.scope_type}
+                          {binding.role_name ??
+                            t("admin.users.roleN", {
+                              id: binding.role_id,
+                            })}{" "}
+                          · {binding.scope_type}
                           {binding.scope_id ? `:${binding.scope_id}` : ""}
                         </span>
                       ))}
@@ -81,9 +96,13 @@ export const UsersPanel = ({
                   )}
                 </div>
                 <div>
-                  <p className="text-xs text-(--yo-text-soft)">外部身份</p>
+                  <p className="text-xs text-(--yo-text-soft)">
+                    {t("admin.users.identities")}
+                  </p>
                   {user.identities.length === 0 ? (
-                    <p className="mt-2 text-sm text-(--yo-text-muted)">无</p>
+                    <p className="mt-2 text-sm text-(--yo-text-muted)">
+                      {t("common.none")}
+                    </p>
                   ) : (
                     <div className="mt-2 space-y-1 text-sm text-(--yo-text-muted)">
                       {user.identities.map((identity) => (

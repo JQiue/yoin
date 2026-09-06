@@ -1,3 +1,11 @@
+import {
+  ChevronsDown,
+  Lock,
+  Pin,
+  Reply,
+  Trash,
+  VenetianMask,
+} from "lucide-preact";
 import { useState } from "preact/hooks";
 import CommentForm from "@/client/components/comment/CommentForm";
 import CommentList from "@/client/components/comment/CommentList";
@@ -6,8 +14,9 @@ import { useCommentReplies } from "@/client/hooks/useCommentReplies";
 import { useCommentStore } from "@/client/store";
 import { getRuntimeConfig } from "@/config/runtime";
 import type { Comment } from "@/shared/api/types";
-import { Button } from "@/shared/components/Button";
-import { formatDate } from "@/shared/helper";
+import { IconButton } from "@/shared/components/IconButton";
+import { commentAvatar, formatDate } from "@/shared/helper";
+import { useI18n } from "@/shared/i18n";
 
 interface Props {
   comment: Comment;
@@ -45,6 +54,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
   const isRootComment = comment.parent_id == null;
   const comments = useCommentStore((state) => state.comments);
   const deleteComment = useCommentStore((state) => state.deleteComment);
+  const setCommentSticky = useCommentStore((state) => state.setCommentSticky);
   const updateCommentReaction = useCommentStore(
     (state) => state.updateCommentReaction,
   );
@@ -66,6 +76,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
     sort,
     onReplyCreated,
   });
+  const { t } = useI18n();
 
   const replyNickname = (id: number | null) => {
     if (id == null) return undefined;
@@ -81,20 +92,28 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
     onDeleteComment?.(comment);
   };
 
+  const handleClickPin = () => {
+    return setCommentSticky(comment.id, !comment.is_sticky);
+  };
+
   const handleSelectReaction = (reaction: string) => {
     return updateCommentReaction(comment.id, reaction);
   };
 
   return (
     <div
-      className={`group -mx-4 px-4 py-3 rounded-md transition-all hover:bg-zinc-100 ${comment.parent_id ? "ml-8 sm:ml-12" : ""}`}
+      className={`group -mx-4 px-4 py-3 rounded-md transition-all hover:bg-(--yo-surface-soft) ${comment.parent_id ? "ml-8 sm:ml-12" : ""}`}
     >
       <div className="flex items-start gap-2.5">
         <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full`}>
           <img
-            className="w-full h-full rounded-full"
-            src={comment.avatar}
-            alt="avatar"
+            className="w-full h-full rounded-full bg-(--yo-surface-strong) object-cover"
+            src={commentAvatar(comment)}
+            alt={
+              comment.is_anonymous
+                ? t("client.anonymousAvatar")
+                : t("common.avatar")
+            }
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -117,15 +136,28 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
               )}
             </span>
             <span>{formatDate(comment.created_at)}</span>
-            <span>{comment.location || "LOCAL"}</span>
             {comment.is_anonymous ? (
-              <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] text-zinc-600">
-                匿名
+              <span
+                title={t("client.anonymousComment")}
+                className="inline-flex text-(--yo-text-muted)"
+              >
+                <VenetianMask size={12} strokeWidth={2} />
               </span>
             ) : null}
             {comment.is_private ? (
-              <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] text-zinc-600">
-                私密
+              <span
+                title={t("client.privateComment")}
+                className="inline-flex text-(--yo-text-muted)"
+              >
+                <Lock size={12} strokeWidth={2} />
+              </span>
+            ) : null}
+            {comment.is_sticky ? (
+              <span
+                title={t("client.stickyComment")}
+                className="inline-flex text-(--yo-text-muted)"
+              >
+                <Pin size={12} strokeWidth={2} fill="currentColor" />
               </span>
             ) : null}
           </div>
@@ -140,23 +172,30 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
               hideEmpty
               showPickerOnHover
             />
-            <Button
+            <IconButton
               className="invisible group-hover:visible"
-              variant="ghost"
-              size="sm"
-              aria-label="回复评论"
+              icon={Reply}
+              label={isReply ? t("client.cancelReply") : t("client.reply")}
+              pressed={isReply}
               onClick={handleClickReply}
-            >
-              回复
-            </Button>
-            <Button
-              className="invisible group-hover:visible"
-              variant="ghost"
-              size="sm"
-              onClick={handleClickDelete}
-            >
-              删除
-            </Button>
+            />
+            {comment.can_pin ? (
+              <IconButton
+                className="invisible group-hover:visible"
+                icon={Pin}
+                label={comment.is_sticky ? t("client.unpin") : t("client.pin")}
+                pressed={comment.is_sticky}
+                onClick={handleClickPin}
+              />
+            ) : null}
+            {comment.can_delete ? (
+              <IconButton
+                className="invisible group-hover:visible"
+                icon={Trash}
+                label={t("client.deleteComment")}
+                onClick={handleClickDelete}
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -182,16 +221,17 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
           )}
           {hasMoreReplies ? (
             <div className="mt-2 ml-11 sm:ml-14">
-              <Button
-                type="button"
+              <IconButton
+                icon={ChevronsDown}
+                label={
+                  isLoadingReplies
+                    ? t("client.loadingReplies")
+                    : t("client.loadMoreReplies")
+                }
                 disabled={isLoadingReplies}
                 onClick={handleLoadMoreReplies}
-                size="sm"
-                variant="ghost"
-                className="px-0 py-0 text-zinc-500 hover:text-zinc-900"
-              >
-                {isLoadingReplies ? "加载中..." : "查看更多回复"}
-              </Button>
+                className={isLoadingReplies ? "animate-pulse" : ""}
+              />
             </div>
           ) : null}
         </div>

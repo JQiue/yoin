@@ -8,6 +8,7 @@ import { getRuntimeConfig } from "@/config/runtime";
 import { sendComment } from "@/shared/api/comment";
 import type { Comment } from "@/shared/api/types";
 import { storage } from "@/shared/helper";
+import { t } from "@/shared/i18n";
 
 type SubmitStatus = {
   type: "" | "success" | "error";
@@ -62,7 +63,7 @@ export const useCommentSubmit = ({
     setSubmitStatus({ type: "", msg: "" });
 
     if (siteId == null) {
-      setSubmitStatus({ type: "error", msg: "缺少站点配置，暂时无法发表评论" });
+      setSubmitStatus({ type: "error", msg: t("client.missingSite") });
       setSubmitting(false);
       return;
     }

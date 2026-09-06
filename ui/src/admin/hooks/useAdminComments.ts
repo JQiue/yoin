@@ -2,22 +2,27 @@ import { useEffect, useState } from "preact/hooks";
 import type { CommentTab, CommentTabItem } from "@/admin/types";
 import { fetchAdminComments, updateAdminCommentStatus } from "@/shared/api";
 import type { CommentForAdmin, Paged, Site } from "@/shared/api/types";
+import type { MessageKey } from "@/shared/i18n";
+import { t } from "@/shared/i18n";
 
 const COMMENT_PAGE_SIZE = 20;
 
 export const COMMENT_TABS: CommentTabItem[] = [
-  { key: "all", label: "全部评论" },
-  { key: "pending", label: "待审核" },
-  { key: "spam", label: "垃圾评论" },
-  { key: "deleted", label: "已删除" },
+  { key: "all", labelKey: "admin.comments.tabAll" },
+  { key: "pending", labelKey: "admin.comments.tabPending" },
+  { key: "spam", labelKey: "admin.comments.tabSpam" },
+  { key: "deleted", labelKey: "admin.comments.tabDeleted" },
 ];
 
-export const COMMENT_STATUS_OPTIONS = [
-  { value: "pending", label: "待审核" },
-  { value: "approved", label: "已通过" },
-  { value: "spam", label: "垃圾" },
-  { value: "deleted", label: "已删除" },
-] as const;
+export const COMMENT_STATUS_OPTIONS: {
+  value: CommentForAdmin["status"];
+  labelKey: MessageKey;
+}[] = [
+  { value: "pending", labelKey: "admin.comments.statusPending" },
+  { value: "approved", labelKey: "admin.comments.statusApproved" },
+  { value: "spam", labelKey: "admin.comments.statusSpam" },
+  { value: "deleted", labelKey: "admin.comments.statusDeleted" },
+];
 
 function getCommentStatusFilter(tab: CommentTab) {
   if (tab === "all") return undefined;
@@ -78,7 +83,9 @@ export const useAdminComments = (activeTab: string, sites: Site[]) => {
       .catch((error) => {
         if (!alive) return;
         setCommentsError(
-          error instanceof Error ? error.message : "加载评论列表失败",
+          error instanceof Error
+            ? error.message
+            : t("admin.comments.loadFailed"),
         );
       })
       .finally(() => {
@@ -111,7 +118,9 @@ export const useAdminComments = (activeTab: string, sites: Site[]) => {
       .then((res) => setCommentsPage(res.data))
       .catch((error) =>
         setCommentsError(
-          error instanceof Error ? error.message : "加载评论列表失败",
+          error instanceof Error
+            ? error.message
+            : t("admin.comments.loadFailed"),
         ),
       )
       .finally(() => setIsLoadingComments(false));
@@ -149,7 +158,9 @@ export const useAdminComments = (activeTab: string, sites: Site[]) => {
       });
     } catch (error) {
       setCommentsError(
-        error instanceof Error ? error.message : "更新评论状态失败",
+        error instanceof Error
+          ? error.message
+          : t("admin.comments.updateFailed"),
       );
     } finally {
       setUpdatingCommentId(null);
@@ -157,8 +168,10 @@ export const useAdminComments = (activeTab: string, sites: Site[]) => {
   };
 
   const comments = commentsPage?.items ?? [];
-  const activeCommentTabLabel =
-    COMMENT_TABS.find((tab) => tab.key === activeCommentTab)?.label ?? "评论";
+  const activeCommentTabLabel = t(
+    COMMENT_TABS.find((tab) => tab.key === activeCommentTab)?.labelKey ??
+      "admin.comments.fallback",
+  );
 
   return {
     activeCommentTab,

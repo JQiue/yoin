@@ -13,8 +13,8 @@ export default ({ type, msg }: Props) => {
       <span
         className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold ${
           type === "success"
-            ? "bg-zinc-100 text-zinc-600"
-            : "bg-red-50 text-red-600"
+            ? "bg-(--yo-surface-soft) text-(--yo-text-muted)"
+            : "bg-(--yo-danger-bg) text-(--yo-danger)"
         }`}
       >
         {type === "error" && <Icon name="alert" />}

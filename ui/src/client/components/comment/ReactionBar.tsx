@@ -3,6 +3,7 @@ import { useCommentStore } from "@/client/store";
 import type { ReactionSummary } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 import Icon from "@/shared/components/Icon";
+import { useI18n } from "@/shared/i18n";
 
 const FALLBACK_REACTIONS = ["👍", "❤️", "😄", "🎉", "👎"];
 
@@ -31,6 +32,7 @@ const ReactionButton = ({
   disabled: boolean;
   onSelect: (reaction: string) => void;
 }) => {
+  const { t } = useI18n();
   return (
     <Button
       type="button"
@@ -38,10 +40,14 @@ const ReactionButton = ({
       size={spread ? "md" : "sm"}
       aria-pressed={isMine}
       aria-busy={loading}
-      aria-label={loading ? `正在提交反应 ${reaction}` : `反应 ${reaction}`}
+      aria-label={
+        loading
+          ? t("client.submittingReaction", { reaction })
+          : t("client.reaction", { reaction })
+      }
       disabled={disabled}
       onClick={() => onSelect(reaction)}
-      className={`${spread ? "min-w-0 flex-1 py-3 text-2xl" : "px-1.5 py-0.5"} ${isMine ? "bg-zinc-100" : ""} ${disabled ? "cursor-wait" : ""}`}
+      className={`${spread ? "min-w-0 flex-1 py-3 text-2xl" : "px-1.5 py-0.5"} ${isMine ? "bg-(--yo-surface-soft)" : ""} ${disabled ? "cursor-wait" : ""}`}
     >
       <span>{reaction}</span>
       {loading ? (

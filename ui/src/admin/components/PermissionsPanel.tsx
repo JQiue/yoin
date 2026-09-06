@@ -8,6 +8,7 @@ import type {
 } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 import { formatLocalDateTime } from "@/shared/helper";
+import { useI18n } from "@/shared/i18n";
 
 interface BindingFormState {
   userId: string;
@@ -57,6 +58,7 @@ export const PermissionsPanel = ({
   onCreateBinding,
   onDeleteBinding,
 }: Props) => {
+  const { t } = useI18n();
   const globalPermissions = capabilities?.global_permissions ?? [];
   const sitePermissionEntries = Object.entries(
     capabilities?.site_permissions ?? {},
@@ -66,16 +68,18 @@ export const PermissionsPanel = ({
     <section className={panelClass}>
       <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">权限管理</h2>
+          <h2 className="text-xl font-semibold">
+            {t("admin.permissions.title")}
+          </h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            权限码由系统启动时写入，这里只改角色拥有哪些权限，以及用户绑定到哪个角色。
+            {t("admin.permissions.desc")}
           </p>
         </div>
       </div>
 
       {isLoadingPermissions ? (
         <p className="text-sm text-(--yo-text-muted)">
-          正在加载权限管理数据...
+          {t("admin.permissions.loading")}
         </p>
       ) : permissionsError ? (
         <div className="rounded-lg bg-(--yo-danger-bg) px-4 py-3 text-sm text-(--yo-danger)">
@@ -85,16 +89,20 @@ export const PermissionsPanel = ({
         <>
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
             <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-              <p className="text-sm font-medium">我的权限快照</p>
+              <p className="text-sm font-medium">
+                {t("admin.permissions.snapshot")}
+              </p>
               <p className="mt-1 text-xs text-(--yo-text-soft)">
-                这里展示当前登录管理员自己拥有的权限，不是系统里的全部权限定义。
+                {t("admin.permissions.snapshotHint")}
               </p>
               <div className="mt-4 grid gap-4 xl:grid-cols-2">
                 <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface) p-4">
-                  <p className="text-sm font-medium">我拥有的全局权限</p>
+                  <p className="text-sm font-medium">
+                    {t("admin.permissions.myGlobal")}
+                  </p>
                   {globalPermissions.length === 0 ? (
                     <p className="mt-3 text-sm text-(--yo-text-muted)">
-                      当前账号没有全局权限。
+                      {t("admin.permissions.noGlobal")}
                     </p>
                   ) : (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -110,10 +118,12 @@ export const PermissionsPanel = ({
                   )}
                 </div>
                 <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface) p-4">
-                  <p className="text-sm font-medium">我拥有的站点权限</p>
+                  <p className="text-sm font-medium">
+                    {t("admin.permissions.mySite")}
+                  </p>
                   {sitePermissionEntries.length === 0 ? (
                     <p className="mt-3 text-sm text-(--yo-text-muted)">
-                      当前账号没有站点级角色绑定。
+                      {t("admin.permissions.noSite")}
                     </p>
                   ) : (
                     <div className="mt-3 space-y-3">
@@ -124,7 +134,7 @@ export const PermissionsPanel = ({
                             className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface-soft) px-3 py-3"
                           >
                             <p className="text-xs text-(--yo-text-soft)">
-                              站点 #{siteId}
+                              {t("admin.permissions.siteN", { id: siteId })}
                             </p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               {permissionNames.map((permission) => (
@@ -146,22 +156,30 @@ export const PermissionsPanel = ({
             </div>
 
             <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-              <p className="text-sm font-medium">RBAC 概览</p>
+              <p className="text-sm font-medium">
+                {t("admin.permissions.overview")}
+              </p>
               <div className="mt-4 grid gap-3 text-sm text-(--yo-text-muted)">
                 <div className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-3">
-                  <p className="text-xs text-(--yo-text-soft)">系统角色</p>
+                  <p className="text-xs text-(--yo-text-soft)">
+                    {t("admin.permissions.systemRoles")}
+                  </p>
                   <p className="mt-1 text-2xl font-semibold text-(--yo-text)">
                     {roles.length}
                   </p>
                 </div>
                 <div className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-3">
-                  <p className="text-xs text-(--yo-text-soft)">权限能力</p>
+                  <p className="text-xs text-(--yo-text-soft)">
+                    {t("admin.permissions.capabilities")}
+                  </p>
                   <p className="mt-1 text-2xl font-semibold text-(--yo-text)">
                     {permissions.length}
                   </p>
                 </div>
                 <div className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-3">
-                  <p className="text-xs text-(--yo-text-soft)">授权绑定</p>
+                  <p className="text-xs text-(--yo-text-soft)">
+                    {t("admin.permissions.bindings")}
+                  </p>
                   <p className="mt-1 text-2xl font-semibold text-(--yo-text)">
                     {roleBindings.length}
                   </p>
@@ -172,9 +190,11 @@ export const PermissionsPanel = ({
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-              <p className="text-sm font-medium">系统角色</p>
+              <p className="text-sm font-medium">
+                {t("admin.permissions.systemRoles")}
+              </p>
               <p className="mt-1 text-xs text-(--yo-text-soft)">
-                勾选后立即保存该角色的权限集合。
+                {t("admin.permissions.rolesHint")}
               </p>
               <div className="mt-3 space-y-3">
                 {roles.map((role) => (
@@ -223,7 +243,9 @@ export const PermissionsPanel = ({
 
             <div className="space-y-4">
               <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-                <p className="text-sm font-medium">权限能力</p>
+                <p className="text-sm font-medium">
+                  {t("admin.permissions.capabilities")}
+                </p>
                 <div className="mt-3 space-y-2">
                   {permissions.map((permission) => (
                     <div
@@ -242,10 +264,12 @@ export const PermissionsPanel = ({
               </div>
 
               <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-                <p className="text-sm font-medium">用户授权绑定</p>
+                <p className="text-sm font-medium">
+                  {t("admin.permissions.userBindings")}
+                </p>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <label className="block text-xs text-(--yo-text-soft)">
-                    用户
+                    {t("common.user")}
                     <select
                       value={bindingForm.userId}
                       onChange={(event) =>
@@ -255,7 +279,9 @@ export const PermissionsPanel = ({
                       }
                       className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
                     >
-                      <option value="">选择用户</option>
+                      <option value="">
+                        {t("admin.permissions.selectUser")}
+                      </option>
                       {users.map((user) => (
                         <option key={user.id} value={user.id}>
                           {user.nickname} ({user.email})
@@ -264,7 +290,7 @@ export const PermissionsPanel = ({
                     </select>
                   </label>
                   <label className="block text-xs text-(--yo-text-soft)">
-                    角色
+                    {t("common.role")}
                     <select
                       value={bindingForm.roleId}
                       onChange={(event) =>
@@ -274,7 +300,9 @@ export const PermissionsPanel = ({
                       }
                       className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
                     >
-                      <option value="">选择角色</option>
+                      <option value="">
+                        {t("admin.permissions.selectRole")}
+                      </option>
                       {roles.map((role) => (
                         <option key={role.id} value={role.id}>
                           {role.name}
@@ -283,7 +311,7 @@ export const PermissionsPanel = ({
                     </select>
                   </label>
                   <label className="block text-xs text-(--yo-text-soft)">
-                    范围
+                    {t("admin.permissions.scope")}
                     <select
                       value={bindingForm.scopeType}
                       onChange={(event) =>
@@ -295,13 +323,13 @@ export const PermissionsPanel = ({
                       }
                       className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
                     >
-                      <option value="global">全局</option>
-                      <option value="site">站点</option>
+                      <option value="global">{t("common.global")}</option>
+                      <option value="site">{t("common.site")}</option>
                     </select>
                   </label>
                   {bindingForm.scopeType === "site" ? (
                     <label className="block text-xs text-(--yo-text-soft)">
-                      站点
+                      {t("common.site")}
                       <select
                         value={bindingForm.scopeId}
                         onChange={(event) =>
@@ -311,7 +339,9 @@ export const PermissionsPanel = ({
                         }
                         className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
                       >
-                        <option value="">选择站点</option>
+                        <option value="">
+                          {t("admin.permissions.selectSite")}
+                        </option>
                         {sites.map((site) => (
                           <option key={site.id} value={site.id}>
                             {site.name}
@@ -332,13 +362,13 @@ export const PermissionsPanel = ({
                     loading={isCreatingBinding}
                     onClick={onCreateBinding}
                   >
-                    添加绑定
+                    {t("admin.permissions.addBinding")}
                   </Button>
                 </div>
                 <div className="mt-3 space-y-2">
                   {roleBindings.length === 0 ? (
                     <p className="text-sm text-(--yo-text-muted)">
-                      暂无授权绑定。
+                      {t("admin.permissions.noBindings")}
                     </p>
                   ) : (
                     roleBindings.map((binding) => (
@@ -349,10 +379,13 @@ export const PermissionsPanel = ({
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-medium">
-                              {binding.role_name ?? `角色 #${binding.role_id}`}
+                              {binding.role_name ??
+                                t("admin.users.roleN", { id: binding.role_id })}
                             </p>
                             <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
-                              用户 #{binding.user_id}
+                              {t("admin.permissions.userN", {
+                                id: binding.user_id,
+                              })}
                             </span>
                             <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
                               {binding.scope_type}
@@ -365,15 +398,19 @@ export const PermissionsPanel = ({
                             loading={deletingBindingId === binding.id}
                             onClick={() => onDeleteBinding(binding.id)}
                           >
-                            删除
+                            {t("common.delete")}
                           </Button>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--yo-text-muted)">
                           <span>
-                            创建：{formatLocalDateTime(binding.created_at)}
+                            {t("admin.permissions.created", {
+                              time: formatLocalDateTime(binding.created_at),
+                            })}
                           </span>
                           <span>
-                            更新：{formatLocalDateTime(binding.updated_at)}
+                            {t("admin.permissions.updated", {
+                              time: formatLocalDateTime(binding.updated_at),
+                            })}
                           </span>
                         </div>
                       </div>

@@ -1,9 +1,9 @@
-import type { RefObject, TargetedEvent } from "preact";
-import { Lock, VenetianMask } from "lucide-preact";
 import type { LucideIcon } from "lucide-preact";
+import { LoaderCircle, Lock, Send, VenetianMask } from "lucide-preact";
+import type { RefObject, TargetedEvent } from "preact";
 import type { StoredUser } from "@/client/hooks/useStoredUser";
-import { Button } from "@/shared/components/Button";
-import Icon from "@/shared/components/Icon";
+import { IconButton } from "@/shared/components/IconButton";
+import { useI18n } from "@/shared/i18n";
 
 function ComposerToggle({
   pressed,
@@ -16,17 +16,23 @@ function ComposerToggle({
   Icon: LucideIcon;
   onToggle: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <button
       type="button"
       aria-pressed={pressed}
-      aria-label={pressed ? `取消${label}` : label}
-      title={pressed ? `${label}已开启` : `${label}未开启`}
+      aria-label={pressed ? t("client.cancelToggle", { label }) : label}
+      title={
+        pressed
+          ? t("client.toggleOn", { label })
+          : t("client.toggleOff", { label })
+      }
       onClick={onToggle}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${pressed
-          ? "text-zinc-800"
-          : "text-zinc-400 hover:text-zinc-600"
-        }`}
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+        pressed
+          ? "text-(--yo-text)"
+          : "text-(--yo-text-soft) hover:text-(--yo-text-muted)"
+      }`}
     >
       <ToggleIcon
         size={16}
@@ -68,6 +74,7 @@ export default ({
   onPrivateChange,
   onAnonymousChange,
 }: Props) => {
+  const { t } = useI18n();
   return (
     <div className="relative">
       <textarea
@@ -76,20 +83,20 @@ export default ({
         rows={1}
         placeholder={
           currentUser
-            ? `以 ${currentUser.nickname} 的身份发表评论...`
-            : "write a comment..."
+            ? t("client.writeAs", { name: currentUser.nickname })
+            : t("client.writeComment")
         }
         value={content}
         onChange={onInputChange}
         maxLength={maxCommentLength}
-        className="p-3 pb-10 outline-none m-0 min-h-28 w-full resize-none overflow-hidden rounded-md bg-zinc-200/50 placeholder:text-zinc-400 focus:bg-zinc-200"
+        className="p-3 pb-10 outline-none m-0 min-h-28 w-full resize-none overflow-hidden rounded-md bg-(--yo-surface-soft) placeholder:text-(--yo-text-soft) focus:bg-(--yo-surface-strong) text-(--yo-text)"
         required
       ></textarea>
       <div className="absolute bottom-3 right-2 flex items-center gap-2">
         {allowAnonymous ? (
           <ComposerToggle
             pressed={isAnonymous}
-            label="匿名评论"
+            label={t("client.anonymousComment")}
             Icon={VenetianMask}
             onToggle={() => onAnonymousChange(!isAnonymous)}
           />
@@ -97,18 +104,21 @@ export default ({
         {allowPrivate ? (
           <ComposerToggle
             pressed={isPrivate}
-            label="私密评论"
+            label={t("client.privateComment")}
             Icon={Lock}
             onToggle={() => onPrivateChange(!isPrivate)}
           />
         ) : null}
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-(--yo-text-soft)">
           {content.length}/{maxCommentLength}
         </span>
-        <Button variant="primary" type="submit" size="sm" disabled={submitting}>
-          {submitting ? <Icon name="refresh" /> : <Icon name="send" />}
-          {submitting ? "发送中" : "发送"}
-        </Button>
+        <IconButton
+          type="submit"
+          icon={submitting ? LoaderCircle : Send}
+          label={submitting ? t("client.sending") : t("client.send")}
+          disabled={submitting}
+          className={`text-(--yo-text) ${submitting ? "animate-spin" : ""}`}
+        />
       </div>
     </div>
   );

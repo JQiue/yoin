@@ -1,26 +1,30 @@
+import { getLocale, t } from "@/shared/i18n";
+
 export const formatDate = (dateStr: string) => {
   try {
     const date = new Date(dateStr);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const locale = getLocale() === "zh" ? "zh-CN" : "en-US";
 
-    if (diffInSeconds < 0) return "刚刚";
-    if (diffInSeconds < 60) return "刚刚";
+    if (diffInSeconds < 60) return t("date.justNow");
     const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `${diffInMinutes}分钟前`;
+    if (diffInMinutes < 60)
+      return t("date.minutesAgo", { count: diffInMinutes });
 
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24 && date.getDate() === now.getDate()) {
-      return `${diffInHours}小时前`;
+      return t("date.hoursAgo", { count: diffInHours });
     }
 
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     if (date.toDateString() === yesterday.toDateString()) {
-      return `昨天 ${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+      const time = `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+      return t("date.yesterday", { time });
     }
 
-    return date.toLocaleString("zh-CN", {
+    return date.toLocaleString(locale, {
       month: "numeric",
       day: "numeric",
       hour: "2-digit",
@@ -35,7 +39,7 @@ export const formatDate = (dateStr: string) => {
 export const formatLocalDateTime = (dateStr: string) => {
   try {
     const date = new Date(dateStr);
-    return date.toLocaleString(undefined, {
+    return date.toLocaleString(getLocale() === "zh" ? "zh-CN" : "en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 import { fetchAdminProfile } from "@/shared/api";
 import type { UserProfile } from "@/shared/api/types";
 import { storage } from "@/shared/helper";
+import { t } from "@/shared/i18n";
 
 export const useAdminProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -44,7 +45,9 @@ export const useAdminProfile = () => {
         if (!alive) return;
         setProfile(null);
         setProfileError(
-          error instanceof Error ? error.message : "加载管理员信息失败",
+          error instanceof Error
+            ? error.message
+            : t("admin.profile.loadFailed"),
         );
       })
       .finally(() => {

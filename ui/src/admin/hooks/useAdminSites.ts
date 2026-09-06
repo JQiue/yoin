@@ -10,6 +10,7 @@ import {
   type Site,
   type SiteConfig,
 } from "@/shared/api/types";
+import { t } from "@/shared/i18n";
 
 const emptyCreateSiteForm: SiteFormState = {
   name: "",
@@ -40,16 +41,16 @@ function toSiteConfig(form: SiteFormState): SiteConfig | string {
   const maxCommentLength = Number(form.maxCommentLength);
   const commentLimitSeconds = Number(form.commentLimitSeconds);
   if (!form.name.trim()) {
-    return "站点名称不能为空";
+    return t("admin.sites.nameRequired");
   }
   if (!form.url.trim()) {
-    return "站点地址不能为空";
+    return t("admin.sites.urlRequired");
   }
   if (!Number.isFinite(maxCommentLength) || maxCommentLength <= 0) {
-    return "最大长度必须是大于 0 的数字";
+    return t("admin.sites.maxLengthInvalid");
   }
   if (!Number.isFinite(commentLimitSeconds) || commentLimitSeconds < 0) {
-    return "限流秒数必须是大于等于 0 的数字";
+    return t("admin.sites.rateLimitInvalid");
   }
   return {
     allow_anonymous: form.allowAnonymous,
@@ -85,7 +86,9 @@ export const useAdminSites = (activeTab: string) => {
       })
       .catch((error) => {
         if (!alive) return;
-        setSitesError(error instanceof Error ? error.message : "加载站点失败");
+        setSitesError(
+          error instanceof Error ? error.message : t("admin.sites.loadFailed"),
+        );
       })
       .finally(() => {
         if (!alive) return;
@@ -140,7 +143,9 @@ export const useAdminSites = (activeTab: string) => {
       setEditingSiteId(null);
       setSiteForm(null);
     } catch (error) {
-      setSiteFormError(error instanceof Error ? error.message : "保存站点失败");
+      setSiteFormError(
+        error instanceof Error ? error.message : t("admin.sites.saveFailed"),
+      );
     } finally {
       setIsSavingSite(false);
     }
@@ -167,7 +172,7 @@ export const useAdminSites = (activeTab: string) => {
       setCreateSiteForm(emptyCreateSiteForm);
     } catch (error) {
       setCreateSiteError(
-        error instanceof Error ? error.message : "创建站点失败",
+        error instanceof Error ? error.message : t("admin.sites.createFailed"),
       );
     } finally {
       setIsSubmittingCreateSite(false);

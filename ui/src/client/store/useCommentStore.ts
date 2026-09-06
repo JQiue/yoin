@@ -6,6 +6,7 @@ import {
   fetchCommentsList,
   fetchPublicSiteConfig,
   fetchReactions,
+  setCommentSticky,
   upsertReaction,
 } from "@/shared/api";
 import type { Comment, ReactionSummary } from "@/shared/api/types";
@@ -103,6 +104,17 @@ export const useCommentStore = create<CommentsState>((set, get) => ({
     const { comments, total } = get();
     set({ comments: removeCommentById(comments, id), total: total - 1 });
     await deleteComment(id);
+  },
+  setCommentSticky: async (id: number, isSticky: boolean) => {
+    const { data } = await setCommentSticky(id, isSticky);
+    set({
+      comments: mapCommentById(get().comments, id, (comment) => ({
+        ...comment,
+        is_sticky: data.is_sticky,
+        can_pin: data.can_pin,
+      })),
+    });
+    await get().fetchComments();
   },
   updateCommentReaction: async (id: number, reaction: string) => {
     const config = getRuntimeConfig();

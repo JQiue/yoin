@@ -31,6 +31,7 @@ export interface CommentsState {
   fetchNextPage: () => void;
   changeSort: (newSort: string) => void;
   deleteComment: (id: number) => void;
+  setCommentSticky: (id: number, isSticky: boolean) => Promise<void>;
   updateCommentReaction: (id: number, reaction: string) => Promise<void>;
   pageReactions: ReactionSummary;
   fetchPageReactions: () => void;

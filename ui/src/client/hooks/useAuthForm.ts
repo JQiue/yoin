@@ -3,6 +3,7 @@ import { useState } from "preact/compat";
 import { login, register } from "@/shared/api/auth";
 import type { Login } from "@/shared/api/types";
 import { storage } from "@/shared/helper";
+import { t } from "@/shared/i18n";
 
 export interface LoginInput {
   email: string;
@@ -46,7 +47,7 @@ export const useAuthForm = (onSuccess?: () => void) => {
           avatar: resData.data.avatar,
         });
         setUser(resData.data);
-        setSubmitStatus({ type: "success", msg: "登录成功" });
+        setSubmitStatus({ type: "success", msg: t("auth.loginSuccess") });
         onSuccess?.();
       } else {
         const regData = data as NewUserInput;
@@ -56,7 +57,7 @@ export const useAuthForm = (onSuccess?: () => void) => {
           regData.nickname,
           regData.website,
         );
-        setSubmitStatus({ type: "success", msg: "注册成功，请登录" });
+        setSubmitStatus({ type: "success", msg: t("auth.registerSuccess") });
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);

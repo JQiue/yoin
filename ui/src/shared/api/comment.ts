@@ -56,6 +56,10 @@ export const deleteComment = (id: number) => {
   return http.delete(`/api/comments/${id}`);
 };
 
+export const setCommentSticky = (id: number, is_sticky: boolean) => {
+  return http.patch<Comment>(`/api/comments/${id}/sticky`, { is_sticky });
+};
+
 export const upsertReaction = (
   site_id: number,
   target_type: "comment" | "page",

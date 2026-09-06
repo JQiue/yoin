@@ -12,6 +12,7 @@ import { useStoredUser } from "@/client/hooks/useStoredUser";
 import { useCommentStore } from "@/client/store";
 import type { CommentForm } from "@/client/types";
 import type { Comment } from "@/shared/api/types";
+import { useI18n } from "@/shared/i18n";
 
 interface Props {
   parent_id?: number;
@@ -50,16 +51,29 @@ export default (props: Props) => {
     setField,
   });
   const textareaRef = useAutoResizeTextarea(content);
+  const { t } = useI18n();
 
   const fields: {
     name: keyof Omit<CommentForm, "content" | "is_private" | "is_anonymous">;
     placeholder: string;
     type: string;
   }[] = [
-      { name: "nickname", placeholder: "nickname", type: "text" },
-      { name: "email", placeholder: "email", type: "email" },
-      { name: "website", placeholder: "website", type: "url" },
-    ];
+    {
+      name: "nickname",
+      placeholder: t("client.placeholder.nickname"),
+      type: "text",
+    },
+    {
+      name: "email",
+      placeholder: t("client.placeholder.email"),
+      type: "email",
+    },
+    {
+      name: "website",
+      placeholder: t("client.placeholder.website"),
+      type: "url",
+    },
+  ];
 
   const fieldValues = { nickname, email, website };
 
@@ -128,14 +142,14 @@ export default (props: Props) => {
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <button
-            aria-label="Close login dialog"
-            className="absolute inset-0 bg-zinc-400/40 backdrop-blur-sm"
+            aria-label={t("common.closeLogin")}
+            className="absolute inset-0 bg-(--yo-overlay) backdrop-blur-sm"
             onClick={close}
             type="button"
           />
           <div
             aria-modal="true"
-            className="relative z-10 w-full max-w-sm bg-zinc-50 p-3"
+            className="relative z-10 w-full max-w-sm bg-(--yo-surface) p-3 text-(--yo-text)"
             role="dialog"
           >
             <Login onSuccess={handleAuthSuccess}></Login>

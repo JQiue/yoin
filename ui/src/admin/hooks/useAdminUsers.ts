@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { AdminTab } from "@/admin/types";
 import { fetchAdminUsers } from "@/shared/api";
 import type { UserForAdmin } from "@/shared/api/types";
+import { t } from "@/shared/i18n";
 
 export const useAdminUsers = (activeTab: AdminTab) => {
   const [users, setUsers] = useState<UserForAdmin[]>([]);
@@ -21,7 +22,9 @@ export const useAdminUsers = (activeTab: AdminTab) => {
       })
       .catch((error) => {
         if (!alive) return;
-        setUsersError(error instanceof Error ? error.message : "加载用户失败");
+        setUsersError(
+          error instanceof Error ? error.message : t("admin.users.loadFailed"),
+        );
       })
       .finally(() => {
         if (!alive) return;

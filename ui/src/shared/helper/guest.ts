@@ -1,4 +1,5 @@
 import { storage } from "@/shared/helper/storage";
+import { t } from "@/shared/i18n";
 
 export const GUEST_ID_HEADER = "x-yoin-guest-id";
 
@@ -13,5 +14,5 @@ export function getGuestId() {
 }
 
 export function guestLabel(guestId = getGuestId()) {
-  return `访客 ${guestId.slice(0, 6)}`;
+  return t("client.guestLabel", { id: guestId.slice(0, 6) });
 }
