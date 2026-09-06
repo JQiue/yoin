@@ -81,6 +81,13 @@ impl AppError {
       msg,
     }
   }
+
+  pub fn invalid_oauth_provider(msg: String) -> Self {
+    Self::Client {
+      code: ErrorCode::InvalidOauthProvider,
+      msg,
+    }
+  }
 }
 
 impl IntoResponse for AppError {
