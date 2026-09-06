@@ -22,9 +22,10 @@ Initial public milestone for Yoin as an embeddable comment system with a lightwe
 
 ### Not Yet Considered Complete
 
-- OAuth providers, external identity providers, and moderation providers are not fully implemented end-to-end.
-- Some admin tabs are still placeholders or read-only views.
-- State management and data fetching may continue to evolve after `0.0.1`.
+- External identity exchange (`POST /api/auth/external/exchange`) is still unimplemented.
+- Email notifications and 2FA are still unimplemented.
+- Akismet moderation still parks comments as pending.
+- Some admin tabs remain incomplete; OAuth and comment moderation now have a working path.
 
 ## [unreleased]
 

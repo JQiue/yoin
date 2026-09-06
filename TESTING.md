@@ -1,63 +1,47 @@
 # 测试指南
 
+对齐 CI（`.github/workflows/check.yml`）。集成测试使用内存 SQLite，不监听 `7410`。
+
 ## 测试目录结构
 
 ```plain
 tests/
-├── unit/                    # 单元测试
-│   ├── common/             # 共享测试工具
-│   ├── entity/             # 实体测试
-│   ├── handler/            # 处理器测试
-│   ├── service/            # 服务层测试
-│   └── mod.rs              # 模块导出
-├── integration/            # 集成测试
-│   ├── mod.rs              # 模块导出
-│   ├── auth.rs            # 认证集成测试
-│   ├── comment.rs          # 评论集成测试
-│   ├── site.rs             # 站点集成测试
-│   └── user.rs             # 用户集成测试
-└── ...
+├── common/                 # 共享测试工具（test_app、register_user）
+├── integration/            # HTTP 集成测试
+│   ├── admin.rs
+│   ├── auth.rs
+│   ├── comment.rs
+│   ├── moderation.rs
+│   ├── oauth.rs
+│   ├── reaction.rs
+│   ├── site.rs
+│   └── user.rs
+├── unit/                   # 目前为空占位
+├── integration_test.rs     # 入口：mod common; mod integration;
+└── unit_test.rs            # 入口：mod unit;
 ```
 
 ## 运行测试
 
-### 运行所有测试
-
 ```bash
-cargo test
+cargo +nightly fmt --all
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-features
+cargo test --test integration_test
 ```
 
 ### 只运行单元测试
 
 ```bash
 cargo test --lib
-```
-
-### 只运行集成测试
-
-```bash
-cargo test --test integration
+cargo test --test unit_test
 ```
 
 ### 运行特定测试
 
 ```bash
-# 运行特定模块的测试
-cargo test error
-cargo test auth
-
-# 运行特定文件
-cargo test -- unit::service::error_tests
-```
-
-### 运行并生成覆盖率报告
-
-```bash
-# 安装 tarpaulin
-cargo install tarpaulin
-
-# 运行覆盖率测试
-cargo tarpaulin --out Html
+cargo test --test integration_test oauth
+cargo test --test integration_test admin_can_approve_pending_comment
 ```
 
 ## 测试最佳实践
