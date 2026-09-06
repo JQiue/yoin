@@ -56,6 +56,7 @@ pub enum UserRoleBindingScopeType {
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+#[serde(rename_all = "lowercase")]
 pub enum ModerationProviderType {
   #[sea_orm(string_value = "llm")]
   LLM,
