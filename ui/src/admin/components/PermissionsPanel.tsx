@@ -2,10 +2,19 @@ import type {
   AdminCapabilities,
   PermissionForAdmin,
   RoleForAdmin,
+  Site,
+  UserForAdmin,
   UserRoleBindingForAdmin,
 } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 import { formatLocalDateTime } from "@/shared/helper";
+
+interface BindingFormState {
+  userId: string;
+  roleId: string;
+  scopeType: "global" | "site";
+  scopeId: string;
+}
 
 interface Props {
   panelClass: string;
@@ -15,6 +24,17 @@ interface Props {
   roles: RoleForAdmin[];
   permissions: PermissionForAdmin[];
   roleBindings: UserRoleBindingForAdmin[];
+  users: UserForAdmin[];
+  sites: Site[];
+  savingRoleId: number | null;
+  deletingBindingId: number | null;
+  isCreatingBinding: boolean;
+  bindingForm: BindingFormState;
+  bindingError: string;
+  onToggleRolePermission: (role: RoleForAdmin, permissionName: string) => void;
+  onChangeBindingForm: (patch: Partial<BindingFormState>) => void;
+  onCreateBinding: () => void;
+  onDeleteBinding: (id: number) => void;
 }
 
 export const PermissionsPanel = ({
@@ -25,6 +45,17 @@ export const PermissionsPanel = ({
   roles,
   permissions,
   roleBindings,
+  users,
+  sites,
+  savingRoleId,
+  deletingBindingId,
+  isCreatingBinding,
+  bindingForm,
+  bindingError,
+  onToggleRolePermission,
+  onChangeBindingForm,
+  onCreateBinding,
+  onDeleteBinding,
 }: Props) => {
   const globalPermissions = capabilities?.global_permissions ?? [];
   const sitePermissionEntries = Object.entries(
@@ -37,13 +68,9 @@ export const PermissionsPanel = ({
         <div>
           <h2 className="text-xl font-semibold">权限管理</h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            这里承接 RBAC
-            的当前能力、角色定义和用户授权关系，先把只读信息真正接上。
+            权限码由系统启动时写入，这里只改角色拥有哪些权限，以及用户绑定到哪个角色。
           </p>
         </div>
-        <Button size="sm" variant="secondary" disabled>
-          编辑能力
-        </Button>
       </div>
 
       {isLoadingPermissions ? (
@@ -58,21 +85,16 @@ export const PermissionsPanel = ({
         <>
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
             <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium">我的权限快照</p>
-                  <p className="mt-1 text-xs text-(--yo-text-soft)">
-                    这里展示当前登录管理员自己拥有的权限，不是系统里的全部权限定义。
-                  </p>
-                </div>
-              </div>
-
+              <p className="text-sm font-medium">我的权限快照</p>
+              <p className="mt-1 text-xs text-(--yo-text-soft)">
+                这里展示当前登录管理员自己拥有的权限，不是系统里的全部权限定义。
+              </p>
               <div className="mt-4 grid gap-4 xl:grid-cols-2">
                 <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface) p-4">
                   <p className="text-sm font-medium">我拥有的全局权限</p>
                   {globalPermissions.length === 0 ? (
                     <p className="mt-3 text-sm text-(--yo-text-muted)">
-                      当前账号没有全局权限，后面后台面板应该更多依赖站点级授权来裁剪。
+                      当前账号没有全局权限。
                     </p>
                   ) : (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -87,7 +109,6 @@ export const PermissionsPanel = ({
                     </div>
                   )}
                 </div>
-
                 <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface) p-4">
                   <p className="text-sm font-medium">我拥有的站点权限</p>
                   {sitePermissionEntries.length === 0 ? (
@@ -126,9 +147,6 @@ export const PermissionsPanel = ({
 
             <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
               <p className="text-sm font-medium">RBAC 概览</p>
-              <p className="mt-1 text-xs text-(--yo-text-soft)">
-                这一块看的是系统里当前有多少角色、权限和授权关系。
-              </p>
               <div className="mt-4 grid gap-3 text-sm text-(--yo-text-muted)">
                 <div className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-3">
                   <p className="text-xs text-(--yo-text-soft)">系统角色</p>
@@ -148,67 +166,58 @@ export const PermissionsPanel = ({
                     {roleBindings.length}
                   </p>
                 </div>
-                <div className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-3">
-                  <p className="text-xs text-(--yo-text-soft)">站点授权覆盖</p>
-                  <p className="mt-1 text-2xl font-semibold text-(--yo-text)">
-                    {sitePermissionEntries.length}
-                  </p>
-                </div>
               </div>
             </div>
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">系统角色</p>
-                  <p className="mt-1 text-xs text-(--yo-text-soft)">
-                    展示角色与其当前绑定的权限能力。
-                  </p>
-                </div>
-              </div>
+              <p className="text-sm font-medium">系统角色</p>
+              <p className="mt-1 text-xs text-(--yo-text-soft)">
+                勾选后立即保存该角色的权限集合。
+              </p>
               <div className="mt-3 space-y-3">
-                {roles.length === 0 ? (
-                  <p className="text-sm text-(--yo-text-muted)">
-                    暂无角色数据。
-                  </p>
-                ) : (
-                  roles.map((role) => (
-                    <div
-                      key={role.id}
-                      className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) p-3"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{role.name}</p>
-                        <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
-                          ID {role.id}
-                        </span>
-                      </div>
-                      {role.description && (
-                        <p className="mt-2 text-sm text-(--yo-text-muted)">
-                          {role.description}
-                        </p>
-                      )}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {role.permission_names.length === 0 ? (
-                          <span className="text-xs text-(--yo-text-muted)">
-                            当前未绑定权限
-                          </span>
-                        ) : (
-                          role.permission_names.map((permission) => (
-                            <span
-                              key={`${role.id}-${permission}`}
-                              className="rounded-full border border-(--yo-surface-strong) px-2 py-0.5 text-xs text-(--yo-text-muted)"
-                            >
-                              {permission}
-                            </span>
-                          ))
-                        )}
-                      </div>
+                {roles.map((role) => (
+                  <div
+                    key={role.id}
+                    className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) p-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{role.name}</p>
+                      <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
+                        ID {role.id}
+                      </span>
                     </div>
-                  ))
-                )}
+                    {role.description ? (
+                      <p className="mt-2 text-sm text-(--yo-text-muted)">
+                        {role.description}
+                      </p>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {permissions.map((permission) => {
+                        const checked = role.permission_names.includes(
+                          permission.name,
+                        );
+                        return (
+                          <label
+                            key={`${role.id}-${permission.id}`}
+                            className="inline-flex items-center gap-1 rounded-full border border-(--yo-surface-strong) px-2 py-0.5 text-xs text-(--yo-text-muted)"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={savingRoleId === role.id}
+                              onChange={() =>
+                                onToggleRolePermission(role, permission.name)
+                              }
+                            />
+                            {permission.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -216,35 +225,116 @@ export const PermissionsPanel = ({
               <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
                 <p className="text-sm font-medium">权限能力</p>
                 <div className="mt-3 space-y-2">
-                  {permissions.length === 0 ? (
-                    <p className="text-sm text-(--yo-text-muted)">
-                      暂无权限数据。
-                    </p>
-                  ) : (
-                    permissions.map((permission) => (
-                      <div
-                        key={permission.id}
-                        className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-2"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <code className="text-sm">{permission.name}</code>
-                          <span className="text-[11px] text-(--yo-text-soft)">
-                            ID {permission.id}
-                          </span>
-                        </div>
-                        {permission.description && (
-                          <p className="mt-1 text-sm text-(--yo-text-muted)">
-                            {permission.description}
-                          </p>
-                        )}
-                      </div>
-                    ))
-                  )}
+                  {permissions.map((permission) => (
+                    <div
+                      key={permission.id}
+                      className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-2"
+                    >
+                      <code className="text-sm">{permission.name}</code>
+                      {permission.description ? (
+                        <p className="mt-1 text-sm text-(--yo-text-muted)">
+                          {permission.description}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <div className="rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
                 <p className="text-sm font-medium">用户授权绑定</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <label className="block text-xs text-(--yo-text-soft)">
+                    用户
+                    <select
+                      value={bindingForm.userId}
+                      onChange={(event) =>
+                        onChangeBindingForm({
+                          userId: event.currentTarget.value,
+                        })
+                      }
+                      className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
+                    >
+                      <option value="">选择用户</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.nickname} ({user.email})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs text-(--yo-text-soft)">
+                    角色
+                    <select
+                      value={bindingForm.roleId}
+                      onChange={(event) =>
+                        onChangeBindingForm({
+                          roleId: event.currentTarget.value,
+                        })
+                      }
+                      className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
+                    >
+                      <option value="">选择角色</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs text-(--yo-text-soft)">
+                    范围
+                    <select
+                      value={bindingForm.scopeType}
+                      onChange={(event) =>
+                        onChangeBindingForm({
+                          scopeType: event.currentTarget.value as
+                            | "global"
+                            | "site",
+                        })
+                      }
+                      className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
+                    >
+                      <option value="global">全局</option>
+                      <option value="site">站点</option>
+                    </select>
+                  </label>
+                  {bindingForm.scopeType === "site" ? (
+                    <label className="block text-xs text-(--yo-text-soft)">
+                      站点
+                      <select
+                        value={bindingForm.scopeId}
+                        onChange={(event) =>
+                          onChangeBindingForm({
+                            scopeId: event.currentTarget.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-md border border-(--yo-surface-strong) bg-(--yo-bg) px-3 py-2 text-sm"
+                      >
+                        <option value="">选择站点</option>
+                        {sites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {site.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+                {bindingError ? (
+                  <p className="mt-3 text-sm text-(--yo-danger)">
+                    {bindingError}
+                  </p>
+                ) : null}
+                <div className="mt-3">
+                  <Button
+                    size="sm"
+                    loading={isCreatingBinding}
+                    onClick={onCreateBinding}
+                  >
+                    添加绑定
+                  </Button>
+                </div>
                 <div className="mt-3 space-y-2">
                   {roleBindings.length === 0 ? (
                     <p className="text-sm text-(--yo-text-muted)">
@@ -256,17 +346,27 @@ export const PermissionsPanel = ({
                         key={binding.id}
                         className="rounded-md border border-(--yo-surface-strong) bg-(--yo-surface) px-3 py-3"
                       >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">
-                            {binding.role_name ?? `角色 #${binding.role_id}`}
-                          </p>
-                          <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
-                            用户 #{binding.user_id}
-                          </span>
-                          <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
-                            {binding.scope_type}
-                            {binding.scope_id ? `:${binding.scope_id}` : ""}
-                          </span>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">
+                              {binding.role_name ?? `角色 #${binding.role_id}`}
+                            </p>
+                            <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
+                              用户 #{binding.user_id}
+                            </span>
+                            <span className="rounded-full bg-(--yo-surface-soft) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
+                              {binding.scope_type}
+                              {binding.scope_id ? `:${binding.scope_id}` : ""}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            loading={deletingBindingId === binding.id}
+                            onClick={() => onDeleteBinding(binding.id)}
+                          >
+                            删除
+                          </Button>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--yo-text-muted)">
                           <span>

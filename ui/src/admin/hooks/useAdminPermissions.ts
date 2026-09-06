@@ -1,10 +1,13 @@
 import { useEffect, useState } from "preact/hooks";
 import type { AdminTab } from "@/admin/types";
 import {
+  createAdminUserRoleBinding,
+  deleteAdminUserRoleBinding,
   fetchAdminCapabilities,
   fetchAdminPermissions,
   fetchAdminRoles,
   fetchAdminUserRoleBindings,
+  replaceAdminRolePermissions,
 } from "@/shared/api";
 import type {
   AdminCapabilities,
@@ -24,6 +27,32 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
   );
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [permissionsError, setPermissionsError] = useState("");
+  const [savingRoleId, setSavingRoleId] = useState<number | null>(null);
+  const [deletingBindingId, setDeletingBindingId] = useState<number | null>(
+    null,
+  );
+  const [isCreatingBinding, setIsCreatingBinding] = useState(false);
+  const [bindingForm, setBindingForm] = useState({
+    userId: "",
+    roleId: "",
+    scopeType: "global" as "global" | "site",
+    scopeId: "",
+  });
+  const [bindingError, setBindingError] = useState("");
+
+  const reload = async () => {
+    const [capabilitiesRes, rolesRes, permissionsRes, bindingsRes] =
+      await Promise.all([
+        fetchAdminCapabilities(),
+        fetchAdminRoles(),
+        fetchAdminPermissions(),
+        fetchAdminUserRoleBindings(),
+      ]);
+    setCapabilities(capabilitiesRes.data);
+    setRoles(rolesRes.data);
+    setPermissions(permissionsRes.data);
+    setRoleBindings(bindingsRes.data);
+  };
 
   useEffect(() => {
     if (activeTab !== "permissions") return;
@@ -32,19 +61,7 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
     setIsLoadingPermissions(true);
     setPermissionsError("");
 
-    Promise.all([
-      fetchAdminCapabilities(),
-      fetchAdminRoles(),
-      fetchAdminPermissions(),
-      fetchAdminUserRoleBindings(),
-    ])
-      .then(([capabilitiesRes, rolesRes, permissionsRes, bindingsRes]) => {
-        if (!alive) return;
-        setCapabilities(capabilitiesRes.data);
-        setRoles(rolesRes.data);
-        setPermissions(permissionsRes.data);
-        setRoleBindings(bindingsRes.data);
-      })
+    reload()
       .catch((error) => {
         if (!alive) return;
         setPermissionsError(
@@ -61,6 +78,82 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
     };
   }, [activeTab]);
 
+  const saveRolePermissions = async (
+    roleId: number,
+    permissionNames: string[],
+  ) => {
+    setSavingRoleId(roleId);
+    setPermissionsError("");
+    try {
+      const res = await replaceAdminRolePermissions(roleId, permissionNames);
+      setRoles((current) =>
+        current.map((role) => (role.id === roleId ? res.data : role)),
+      );
+    } catch (error) {
+      setPermissionsError(
+        error instanceof Error ? error.message : "保存角色权限失败",
+      );
+    } finally {
+      setSavingRoleId(null);
+    }
+  };
+
+  const createBinding = async () => {
+    const userId = Number(bindingForm.userId);
+    const roleId = Number(bindingForm.roleId);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      setBindingError("请选择用户");
+      return;
+    }
+    if (!Number.isInteger(roleId) || roleId <= 0) {
+      setBindingError("请选择角色");
+      return;
+    }
+    if (bindingForm.scopeType === "site" && !bindingForm.scopeId) {
+      setBindingError("站点绑定需要选择站点");
+      return;
+    }
+
+    setIsCreatingBinding(true);
+    setBindingError("");
+    try {
+      const res = await createAdminUserRoleBinding({
+        user_id: userId,
+        role_id: roleId,
+        scope_type: bindingForm.scopeType,
+        scope_id: bindingForm.scopeType === "site" ? bindingForm.scopeId : null,
+      });
+      setRoleBindings((current) => [res.data, ...current]);
+      setBindingForm({
+        userId: "",
+        roleId: "",
+        scopeType: "global",
+        scopeId: "",
+      });
+    } catch (error) {
+      setBindingError(
+        error instanceof Error ? error.message : "创建角色绑定失败",
+      );
+    } finally {
+      setIsCreatingBinding(false);
+    }
+  };
+
+  const deleteBinding = async (id: number) => {
+    setDeletingBindingId(id);
+    setBindingError("");
+    try {
+      await deleteAdminUserRoleBinding(id);
+      setRoleBindings((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      setBindingError(
+        error instanceof Error ? error.message : "删除角色绑定失败",
+      );
+    } finally {
+      setDeletingBindingId(null);
+    }
+  };
+
   return {
     capabilities,
     roles,
@@ -68,5 +161,14 @@ export const useAdminPermissions = (activeTab: AdminTab) => {
     roleBindings,
     isLoadingPermissions,
     permissionsError,
+    savingRoleId,
+    deletingBindingId,
+    isCreatingBinding,
+    bindingForm,
+    bindingError,
+    setBindingForm,
+    saveRolePermissions,
+    createBinding,
+    deleteBinding,
   };
 };

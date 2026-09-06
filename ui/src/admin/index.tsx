@@ -12,6 +12,7 @@ export default class YoinAdmin {
     this.container = document.getElementById(options.containerId);
     setRuntimeConfig(options);
     if (this.container) {
+      this.container.setAttribute("data-yoin", "");
       render(<App />, this.container);
     } else {
       console.error(`Container #${options.containerId} not found.`);

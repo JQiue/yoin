@@ -1,6 +1,45 @@
 import type { SiteFormState } from "@/admin/types";
-import type { Site } from "@/shared/api/types";
+import { GLOBAL_ALLOWED_REACTIONS, type Site } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
+
+function toggleReaction(current: string[], reaction: string) {
+  return current.includes(reaction)
+    ? current.filter((item) => item !== reaction)
+    : [...current, reaction];
+}
+
+function ReactionPicker({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  return (
+    <div className="mt-4">
+      <p className="text-xs text-(--yo-text-soft)">允许的反应</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {GLOBAL_ALLOWED_REACTIONS.map((reaction) => {
+          const checked = value.includes(reaction);
+          return (
+            <label
+              key={reaction}
+              className="inline-flex items-center gap-1 rounded-full border border-(--yo-surface-strong) px-2 py-1 text-sm"
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => onChange(toggleReaction(value, reaction))}
+                className="h-3.5 w-3.5 rounded border border-(--yo-surface-strong)"
+              />
+              <span>{reaction}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   panelClass: string;
@@ -52,9 +91,6 @@ export const SitesPanel = ({
       <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold">站点管理</h2>
-          <p className="mt-1 text-sm text-(--yo-text-muted)">
-            站点列表已经接上，配置修改也可以直接在这里就地保存。
-          </p>
         </div>
         <Button size="sm" onClick={onToggleCreateSite}>
           {isCreatingSite ? "收起表单" : "新建站点"}
@@ -64,10 +100,6 @@ export const SitesPanel = ({
       {isCreatingSite && (
         <div className="mb-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) p-4">
           <h3 className="text-base font-medium">创建新站点</h3>
-          <p className="mt-1 text-sm text-(--yo-text-muted)">
-            先把站点名称、URL 和评论基础限制填好，后面再继续补其它站点级配置。
-          </p>
-
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="block">
               <span className="text-xs text-(--yo-text-soft)">站点名称</span>
@@ -128,19 +160,40 @@ export const SitesPanel = ({
             </label>
           </div>
 
-          <label className="mt-4 inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
-            <input
-              type="checkbox"
-              checked={createSiteForm.allowAnonymous}
-              onChange={(event) =>
-                onChangeCreateSiteForm({
-                  allowAnonymous: event.currentTarget.checked,
-                })
-              }
-              className="h-4 w-4 rounded border border-(--yo-surface-strong)"
-            />
-            允许匿名评论
-          </label>
+          <div className="mt-4 flex flex-wrap gap-4">
+            <label className="inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
+              <input
+                type="checkbox"
+                checked={createSiteForm.allowAnonymous}
+                onChange={(event) =>
+                  onChangeCreateSiteForm({
+                    allowAnonymous: event.currentTarget.checked,
+                  })
+                }
+                className="h-4 w-4 rounded border border-(--yo-surface-strong)"
+              />
+              允许匿名评论
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
+              <input
+                type="checkbox"
+                checked={createSiteForm.allowPrivate}
+                onChange={(event) =>
+                  onChangeCreateSiteForm({
+                    allowPrivate: event.currentTarget.checked,
+                  })
+                }
+                className="h-4 w-4 rounded border border-(--yo-surface-strong)"
+              />
+              允许私密评论
+            </label>
+          </div>
+          <ReactionPicker
+            value={createSiteForm.allowedReactions}
+            onChange={(allowedReactions) =>
+              onChangeCreateSiteForm({ allowedReactions })
+            }
+          />
 
           {createSiteError && (
             <p className="mt-3 text-sm text-(--yo-danger)">{createSiteError}</p>
@@ -203,11 +256,17 @@ export const SitesPanel = ({
                   </Button>
                 </div>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
                 <div>
                   <p className="text-(--yo-text-soft)">匿名评论</p>
                   <p className="mt-1 font-medium">
                     {site.config.allow_anonymous ? "允许" : "关闭"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-(--yo-text-soft)">私密评论</p>
+                  <p className="mt-1 font-medium">
+                    {site.config.allow_private ? "允许" : "关闭"}
                   </p>
                 </div>
                 <div>
@@ -220,6 +279,12 @@ export const SitesPanel = ({
                   <p className="text-(--yo-text-soft)">限流秒数</p>
                   <p className="mt-1 font-medium">
                     {site.config.comment_limit_seconds}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-(--yo-text-soft)">反应</p>
+                  <p className="mt-1 font-medium">
+                    {(site.config.allowed_reactions ?? []).join(" ") || "无"}
                   </p>
                 </div>
               </div>
@@ -290,19 +355,40 @@ export const SitesPanel = ({
                     </label>
                   </div>
 
-                  <label className="mt-4 inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
-                    <input
-                      type="checkbox"
-                      checked={siteForm.allowAnonymous}
-                      onChange={(event) =>
-                        onChangeSiteForm({
-                          allowAnonymous: event.currentTarget.checked,
-                        })
-                      }
-                      className="h-4 w-4 rounded border border-(--yo-surface-strong)"
-                    />
-                    允许匿名评论
-                  </label>
+                  <div className="mt-4 flex flex-wrap gap-4">
+                    <label className="inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
+                      <input
+                        type="checkbox"
+                        checked={siteForm.allowAnonymous}
+                        onChange={(event) =>
+                          onChangeSiteForm({
+                            allowAnonymous: event.currentTarget.checked,
+                          })
+                        }
+                        className="h-4 w-4 rounded border border-(--yo-surface-strong)"
+                      />
+                      允许匿名评论
+                    </label>
+                    <label className="inline-flex items-center gap-2 text-sm text-(--yo-text-muted)">
+                      <input
+                        type="checkbox"
+                        checked={siteForm.allowPrivate}
+                        onChange={(event) =>
+                          onChangeSiteForm({
+                            allowPrivate: event.currentTarget.checked,
+                          })
+                        }
+                        className="h-4 w-4 rounded border border-(--yo-surface-strong)"
+                      />
+                      允许私密评论
+                    </label>
+                  </div>
+                  <ReactionPicker
+                    value={siteForm.allowedReactions}
+                    onChange={(allowedReactions) =>
+                      onChangeSiteForm({ allowedReactions })
+                    }
+                  />
 
                   {siteFormError && (
                     <p className="mt-3 text-sm text-(--yo-danger)">

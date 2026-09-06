@@ -10,7 +10,7 @@ pub mod user;
 pub mod user_identity;
 pub mod user_role_binding;
 
-pub use comment::{CommentCreateData, CommentRepository};
+pub use comment::{CommentCreateData, CommentListVisibility, CommentRepository};
 pub use moderation_provider::{
   ModerationProviderCreateData, ModerationProviderRepository, ModerationProviderUpdateData,
 };

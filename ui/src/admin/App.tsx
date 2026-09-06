@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { AdminLogin } from "@/admin/components/AdminLogin";
 import { AdminSidebar } from "@/admin/components/AdminSidebar";
 import { CommentsPanel } from "@/admin/components/CommentsPanel";
 import { ExternalProvidersPanel } from "@/admin/components/ExternalProvidersPanel";
@@ -15,14 +16,51 @@ import {
 import { useAdminPermissions } from "@/admin/hooks/useAdminPermissions";
 import { useAdminProfile } from "@/admin/hooks/useAdminProfile";
 import { useAdminSites } from "@/admin/hooks/useAdminSites";
+import { useAdminUsers } from "@/admin/hooks/useAdminUsers";
 import { ADMIN_TABS, type AdminTab } from "@/admin/types";
+import { useAdminProviders } from "./hooks/useAdminProviders";
 
 const panelClass =
   "rounded-xl border border-(--yo-surface-strong) bg-(--yo-surface) p-5 shadow-sm";
 
 const App = () => {
+  const { profile, isLoadingProfile, profileError, refreshProfile, logout } =
+    useAdminProfile();
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-(--yo-bg) text-(--yo-text-muted)">
+        正在加载管理员信息...
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return <AdminLogin error={profileError} onSuccess={refreshProfile} />;
+  }
+
+  return (
+    <AdminDashboard
+      profile={profile}
+      isLoadingProfile={isLoadingProfile}
+      profileError={profileError}
+      onLogout={logout}
+    />
+  );
+};
+
+const AdminDashboard = ({
+  profile,
+  isLoadingProfile,
+  profileError,
+  onLogout,
+}: {
+  profile: NonNullable<ReturnType<typeof useAdminProfile>["profile"]>;
+  isLoadingProfile: boolean;
+  profileError: string;
+  onLogout: () => void;
+}) => {
   const [activeTab, setActiveTab] = useState<AdminTab>("sites");
-  const { profile, isLoadingProfile, profileError } = useAdminProfile();
   const {
     capabilities,
     roles,
@@ -30,7 +68,17 @@ const App = () => {
     roleBindings,
     isLoadingPermissions,
     permissionsError,
+    savingRoleId,
+    deletingBindingId,
+    isCreatingBinding,
+    bindingForm,
+    bindingError,
+    setBindingForm,
+    saveRolePermissions,
+    createBinding,
+    deleteBinding,
   } = useAdminPermissions(activeTab);
+  const { users, isLoadingUsers, usersError } = useAdminUsers(activeTab);
   const {
     sites,
     isLoadingSites,
@@ -52,6 +100,41 @@ const App = () => {
     saveSite,
     createSite,
   } = useAdminSites(activeTab);
+  const {
+    oauthProviders,
+    isLoadingOauthProviders,
+    oauthProvidersError,
+    isCreatingOAuthProvider,
+    createOAuthProviderForm,
+    createOAuthProviderError,
+    isSubmittingOAuthProvider,
+    updatingOauthProviderId,
+    setIsCreatingOAuthProvider,
+    setCreateOAuthProviderForm,
+    setCreateOAuthProviderError,
+    createOAuthProvider,
+    toggleOauthProviderEnabled,
+    moderationProviders,
+    isLoadingModerationProviders,
+    moderationProvidersError,
+    isCreatingModerationProvider,
+    createModerationProviderForm,
+    createModerationProviderError,
+    isSubmittingModerationProvider,
+    editingModerationProviderId,
+    moderationProviderForm,
+    moderationProviderFormError,
+    isSavingModerationProvider,
+    setIsCreatingModerationProvider,
+    setCreateModerationProviderForm,
+    setCreateModerationProviderError,
+    setModerationProviderForm,
+    createModerationProvider,
+    beginEditModerationProvider,
+    cancelEditModerationProvider,
+    saveModerationProvider,
+    toggleModerationProviderEnabled,
+  } = useAdminProviders(activeTab, sites);
   const {
     activeCommentTab,
     commentsPage,
@@ -82,6 +165,7 @@ const App = () => {
           isLoadingProfile={isLoadingProfile}
           profileError={profileError}
           onChangeTab={setActiveTab}
+          onLogout={onLogout}
         />
 
         <main className="min-w-0 flex-1">
@@ -119,9 +203,9 @@ const App = () => {
                 setSiteForm((current) =>
                   current
                     ? {
-                        ...current,
-                        ...patch,
-                      }
+                      ...current,
+                      ...patch,
+                    }
                     : current,
                 )
               }
@@ -164,7 +248,14 @@ const App = () => {
             />
           )}
 
-          {activeTab === "users" && <UsersPanel panelClass={panelClass} />}
+          {activeTab === "users" && (
+            <UsersPanel
+              panelClass={panelClass}
+              users={users}
+              isLoadingUsers={isLoadingUsers}
+              usersError={usersError}
+            />
+          )}
 
           {activeTab === "permissions" && (
             <PermissionsPanel
@@ -175,15 +266,101 @@ const App = () => {
               roles={roles}
               permissions={permissions}
               roleBindings={roleBindings}
+              users={users}
+              sites={sites}
+              savingRoleId={savingRoleId}
+              deletingBindingId={deletingBindingId}
+              isCreatingBinding={isCreatingBinding}
+              bindingForm={bindingForm}
+              bindingError={bindingError}
+              onToggleRolePermission={(role, permissionName) => {
+                const next = role.permission_names.includes(permissionName)
+                  ? role.permission_names.filter(
+                    (name) => name !== permissionName,
+                  )
+                  : [...role.permission_names, permissionName];
+                void saveRolePermissions(role.id, next);
+              }}
+              onChangeBindingForm={(patch) =>
+                setBindingForm((current) => ({ ...current, ...patch }))
+              }
+              onCreateBinding={createBinding}
+              onDeleteBinding={deleteBinding}
             />
           )}
 
           {activeTab === "oauthProviders" && (
-            <OAuthProvidersPanel panelClass={panelClass} />
+            <OAuthProvidersPanel
+              panelClass={panelClass}
+              isCreatingOAuthProvider={isCreatingOAuthProvider}
+              createOAuthProviderForm={createOAuthProviderForm}
+              createOAuthProviderError={createOAuthProviderError}
+              isSubmittingOAuthProvider={isSubmittingOAuthProvider}
+              isLoadingOauthProviders={isLoadingOauthProviders}
+              oauthProvidersError={oauthProvidersError}
+              oauthProviders={oauthProviders}
+              updatingOauthProviderId={updatingOauthProviderId}
+              onToggleCreateOAuthProvider={() => {
+                setIsCreatingOAuthProvider((current) => !current);
+                setCreateOAuthProviderError("");
+              }}
+              onChangeCreateOAuthProviderForm={(patch) =>
+                setCreateOAuthProviderForm((current) => ({
+                  ...current,
+                  ...patch,
+                }))
+              }
+              onCancelCreateOAuthProvider={() => {
+                setIsCreatingOAuthProvider(false);
+                setCreateOAuthProviderError("");
+              }}
+              onCreateOAuthProvider={createOAuthProvider}
+              onToggleOauthProviderEnabled={toggleOauthProviderEnabled}
+            />
           )}
 
           {activeTab === "moderationProviders" && (
-            <ModerationProvidersPanel panelClass={panelClass} />
+            <ModerationProvidersPanel
+              panelClass={panelClass}
+              sites={sites}
+              isCreatingModerationProvider={isCreatingModerationProvider}
+              createModerationProviderForm={createModerationProviderForm}
+              createModerationProviderError={createModerationProviderError}
+              isSubmittingModerationProvider={isSubmittingModerationProvider}
+              isLoadingModerationProviders={isLoadingModerationProviders}
+              moderationProvidersError={moderationProvidersError}
+              moderationProviders={moderationProviders}
+              editingModerationProviderId={editingModerationProviderId}
+              moderationProviderForm={moderationProviderForm}
+              moderationProviderFormError={moderationProviderFormError}
+              isSavingModerationProvider={isSavingModerationProvider}
+              onToggleCreateModerationProvider={() => {
+                setIsCreatingModerationProvider((current) => !current);
+                setCreateModerationProviderError("");
+              }}
+              onChangeCreateModerationProviderForm={(patch) =>
+                setCreateModerationProviderForm((current) => ({
+                  ...current,
+                  ...patch,
+                }))
+              }
+              onCancelCreateModerationProvider={() => {
+                setIsCreatingModerationProvider(false);
+                setCreateModerationProviderError("");
+              }}
+              onCreateModerationProvider={createModerationProvider}
+              onBeginEditModerationProvider={beginEditModerationProvider}
+              onChangeModerationProviderForm={(patch) =>
+                setModerationProviderForm((current) =>
+                  current ? { ...current, ...patch } : current,
+                )
+              }
+              onCancelEditModerationProvider={cancelEditModerationProvider}
+              onSaveModerationProvider={saveModerationProvider}
+              onToggleModerationProviderEnabled={
+                toggleModerationProviderEnabled
+              }
+            />
           )}
 
           {activeTab === "externalProviders" && (

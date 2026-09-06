@@ -28,8 +28,29 @@ export type SiteFormState = {
   name: string;
   url: string;
   allowAnonymous: boolean;
+  allowPrivate: boolean;
   maxCommentLength: string;
   commentLimitSeconds: string;
+  allowedReactions: string[];
+};
+
+export type OAuthProviderFormState = {
+  providerCode: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  enabled: boolean;
+};
+
+export type ModerationProviderFormState = {
+  siteId: string;
+  providerKind: "llm" | "akismet";
+  enabled: boolean;
+  model: string;
+  apiBase: string;
+  apiKey: string;
+  rule: string;
+  blogUrl: string;
 };
 
 export const ADMIN_TABS: AdminTabItem[] = [
@@ -46,12 +67,12 @@ export const ADMIN_TABS: AdminTabItem[] = [
   {
     key: "users",
     label: "用户管理",
-    description: "为后续用户列表、角色绑定预留位置。",
+    description: "查看用户、外部身份与当前角色绑定。",
   },
   {
     key: "permissions",
     label: "权限管理",
-    description: "管理角色、权限与站点级授权范围。",
+    description: "编辑角色权限，以及用户在全局或站点上的角色绑定。",
   },
   {
     key: "oauthProviders",
@@ -66,6 +87,6 @@ export const ADMIN_TABS: AdminTabItem[] = [
   {
     key: "externalProviders",
     label: "外部身份提供者",
-    description: "为宿主系统登录态和外部 SSO 预留。",
+    description: "外部 token exchange 尚未提供管理接口。",
   },
 ];

@@ -10,6 +10,7 @@ interface Props {
   isLoadingProfile: boolean;
   profileError: string;
   onChangeTab: (tab: AdminTab) => void;
+  onLogout: () => void;
 }
 
 export const AdminSidebar = ({
@@ -20,14 +21,11 @@ export const AdminSidebar = ({
   isLoadingProfile,
   profileError,
   onChangeTab,
+  onLogout,
 }: Props) => {
   return (
     <aside className="w-full shrink-0 lg:w-72">
       <div className={`${panelClass} lg:sticky lg:top-6`}>
-        <div className="mb-5">
-          <h1 className="mt-2 text-2xl font-semibold">Yoin Admin</h1>
-        </div>
-
         <div className="mb-5 rounded-lg bg-(--yo-surface-soft) p-4">
           <p className="text-xs text-(--yo-text-soft)">当前身份</p>
           {isLoadingProfile ? (
@@ -35,9 +33,21 @@ export const AdminSidebar = ({
               正在加载管理员信息...
             </p>
           ) : profile ? (
-            <div className="mt-2 space-y-1">
-              <p className="font-medium">{profile.nickname}</p>
-              <p className="text-sm text-(--yo-text-muted)">{profile.email}</p>
+            <div className="mt-2 space-y-3">
+              <div className="space-y-1">
+                <p className="font-medium">{profile.nickname}</p>
+                <p className="text-sm text-(--yo-text-muted)">
+                  {profile.email}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onLogout}
+              >
+                退出登录
+              </Button>
             </div>
           ) : (
             <p className="mt-2 text-sm text-(--yo-danger)">
@@ -55,19 +65,17 @@ export const AdminSidebar = ({
                 type="button"
                 variant={isActive ? "primary" : "secondary"}
                 onClick={() => onChangeTab(tab.key)}
-                className={`min-w-52 justify-start rounded-lg px-4 py-3 text-left lg:w-full lg:min-w-0 ${
-                  !isActive ? "hover:bg-(--yo-surface-soft)" : ""
-                }`}
+                className={`min-w-52 justify-start rounded-lg px-4 py-3 text-left lg:w-full lg:min-w-0 ${!isActive ? "hover:bg-(--yo-surface-soft)" : ""
+                  }`}
                 fullWidth
               >
                 <div className="block">
                   <p className="font-medium">{tab.label}</p>
                   <p
-                    className={`mt-1 text-xs ${
-                      isActive
+                    className={`mt-1 text-xs ${isActive
                         ? "text-[color-mix(in_srgb,var(--yo-primary-contrast)_72%,transparent)]"
                         : "text-(--yo-text-muted)"
-                    }`}
+                      }`}
                   >
                     {tab.description}
                   </p>

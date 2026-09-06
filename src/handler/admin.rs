@@ -46,6 +46,48 @@ pub struct UserRoleBindingView {
   pub updated_at: String,
 }
 
+#[derive(Serialize)]
+pub struct UserIdentityView {
+  pub id: i64,
+  pub provider: String,
+  pub provider_user_id: String,
+  pub email: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct UserBindingSummaryView {
+  pub id: i64,
+  pub role_id: i64,
+  pub role_name: Option<String>,
+  pub scope_type: String,
+  pub scope_id: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct UserView {
+  pub id: i64,
+  pub nickname: String,
+  pub email: String,
+  pub website: String,
+  pub avatar: String,
+  pub created_at: String,
+  pub identities: Vec<UserIdentityView>,
+  pub role_bindings: Vec<UserBindingSummaryView>,
+}
+
+#[derive(Deserialize)]
+pub struct ReplaceRolePermissionsPayload {
+  pub permission_names: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateUserRoleBindingPayload {
+  pub user_id: i64,
+  pub role_id: i64,
+  pub scope_type: String,
+  pub scope_id: Option<String>,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct CommentViewForAdmin {
   pub id: i64,
@@ -140,6 +182,58 @@ pub async fn list_user_role_bindings(
     state
       .service
       .list_user_role_bindings_for_admin(require_auth.user_id)
+      .await?,
+  ))
+}
+
+pub async fn list_users(
+  State(state): State<Arc<AppState>>,
+  require_auth: RequireAuth,
+) -> Result<ApiResponse<Vec<UserView>>, AppError> {
+  Ok(ApiResponse::success(
+    state
+      .service
+      .list_users_for_admin(require_auth.user_id)
+      .await?,
+  ))
+}
+
+pub async fn replace_role_permissions(
+  State(state): State<Arc<AppState>>,
+  require_auth: RequireAuth,
+  Path(role_id): Path<i64>,
+  AppJson(payload): AppJson<ReplaceRolePermissionsPayload>,
+) -> Result<ApiResponse<RoleView>, AppError> {
+  Ok(ApiResponse::success(
+    state
+      .service
+      .replace_role_permissions_for_admin(require_auth.user_id, role_id, payload.permission_names)
+      .await?,
+  ))
+}
+
+pub async fn create_user_role_binding(
+  State(state): State<Arc<AppState>>,
+  require_auth: RequireAuth,
+  AppJson(payload): AppJson<CreateUserRoleBindingPayload>,
+) -> Result<ApiResponse<UserRoleBindingView>, AppError> {
+  Ok(ApiResponse::success(
+    state
+      .service
+      .create_user_role_binding_for_admin(require_auth.user_id, payload)
+      .await?,
+  ))
+}
+
+pub async fn delete_user_role_binding(
+  State(state): State<Arc<AppState>>,
+  require_auth: RequireAuth,
+  Path(id): Path<i64>,
+) -> Result<ApiResponse<()>, AppError> {
+  Ok(ApiResponse::success(
+    state
+      .service
+      .delete_user_role_binding_for_admin(require_auth.user_id, id)
       .await?,
   ))
 }

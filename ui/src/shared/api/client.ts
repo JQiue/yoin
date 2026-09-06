@@ -5,19 +5,7 @@ import {
   type ResData,
   SUCCESS_CODE,
 } from "@/shared/api/types";
-import { storage } from "@/shared/helper";
-
-const GUEST_ID_HEADER = "x-yoin-guest-id";
-
-function getGuestId() {
-  const existing = storage.get("yoin:guest_id");
-  if (existing) return existing;
-  const created =
-    globalThis.crypto?.randomUUID?.().replaceAll("-", "") ??
-    `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
-  storage.set("yoin:guest_id", created);
-  return created;
-}
+import { GUEST_ID_HEADER, getGuestId, storage } from "@/shared/helper";
 
 function getApiBase() {
   const configuredBase = getRuntimeConfig().api_base?.trim() || "";

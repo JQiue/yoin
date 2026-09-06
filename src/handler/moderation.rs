@@ -16,6 +16,7 @@ use crate::{
 #[derive(Debug, Serialize)]
 pub struct ModerationProviderView {
   pub id: i64,
+  pub site_id: i64,
   pub provider_kind: ModerationProviderType,
   pub enabled: bool,
   pub config: ModerationProviderConfig,
@@ -25,6 +26,7 @@ impl ModerationProviderView {
   pub fn from_model(model: crate::entity::moderation_providers::Model) -> Self {
     Self {
       id: model.id,
+      site_id: model.site_id,
       provider_kind: model.provider_kind,
       enabled: model.enabled,
       config: model.config,

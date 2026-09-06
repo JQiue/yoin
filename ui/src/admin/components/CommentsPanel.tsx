@@ -64,7 +64,7 @@ export const CommentsPanel = ({
         <div>
           <h2 className="text-xl font-semibold">评论管理</h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            现在先统一接到后台评论列表接口，按站点、页面和状态做筛选。
+            按站点、页面路径和状态筛选评论，并直接改状态。
           </p>
         </div>
         <Button size="sm" variant="secondary" onClick={onRefresh}>
@@ -114,11 +114,10 @@ export const CommentsPanel = ({
               size="sm"
               type="button"
               variant={isActive ? "primary" : "secondary"}
-              className={`rounded-full whitespace-nowrap ${
-                !isActive
+              className={`rounded-full whitespace-nowrap ${!isActive
                   ? "text-(--yo-text-muted) hover:bg-(--yo-surface)"
                   : ""
-              }`}
+                }`}
             >
               {tab.label}
             </Button>
@@ -131,7 +130,7 @@ export const CommentsPanel = ({
         <span className="font-medium text-(--yo-text)">
           {activeCommentTabLabel}
         </span>
-        。状态接口接上后，我们再按真实状态显示对应动作，而不是所有面板都摆同一组按钮。
+        。当前状态对应的按钮会禁用。
       </div>
 
       {isLoadingComments ? (
@@ -146,7 +145,7 @@ export const CommentsPanel = ({
         </div>
       ) : comments.length === 0 ? (
         <div className="rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
-          当前筛选条件下没有评论，或者后端过滤逻辑还在继续完善。
+          当前筛选条件下没有评论。
         </div>
       ) : (
         <div className="space-y-3">
@@ -194,14 +193,13 @@ export const CommentsPanel = ({
                         onClick={() =>
                           onUpdateCommentStatus(comment.id, option.value)
                         }
-                        className={`rounded-full ${
-                          !isActive
+                        className={`rounded-full ${!isActive
                             ? "bg-(--yo-surface) text-(--yo-text-muted) hover:bg-(--yo-surface-soft) disabled:hover:bg-(--yo-surface)"
                             : ""
-                        }`}
+                          }`}
                       >
                         {updatingCommentId === comment.id &&
-                        option.value === comment.status
+                          option.value === comment.status
                           ? "更新中..."
                           : option.label}
                       </Button>

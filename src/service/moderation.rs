@@ -34,6 +34,14 @@ impl AppService {
     &self,
     payload: CreateModerationProviderPayload,
   ) -> Result<ModerationProviderView, AppError> {
+    self
+      .repo
+      .site()
+      .find_by_id(payload.site_id)
+      .await
+      .with_op("find site for moderation provider")?
+      .ok_or_else(|| AppError::site_not_found("site not found".to_string()))?;
+
     let provider = self
       .repo
       .moderation_provider()
@@ -55,6 +63,16 @@ impl AppService {
     id: i64,
     payload: UpdateModerationProviderPayload,
   ) -> Result<ModerationProviderView, AppError> {
+    self
+      .repo
+      .moderation_provider()
+      .find_by_id(id)
+      .await
+      .with_op("find moderation provider")?
+      .ok_or_else(|| {
+        AppError::moderation_provider_not_found("moderation provider not found".to_string())
+      })?;
+
     let provider = self
       .repo
       .moderation_provider()

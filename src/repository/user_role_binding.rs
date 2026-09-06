@@ -124,4 +124,9 @@ impl UserRoleBindingRepository {
 
     binding.update(self.conn).await
   }
+
+  pub async fn delete_by_id(&self, id: i64) -> Result<u64, DbErr> {
+    let result = UserRoleBindings::delete_by_id(id).exec(self.conn).await?;
+    Ok(result.rows_affected)
+  }
 }

@@ -126,6 +126,7 @@ fn create_router(state: Arc<AppState>) -> Router {
     .route("/auth/external/exchange", post(auth::external_exchange))
     .route("/auth/oauth/{provider}/start", get(auth::oauth_start))
     .route("/auth/oauth/{provider}/callback", get(auth::oauth_callback))
+    .route("/sites/{id}/config", get(site::public_config))
     .route("/comments", post(comment::create).get(comment::list))
     .route("/comments/{id}/replies", get(comment::list_replies))
     .route("/reactions", post(reaction::upsert).get(reaction::list))
@@ -145,7 +146,14 @@ fn create_router(state: Arc<AppState>) -> Router {
       "/sites",
       post(site::create).get(site::list).patch(site::update),
     )
-    .route("/admin/oauth/providers", post(auth::create_oauth_provider))
+    .route(
+      "/admin/oauth/providers",
+      get(auth::list_oauth_providers).post(auth::create_oauth_provider),
+    )
+    .route(
+      "/admin/oauth/providers/{id}",
+      patch(auth::update_oauth_provider),
+    )
     .route(
       "/admin/moderation/providers",
       get(moderation::list_providers).post(moderation::create_provider),
@@ -155,11 +163,20 @@ fn create_router(state: Arc<AppState>) -> Router {
       patch(moderation::update_provider),
     )
     .route("/admin/me/capabilities", get(admin::me_capabilities))
+    .route("/admin/users", get(admin::list_users))
     .route("/admin/rbac/roles", get(admin::list_roles))
+    .route(
+      "/admin/rbac/roles/{id}/permissions",
+      patch(admin::replace_role_permissions),
+    )
     .route("/admin/rbac/permissions", get(admin::list_permissions))
     .route(
       "/admin/rbac/user-role-bindings",
-      get(admin::list_user_role_bindings),
+      get(admin::list_user_role_bindings).post(admin::create_user_role_binding),
+    )
+    .route(
+      "/admin/rbac/user-role-bindings/{id}",
+      delete(admin::delete_user_role_binding),
     )
     .route("/admin/comments", get(admin::list_comments))
     .route("/admin/comments/{id}", patch(admin::update_comment_status))
