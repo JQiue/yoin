@@ -38,21 +38,22 @@
   --yo-transition: 0.4s ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --yo-bg: #18181b;
-    --yo-surface: #27272a;
-    --yo-surface-soft: #3f3f46;
-    --yo-surface-strong: #52525b;
-    --yo-text: #fafafa;
-    --yo-text-muted: #a1a1aa;
-    --yo-text-soft: #71717a;
-    --yo-primary: #fafafa;
-    --yo-primary-hover: #e4e4e7;
-    --yo-primary-contrast: #18181b;
-    --yo-danger: #f87171;
-    --yo-danger-bg: #450a0a;
-    --yo-overlay: rgb(0 0 0 / 0.55);
-  }
+/* 暗色：由 shared/helper/theme.ts 解析宿主主题后给容器加上 .yo-dark
+   （宿主用 <html class> / data-theme 声明时以宿主为准，否则跟随系统配色），
+   所以这里不再用 prefers-color-scheme 媒体查询——它会被宿主主题覆盖不掉。 */
+:root.yo-dark {
+  color-scheme: dark;
+  --yo-bg: #18181b;
+  --yo-surface: #27272a;
+  --yo-surface-soft: #3f3f46;
+  --yo-surface-strong: #52525b;
+  --yo-text: #fafafa;
+  --yo-text-muted: #a1a1aa;
+  --yo-text-soft: #71717a;
+  --yo-primary: #fafafa;
+  --yo-primary-hover: #e4e4e7;
+  --yo-primary-contrast: #18181b;
+  --yo-danger: #f87171;
+  --yo-danger-bg: #450a0a;
+  --yo-overlay: rgb(0 0 0 / 0.55);
 }

@@ -2,6 +2,7 @@ import { render } from "preact";
 import App from "@/admin/App";
 import type { Option } from "@/admin/types";
 import { setRuntimeConfig } from "@/config/runtime";
+import { watchHostTheme } from "@/shared/helper";
 import { watchHtmlLang } from "@/shared/i18n";
 import "@/styles/base.css";
 
@@ -14,6 +15,7 @@ export default class YoinAdmin {
     watchHtmlLang();
     if (this.container) {
       this.container.setAttribute("data-yoin", "");
+      watchHostTheme(this.container);
       render(<App />, this.container);
     } else {
       console.error(`Container #${options.containerId} not found.`);
