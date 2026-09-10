@@ -41,7 +41,7 @@ YOIN_MIGRATE=0 …
 
 ## 容器镜像
 
-仓库根目录的 `Dockerfile` 是多阶段构建：Node 阶段构建前端 → cargo-chef 编译静态 musl 二进制 → `scratch` 运行。镜像里已经设了 `HOST=0.0.0.0`，并且用 `--features postgres` 同时编译了 SQLite 与 Postgres 两种驱动——`DATABASE_URL` 填哪种连接串都能连（`postgres://` 需要带 `--features postgres`，Dockerfile 里已经带上）。
+仓库根目录的 `Dockerfile` 是多阶段构建：Node 阶段构建前端 → cargo-chef 编译静态 musl 二进制 → `scratch` 运行。镜像里已经设了 `HOST=0.0.0.0`，并且用 `--features postgres` 同时编译了 SQLite 与 Postgres 两种驱动，`DATABASE_URL` 填哪种连接串都能连。
 
 ```bash
 docker build -t yoin .
@@ -57,42 +57,123 @@ docker run -p 7410:7410 -v yoin-db:/app/data \
 
 ## 部署到 Vercel
 
-Vercel 可以把 OCI 镜像当 Function 跑：构建镜像 → 流量路由到容器 → 按需求扩缩、空闲缩到零。项目里的 `vercel.json` 直接指向现有 Dockerfile，不需要另写一份：
+Vercel 的[容器镜像](https://vercel.com/docs/functions/container-images)会构建仓库里的 Dockerfile、把镜像推到自己 registry，然后**当一个 Function 跑**：请求进来 → 容器内的 HTTP 端口。路由由 `vercel.json` 的 `services` + `rewrites` 决定（仓库里已经写好，不用动）：
 
 ```json
 {
-  "services": { "yoin": { "root": ".", "entrypoint": "Dockerfile", "runtime": "container" } },
+  "services": { "yoin": { "root": ".", "runtime": "container", "entrypoint": "Dockerfile" } },
   "rewrites": [{ "source": "/(.*)", "destination": { "service": "yoin" } }]
 }
 ```
 
-项目环境变量：
+### 先记住三条硬约束
 
-| 变量 | 值 | 原因 |
-| --- | --- | --- |
-| `DATABASE_URL` | Postgres 连接串 | **函数文件系统非持久，SQLite 不可用**；用 Marketplace 的 Postgres（Neon 等）并开启连接池 |
-| `JWT_KEY` | ≥32 字符固定值 | 同上：不固定则每次实例重启令牌全失效 |
-| `PORT` | **必须显式设为 `80`** | Vercel 把流量打到容器的 80，而应用默认监听 7410；不设这个变量容器会被判为不可用 |
-| `YOIN_MIGRATE` | `0` | 冷启动与多实例都不适合跑迁移，改成部署时手动跑一次（见上） |
+后面每一步都是在满足它们：
 
-首次部署后，先对生产库跑一次迁移：
+1. **必须用 Postgres**：函数文件系统非持久，SQLite 写不进去（镜像里两种驱动都有，填 `postgres://` 就行）；
+2. **必须显式设 `PORT=80`**：容器默认从 80 收流量，而应用默认监听 7410，不设就等着 502；
+3. **必须先迁移、再启动**：`YOIN_MIGRATE=0` 只是不自动迁移，空库启动会直接失败。
+
+### 步骤
+
+**0. 前置**：装 Node.js（为了 `vercel` CLI）、准备好 Vercel 账号。`services` 与容器镜像这两个能力目前带权限/套餐要求，控制台里找不到就先确认账号是否已开放。
+
+**1. 登录并关联项目**——在仓库根目录执行：
 
 ```bash
-DATABASE_URL="postgres://..." ./yoin migrate              # 用镜像
-DATABASE_URL="postgres://..." cargo run --features postgres -- migrate   # 用本地源码
+npm i -g vercel
+vercel login
+vercel link        # 没有项目就按提示新建一个
 ```
+
+**2. 装 Postgres**——用 Marketplace 的 Neon，一条命令装好并连到当前项目：
+
+```bash
+vercel integration add neon
+```
+
+装完项目里会有 Neon 注入的 `DATABASE_URL`（走连接池）和 `DATABASE_URL_UNPOOLED`（直连）。应用只读 `DATABASE_URL`，代码不用改。
+
+**3. 补齐其余环境变量**：
+
+```bash
+vercel env add JWT_KEY production                     # 交互式输入 ≥32 字符的固定串
+vercel env add PORT production --no-sensitive         # 80
+vercel env add YOIN_MIGRATE production --no-sensitive # 0
+```
+
+| 变量 | 值 | 不配的后果 |
+| --- | --- | --- |
+| `DATABASE_URL` | Neon 注入 | 回落 SQLite，函数里写不进去 |
+| `JWT_KEY` | ≥32 字符、固定 | 每次冷启动所有人都要重新登录 |
+| `PORT` | `80` | 应用听 7410、平台打 80，容器被判为不可用 |
+| `YOIN_MIGRATE` | `0` | 冷启动跑迁移，多实例互相竞争 |
+
+容器以 root 运行（镜像里没有 `USER` 指令），绑 80 端口没问题。
+
+**4. 先对生产库跑一次迁移**（首次部署、以及之后每次带新迁移的部署）：
+
+```bash
+# 用镜像跑（和线上同一份二进制）
+docker build -t yoin .
+docker run --rm -e DATABASE_URL="postgres://…（直连串）…" yoin migrate
+
+# 或者用本地源码
+DATABASE_URL="postgres://…" cargo run --features postgres -- migrate
+```
+
+用 Neon 时填 `DATABASE_URL_UNPOOLED` 那条直连串——迁移别走连接池。
+
+**5. 部署**：
+
+```bash
+vercel deploy --prod
+```
+
+Vercel 会构建镜像 → 推 Container Registry → 建 Function → 绑生产域名。
+
+**6. 验收**：
+
+```bash
+curl https://<你的项目>.vercel.app/api/health    # {"code":"ok","msg":"success","data":null}
+vercel logs <你的项目>.vercel.app --since 10m
+```
+
+然后确认 `https://<你的项目>.vercel.app/static/admin.js` 有内容，挂个后台页面[注册第一个账号](../guide/getting-started.md)——它会自动成为超级管理员并创建默认站点（编号 1），把 1 填进 widget 的 `site_id` 就能发评论了。
+
+### 出问题先看这里
+
+| 现象 | 多半是 | 怎么办 |
+| --- | --- | --- |
+| 404，或构建日志说没有 `functions`/`static` 目录 | 服务默认是私有的，没被 rewrite 暴露；或项目的 Framework Preset 不是 Services | 确认 `vercel.json` 里有那条 `rewrites`；Project Settings → Framework Preset 选 Services |
+| 500 / 容器起不来 | 端口没对上 | `PORT=80` 必须设 |
+| 502 / 超时 | 连不上数据库 | 看 `vercel logs`；确认 `DATABASE_URL` 是 Neon 注入的那条、第 4 步的迁移已经跑过 |
+| 评论一直停在「待审」 | 迁移没跑 / 站点没配审核提供商 / LLM 审核在容器里连不出去 | 见下面「已知缺陷」 |
+| 重启后所有人要重新登录 | `JWT_KEY` 没固定 | 固定一个 ≥32 字符的串 |
+| 限流比预期松 | 进程内状态按实例算 | 见下 |
 
 ### 平台带来的行为差异
 
 这些都是模型决定的，不是 bug：
 
-- **必须外部数据库**：函数文件系统非持久，SQLite 写不进去；镜像已同时编译 Postgres 驱动（`--features postgres`），`DATABASE_URL` 填 Postgres 连接串即可；
 - **进程内状态按实例算**：评论限流器与站点配置缓存在进程内存里，多实例、冷启动后各算各的，限流会明显变宽；
-- **后台任务可能被截断**：审核是评论落库后 `tokio::spawn` 异步调用提供商的，实例被回收时（空闲 5 分钟后收到 SIGTERM，30 秒宽限）可能没跑完，评论会停在「待审」——安全降级，人工在后台处理即可；
-- **没有优雅退出**：进程只监听 Ctrl-C（SIGINT），收到 SIGTERM 会直接结束，正在处理的请求可能被中断（客户端拿到 5xx，可重试）；
-- 默认单区域（`iad1`），面向其他地区延迟更高，可改区域；
-- 上限：函数包 250MB、单次调用最长 300s、请求/响应体 4.5MB —— 对本项目都够用；
-- 容器镜像与原生 Rust runtime 目前都标着权限/套餐要求（beta 阶段），部署前先确认账号可用。
+- **后台任务可能被截断**：审核是评论落库后 `tokio::spawn` 异步调用提供商的，实例空闲 5 分钟被回收时（SIGTERM + 30 秒宽限）可能没跑完，评论会停在「待审」——安全降级，人工在后台处理即可；
+- **没有优雅退出**：进程只监听 Ctrl-C（SIGINT），收到 SIGTERM 直接结束，正在处理的请求可能被中断（客户端拿到 5xx，可重试）；
+- **数据库连接**：每个实例的连接池上限默认 10（代码没设，取 sqlx 默认），多实例时用 Neon 的连接池串、别用直连串；
+- **限额**：单次调用最长 300s（Hobby 上限也是 300s，Pro 可到 800s）、内存 Hobby 2GB / Pro 4GB、请求与响应体各 4.5MB、同一实例内并发共享 1024 个文件描述符；镜像本身的上限是单层压缩 500MB、整镜像 15GB（存储 $0.10/GB）——对本项目都远远够用；
+- 默认只跑单区域 `iad1`，换区域要另外配。
+
+### 已知缺陷：容器里的 LLM 审核连不出去
+
+`scratch` 镜像里没有系统根证书。而 LLM 客户端（`async-openai` → reqwest）编译时启用的是 `rustls-native-roots`：它只从系统证书目录（`/etc/ssl/certs`、`SSL_CERT_FILE`）读根证书，读不到就是一个空的根证书集，于是容器里所有到 LLM 服务的 HTTPS 调用都会校验失败，评论停在「待审」。
+
+Postgres 连接（sqlx）和 GitHub/QQ 登录（ureq）用的是编译进二进制的根证书，不受影响。
+
+修法（改完要重新构建镜像验证一次）：在 builder 阶段装一份证书再拷进运行镜像，例如在 `rust-builder` 阶段把 `ca-certificates` 加进 `apt-get install`，然后
+
+```dockerfile
+COPY --from=rust-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+```
 
 ### 为什么不走原生 Rust runtime
 
