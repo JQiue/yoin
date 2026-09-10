@@ -6,6 +6,7 @@ services:
       - "7410:7410"
     environment:
       - HOST=0.0.0.0
+      - PORT=7410
       - DATABASE_URL=sqlite:///app/data/yoin.sqlite?mode=rwc
     volumes:
       - yoin-db:/app/data

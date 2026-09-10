@@ -1,13 +1,13 @@
 FROM node:24.14.0-slim AS ui-builder
 WORKDIR /app/ui
-COPY ui/package.json ui/pnpm-lock.yaml ./
+COPY ui/package.json ui/pnpm-lock.yaml ui/pnpm-workspace.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile
 COPY ui ./
 RUN pnpm run build
 
 FROM rust:1.94.0-slim AS chef
 WORKDIR /app
-RUN apt-get update && apt-get install -y musl-tools && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y musl-tools ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef
 RUN rustup target add x86_64-unknown-linux-musl
 
@@ -31,7 +31,11 @@ RUN cargo build --release --target x86_64-unknown-linux-musl --features postgres
 
 FROM scratch
 WORKDIR /app
-ENV HOST=0.0.0.0
+ENV HOST=0.0.0.0 \
+    PORT=80
 COPY --from=rust-builder /app/target/x86_64-unknown-linux-musl/release/yoin /app/yoin
-EXPOSE 7410
+# 证书不能省：LLM 客户端（async-openai → reqwest → rustls-native-certs）只从系统目录读根证书，
+# 而 scratch 里本来没有；缺了它 moderation 的 HTTPS 调用会全部校验失败。
+COPY --from=rust-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+EXPOSE 80
 ENTRYPOINT ["./yoin"]

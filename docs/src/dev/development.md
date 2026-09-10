@@ -37,7 +37,7 @@
 | `npm run biome` | `biome check --write` |
 | `npx tsc --noEmit` | 类型检查 |
 
-> 本地构建用 **npm**（`build.rs` 也是），Docker 与 `ui/pnpm-lock.yaml` 用 **pnpm**。
+> 本地构建用 **npm**（`build.rs` 也是），Docker 与 `ui/pnpm-lock.yaml` 用 **pnpm**（版本由固定的 `node:24.14.0-slim` 镜像经 corepack 决定）。依赖脚本白名单在 `ui/pnpm-workspace.yaml` 的 `allowBuilds` 里——**这个文件必须和 package.json 一起进镜像**，少了它 `pnpm install` 会以 `ERR_PNPM_IGNORED_BUILDS` 失败（`strictDepBuilds` 默认为真）；反过来也别在 `ui/package.json` 里加 `packageManager`，pnpm 12 会因此要求更新 lockfile，`--frozen-lockfile` 下直接报 `ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE`。
 
 ## 前端产物是怎么进二进制的
 
