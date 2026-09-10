@@ -31,7 +31,8 @@ RUN cargo build --release --target x86_64-unknown-linux-musl --features postgres
 
 FROM scratch
 WORKDIR /app
-ENV HOST=0.0.0.0
+ENV HOST=0.0.0.0 \
+    PORT=80
 COPY --from=rust-builder /app/target/x86_64-unknown-linux-musl/release/yoin /app/yoin
-EXPOSE 7410
+EXPOSE 80
 ENTRYPOINT ["./yoin"]

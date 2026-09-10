@@ -9,7 +9,7 @@
 | 变量 | 默认 | 说明 |
 | --- | --- | --- |
 | `DATABASE_URL` | `sqlite://./yoin.sqlite?mode=rwc` | 自部署保持默认即可 |
-| `HOST` / `PORT` | `127.0.0.1` / `7410` | 容器里用 `HOST=0.0.0.0`、`PORT` 按平台要求给 |
+| `HOST` / `PORT` | `127.0.0.1` / `7410` | 二进制的默认值；容器镜像里已经设成 `0.0.0.0` / `80` |
 | `JWT_KEY` | 每次随机 | 生产必须固定（≥32 字符），否则每次重启所有人都要重新登录 |
 | `YOIN_MIGRATE` | 开 | 见下 |
 
@@ -41,11 +41,12 @@ YOIN_MIGRATE=0 …
 
 ## 容器镜像
 
-仓库根目录的 `Dockerfile` 是多阶段构建：Node 阶段构建前端 → cargo-chef 编译静态 musl 二进制 → `scratch` 运行。镜像里已经设了 `HOST=0.0.0.0`，并且用 `--features postgres` 同时编译了 SQLite 与 Postgres 两种驱动，`DATABASE_URL` 填哪种连接串都能连。
+仓库根目录的 `Dockerfile` 是多阶段构建：Node 阶段构建前端 → cargo-chef 编译静态 musl 二进制 → `scratch` 运行。镜像里已经用 `--features postgres` 同时编译了 SQLite 与 Postgres 两种驱动，`DATABASE_URL` 填哪种连接串都能连；默认环境是 `HOST=0.0.0.0` + `PORT=80`——**容器监听 80** 是惯例，也是 Vercel 容器的默认入口端口，平台注入的 `PORT`/`HOST` 会覆盖镜像里的值。
 
 ```bash
 docker build -t yoin .
 docker run -p 7410:7410 -v yoin-db:/app/data \
+  -e PORT=7410 \
   -e DATABASE_URL="sqlite:///app/data/yoin.sqlite?mode=rwc" \
   -e JWT_KEY="至少32字符的固定密钥" \
   yoin
@@ -66,13 +67,14 @@ Vercel 的[容器镜像](https://vercel.com/docs/functions/container-images)会�
 }
 ```
 
-### 先记住三条硬约束
+### 先记住两条硬约束
 
 后面每一步都是在满足它们：
 
 1. **必须用 Postgres**：函数文件系统非持久，SQLite 写不进去（镜像里两种驱动都有，填 `postgres://` 就行）；
-2. **必须显式设 `PORT=80`**：容器默认从 80 收流量，而应用默认监听 7410，不设就等着 502；
-3. **必须先迁移、再启动**：`YOIN_MIGRATE=0` 只是不自动迁移，空库启动会直接失败。
+2. **必须先迁移、再启动**：`YOIN_MIGRATE=0` 只是不自动迁移，空库启动会直接失败。
+
+端口不用单独配：镜像默认监听 80，正是 Vercel 容器的默认入口端口。只有平台自己注入 `PORT` 时才需要对齐——而那种情况下应用会跟着 `PORT` 走，同样不用改配置。
 
 ### 步骤
 
@@ -94,22 +96,20 @@ vercel integration add neon
 
 装完项目里会有 Neon 注入的 `DATABASE_URL`（走连接池）和 `DATABASE_URL_UNPOOLED`（直连）。应用只读 `DATABASE_URL`，代码不用改。
 
-**3. 补齐其余环境变量**：
+**3. 补齐剩下的两个变量**：
 
 ```bash
 vercel env add JWT_KEY production                     # 交互式输入 ≥32 字符的固定串
-vercel env add PORT production --no-sensitive         # 80
 vercel env add YOIN_MIGRATE production --no-sensitive # 0
 ```
 
 | 变量 | 值 | 不配的后果 |
 | --- | --- | --- |
-| `DATABASE_URL` | Neon 注入 | 回落 SQLite，函数里写不进去 |
+| `DATABASE_URL` | Neon 注入，不用手填 | 回落 SQLite，函数里写不进去 |
 | `JWT_KEY` | ≥32 字符、固定 | 每次冷启动所有人都要重新登录 |
-| `PORT` | `80` | 应用听 7410、平台打 80，容器被判为不可用 |
 | `YOIN_MIGRATE` | `0` | 冷启动跑迁移，多实例互相竞争 |
 
-容器以 root 运行（镜像里没有 `USER` 指令），绑 80 端口没问题。
+> **为什么这些不写进 `vercel.json`**：那里的 `env` / `build.env` 两个键在 Vercel 的 schema 里都标着 deprecated（`build.env` 只传给构建阶段），官方文档的配置项清单里已经没有它们；Services 模式下顶层的构建/运行时字段又必须挪进 service，而 service 的配置项里没有环境变量这一项。所以：**非秘密的默认值放镜像的 `ENV`**（端口就是这么处理的），**秘密留在项目环境变量里**。
 
 **4. 先对生产库跑一次迁移**（首次部署、以及之后每次带新迁移的部署）：
 
@@ -146,7 +146,7 @@ vercel logs <你的项目>.vercel.app --since 10m
 | 现象 | 多半是 | 怎么办 |
 | --- | --- | --- |
 | 404，或构建日志说没有 `functions`/`static` 目录 | 服务默认是私有的，没被 rewrite 暴露；或项目的 Framework Preset 不是 Services | 确认 `vercel.json` 里有那条 `rewrites`；Project Settings → Framework Preset 选 Services |
-| 500 / 容器起不来 | 端口没对上 | `PORT=80` 必须设 |
+| 500 / 容器起不来 | 端口没对上 | 镜像默认听 80；如果你另外在项目里设了 `PORT`，两者必须一致 |
 | 502 / 超时 | 连不上数据库 | 看 `vercel logs`；确认 `DATABASE_URL` 是 Neon 注入的那条、第 4 步的迁移已经跑过 |
 | 评论一直停在「待审」 | 迁移没跑 / 站点没配审核提供商 / LLM 审核在容器里连不出去 | 见下面「已知缺陷」 |
 | 重启后所有人要重新登录 | `JWT_KEY` 没固定 | 固定一个 ≥32 字符的串 |
