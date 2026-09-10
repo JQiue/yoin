@@ -15,8 +15,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       lucide-preact:
-        specifier: ^1.41.0
-        version: 1.41.0(preact@10.29.0)
+        specifier: ^1.42.0
+        version: 1.42.0(preact@10.29.0)
       preact:
         specifier: ^10.29.0
         version: 10.29.0
@@ -465,8 +465,8 @@ packages:
     resolution: {integrity: sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==}
     engines: {node: '>= 12.0.0'}
 
-  lucide-preact@1.41.0:
-    resolution: {integrity: sha512-tHLVOGaMYnYLY2pZh5B2XWhKKz6dx+LhpHc71MNHzXW/LfiV0qEwDsbecFdDRaXGnPNMyAiRao0M946mFJRSkQ==}
+  lucide-preact@1.42.0:
+    resolution: {integrity: sha512-LEIDSPW1T18eKV+I0gtKoJ+xJDlAEsM/1a3ca3m5Agj1bVFNv4y85NYwkvAeTxY49yr28elefQSzg7laPlXzEQ==}
     peerDependencies:
       preact: ^10.27.2
 
@@ -895,7 +895,7 @@ snapshots:
       lightningcss-win32-arm64-msvc: 1.32.0
       lightningcss-win32-x64-msvc: 1.32.0
 
-  lucide-preact@1.41.0(preact@10.29.0):
+  lucide-preact@1.42.0(preact@10.29.0):
     dependencies:
       preact: 10.29.0
 
