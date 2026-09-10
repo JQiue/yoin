@@ -1,8 +1,8 @@
-import CommentForm from "@/client/components/comment/CommentForm";
-import CommentList from "@/client/components/comment/CommentList";
-import CommentListFooter from "@/client/components/comment/CommentListFooter";
-import ReactionBar from "@/client/components/comment/ReactionBar";
-import Sort from "@/client/components/comment/Sort";
+import CommentForm from "@/client/components/CommentForm";
+import CommentList from "@/client/components/CommentList";
+import CommentListFooter from "@/client/components/CommentListFooter";
+import ReactionBar from "@/client/components/ReactionBar";
+import Sort from "@/client/components/Sort";
 import { useInfiniteCommentScroll } from "@/client/hooks/useInfiniteCommentScroll";
 import { useInitializeCommentPage } from "@/client/hooks/useInitializeCommentPage";
 import { useCommentStore } from "@/client/store";
@@ -30,7 +30,7 @@ const App = () => {
   });
 
   return (
-    <div className="min-h-screen py-6 px-4 bg-(--yo-bg) text-(--yo-text)">
+    <div className="text-(--yo-text)">
       <ReactionBar
         summary={pageReactions}
         onSelect={updatePageReaction}

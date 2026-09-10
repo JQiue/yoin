@@ -20,14 +20,14 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS rust-builder
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --features postgres --recipe-path recipe.json
 COPY Cargo.toml Cargo.lock ./
 COPY migration ./migration
 COPY src ./src
 COPY build.rs ./
 ENV YOIN_SKIP_UI_BUILD=1
 COPY --from=ui-builder /app/ui/dist ./ui/dist
-RUN cargo build --release --target x86_64-unknown-linux-musl
+RUN cargo build --release --target x86_64-unknown-linux-musl --features postgres
 
 FROM scratch
 WORKDIR /app

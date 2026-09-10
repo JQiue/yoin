@@ -7,7 +7,6 @@ export const en = {
   "common.enable": "Enable",
   "common.disable": "Disable",
   "common.none": "None",
-  "common.loading": "Loading...",
   "common.site": "Site",
   "common.user": "User",
   "common.role": "Role",

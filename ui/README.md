@@ -1,29 +1,24 @@
-# Yoin
+# Yoin UI
+
+Preact widgets compiled into the Rust binary: the public comment widget (`client`) and the admin console (`admin`).
 
 ## Setup
-
-Install the dependencies:
 
 ```bash
 pnpm install
 ```
 
-## Get started
+Docker and `pnpm-lock.yaml` use **pnpm**; [build.rs](../build.rs) shells out to **npm** (`npm run build`). Either package manager works locally.
 
-Start the dev server, and the app will be available at [http://localhost:3000](http://localhost:3000).
+## Development
 
-```bash
-pnpm run dev
-```
+- `npm run client:dev` — widget playground at http://localhost:3000/client, proxies `/api` to `127.0.0.1:7410`
+- `npm run admin:dev` — admin playground
 
-Build the app for production:
+## Build and check
 
-```bash
-pnpm run build
-```
-
-Preview the production build locally:
-
-```bash
-pnpm run preview
-```
+- `npm run build` — bundles both entries into `dist/client` and `dist/admin`
+- `npm run client:build` / `npm run admin:build` — one entry only
+- `npm run client:preview` / `npm run admin:preview` — serve a production bundle
+- `npx tsc --noEmit` — typecheck
+- `npm run biome` — `biome check --write`

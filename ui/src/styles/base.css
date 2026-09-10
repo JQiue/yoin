@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/* 组件按 16px 基准设计：宿主页面可能改小根字号（例如 mdBook 的
+   `:root { font-size: 62.5% }`，此时 1rem 只有 10px），Tailwind 的尺寸 token 全是 rem，
+   整个组件会等比缩小。这里把用到的 token 钉成等值的 px，保证在任何宿主页面里
+   都与本地 playground 的 16px 基准一致。
+   注意 rem 的媒体查询（sm/md/lg 断点）无法这样覆盖。 */
+:root {
+  --spacing: 4px;
+  --container-sm: 384px;
+  --container-md: 448px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
 :root {
   color-scheme: light;
   --yo-bg: #f5f5f4;
@@ -18,21 +38,22 @@
   --yo-transition: 0.4s ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --yo-bg: #18181b;
-    --yo-surface: #27272a;
-    --yo-surface-soft: #3f3f46;
-    --yo-surface-strong: #52525b;
-    --yo-text: #fafafa;
-    --yo-text-muted: #a1a1aa;
-    --yo-text-soft: #71717a;
-    --yo-primary: #fafafa;
-    --yo-primary-hover: #e4e4e7;
-    --yo-primary-contrast: #18181b;
-    --yo-danger: #f87171;
-    --yo-danger-bg: #450a0a;
-    --yo-overlay: rgb(0 0 0 / 0.55);
-  }
+/* 暗色：由 shared/helper/theme.ts 解析宿主主题后给容器加上 .yo-dark
+   （宿主用 <html class> / data-theme 声明时以宿主为准，否则跟随系统配色），
+   所以这里不再用 prefers-color-scheme 媒体查询——它会被宿主主题覆盖不掉。 */
+:root.yo-dark {
+  color-scheme: dark;
+  --yo-bg: #18181b;
+  --yo-surface: #27272a;
+  --yo-surface-soft: #3f3f46;
+  --yo-surface-strong: #52525b;
+  --yo-text: #fafafa;
+  --yo-text-muted: #a1a1aa;
+  --yo-text-soft: #71717a;
+  --yo-primary: #fafafa;
+  --yo-primary-hover: #e4e4e7;
+  --yo-primary-contrast: #18181b;
+  --yo-danger: #f87171;
+  --yo-danger-bg: #450a0a;
+  --yo-overlay: rgb(0 0 0 / 0.55);
 }

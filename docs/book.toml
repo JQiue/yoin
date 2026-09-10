@@ -1,0 +1,17 @@
+[book]
+title = "Yoin 使用文档"
+authors = ["JQiue"]
+description = "可嵌入的评论系统：部署、嵌入、站点配置与后台管理"
+language = "zh"
+src = "src"
+
+# mdBook 0.5 没有 [serve] 配置表，端口只能在命令行给：
+#   mdbook serve docs --port 3002
+# （3000 / 3001 留给前端 playground：widget / admin）
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+additional-js = ["yoin-docs.js"]
+git-repository-url = "https://github.com/JQiue/yoin"
+edit-url-template = "https://github.com/JQiue/yoin/edit/dev/docs/src/{path}"
