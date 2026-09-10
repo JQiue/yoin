@@ -30,7 +30,7 @@ const App = () => {
   });
 
   return (
-    <div className="min-h-screen py-6 px-4 bg-(--yo-bg) text-(--yo-text)">
+    <div className="text-(--yo-text)">
       <ReactionBar
         summary={pageReactions}
         onSelect={updatePageReaction}

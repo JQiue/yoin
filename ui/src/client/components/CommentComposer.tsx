@@ -93,6 +93,9 @@ export default ({
         required
       ></textarea>
       <div className="absolute bottom-3 right-2 flex items-center gap-2">
+        <span className="text-xs text-(--yo-text-soft)">
+          {content.length}/{maxCommentLength}
+        </span>
         {allowAnonymous ? (
           <ComposerToggle
             pressed={isAnonymous}
@@ -109,9 +112,6 @@ export default ({
             onToggle={() => onPrivateChange(!isPrivate)}
           />
         ) : null}
-        <span className="text-xs text-(--yo-text-soft)">
-          {content.length}/{maxCommentLength}
-        </span>
         <IconButton
           type="submit"
           icon={submitting ? LoaderCircle : Send}
