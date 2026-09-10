@@ -17,11 +17,11 @@
 
 ## 迁移
 
-两种做法，二选一，默认是第一种。
+两种做法，二选一。**Vercel 这类会同时起多个实例的平台建议 B**：启动时迁移在多个实例同时冷启动时会撞车（见下），首次部署也一样。
 
-**A. 启动时自动迁移（默认，什么都不用配）**：进程起来先跑 `Migrator::up`。单实例、首次部署最省事（代价见下）。
+**A. 启动时自动迁移（默认，什么都不用配）**：进程起来先跑 `Migrator::up`。单实例最省事；平台只要可能同时起多个实例，就有撞车风险。
 
-**B. 从启动路径里拿出去**：部署时对着目标库跑一次，再让服务跳过启动迁移，适合多实例长期在线。
+**B. 从启动路径里拿出去（生产推荐）**：部署时对着目标库跑一次，再让服务跳过启动迁移。多实例、无服务器都适用，也不会让一次启动失败影响到容器就绪。
 
 ```bash
 yoin migrate   # 只执行迁移然后退出
@@ -52,7 +52,14 @@ select * from seaql_migrations;   -- 每条已应用的迁移一行
 
 想省掉这两点，就把 `YOIN_MIGRATE=0` 固定下来，改成部署时跑一次迁移。
 
-**撞车会怎样**：`sea-orm-migration` 的迁移**不加锁**（源码里没有任何 advisory lock），所以多个实例同时冷启动时可能同时执行同一条迁移。Postgres 上每条迁移默认跑在事务里（`use_transaction` 默认 `true`，含写入迁移记录），后到的那个会干净地报错回滚、不会留下半截状态，重试即可——代价只是一次冷启动失败。迁移都应用完之后自动迁移就只是每次冷启动多几条 SELECT。
+**撞车会怎样（Vercel 上实测过）**：`sea-orm-migration` 的迁移**不加锁**（源码里没有任何 advisory lock），多个实例同时冷启动就会各跑一遍 `Migrator::up`。Postgres 建表时会顺带建一个同名复合类型，于是并发建同一张表时，后到的那个报：
+
+```
+ERROR duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+      Key (typname, typnamespace)=(users, 2200) already exists.
+```
+
+该实例随即 `Application exited with code 1`（你会在 Vercel 日志里看到这一条，同时夹杂好几个 `relation "seaql_migrations" already exists, skipping`——那正是多个实例各建了一次迁移表）。**不会坏数据**：每条迁移默认跑在事务里（`use_transaction` 默认 `true`，含写入迁移记录），失败那份整体回滚；重试或重新部署时新实例看到 `No pending migrations` 就正常了。但那一次启动失败很刺眼，也可能让运维误判——想彻底避免就选 B。
 
 **跳过迁移不等于能用空库**：启动时的权限/角色引导会读表，表不存在就直接启动失败——SQLite 上是 `no such table: permissions`，Postgres 上是 `42P01 relation "permissions" does not exist`。所以走 B 的话顺序是**先迁移、再启动**。
 
@@ -90,10 +97,10 @@ Vercel 的[容器镜像](https://vercel.com/docs/functions/container-images)会�
 
 1. 装 Neon（`vercel integration add neon`，自动注入 `DATABASE_URL`）；
 2. 设一个固定的 `JWT_KEY`（≥32 字符）；
-3. **不要设 `YOIN_MIGRATE`** —— 留空，让应用启动时自己建表；
-4. 部署，看到日志 `Applying all pending migrations` → `migrations applied` 就成了。
+3. 本地对生产库跑一次迁移（第 4 步，用 Neon 的**直连**串），跑完把 `YOIN_MIGRATE` 设为 `0`；
+4. 部署，日志里看到 `Using PostgreSQL` + `Server running on http://0.0.0.0:80` 就成了。
 
-表建好之后，如果以后要长期跑多实例，再把 `YOIN_MIGRATE` 设为 `0`，改用部署时手动跑一次迁移（见第 4 步）。
+> 嫌第 3 步麻烦也可以跳过（**不设** `YOIN_MIGRATE`，让应用启动时自己建表）。代价是：Vercel 可能同时起多个实例，并发建表会让其中一个实例以 exit 1 退出（回滚干净、重试即好，详见[迁移](#迁移)）。首次部署之后库里没有待应用的迁移，这个问题自然消失。
 
 ### 先记住两条硬约束
 
@@ -179,6 +186,7 @@ vercel logs <你的项目>.vercel.app --since 10m
 | 404，或构建日志说没有 `functions`/`static` 目录 | 服务默认是私有的，没被 rewrite 暴露；或项目的 Framework Preset 不是 Services | 确认 `vercel.json` 里有那条 `rewrites`；Project Settings → Framework Preset 选 Services |
 | 500 / 容器起不来 | 端口没对上 | 镜像默认听 80；如果你另外在项目里设了 `PORT`，两者必须一致 |
 | 502 / 超时 | 连不上数据库 | 看 `vercel logs`；确认 `DATABASE_URL` 是 Neon 注入的那条、迁移已经跑过（或者把 `YOIN_MIGRATE` 留空让应用自己建表） |
+| 启动日志报 `duplicate key value violates unique constraint "pg_type_typname_nsp_index"` | 多个实例同时冷启动、同时跑迁移（迁移不加锁） | 重试或重新部署会自愈（失败那份已回滚）；想彻底避免就走 B：迁移移出启动路径 + `YOIN_MIGRATE=0` |
 | 启动日志报 `relation "permissions" does not exist`（`42P01`） | 库连上了，但表还没建 | 跑一次迁移，或把 `YOIN_MIGRATE` 从 `0` 改成不设/`1` 再部署 |
 | 评论一直停在「待审」 | 迁移没跑 / 站点没配审核提供商 / 镜像里少了 CA 证书 | 见下面「镜像里的 CA 证书」 |
 | 重启后所有人要重新登录 | `JWT_KEY` 没固定 | 固定一个 ≥32 字符的串 |
