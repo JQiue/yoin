@@ -41,7 +41,7 @@ YOIN_MIGRATE=0 …
 
 ## 容器镜像
 
-仓库根目录的 `Dockerfile` 是多阶段构建：Node 阶段构建前端 → cargo-chef 编译静态 musl 二进制 → `scratch` 运行。镜像里已经设了 `HOST=0.0.0.0`。
+仓库根目录的 `Dockerfile` 是多阶段构建：Node 阶段构建前端 → cargo-chef 编译静态 musl 二进制 → `scratch` 运行。镜像里已经设了 `HOST=0.0.0.0`，并且用 `--features postgres` 同时编译了 SQLite 与 Postgres 两种驱动——`DATABASE_URL` 填哪种连接串都能连（`postgres://` 需要带 `--features postgres`，Dockerfile 里已经带上）。
 
 ```bash
 docker build -t yoin .
@@ -72,20 +72,21 @@ Vercel 可以把 OCI 镜像当 Function 跑：构建镜像 → 流量路由到�
 | --- | --- | --- |
 | `DATABASE_URL` | Postgres 连接串 | **函数文件系统非持久，SQLite 不可用**；用 Marketplace 的 Postgres（Neon 等）并开启连接池 |
 | `JWT_KEY` | ≥32 字符固定值 | 同上：不固定则每次实例重启令牌全失效 |
-| `PORT` | `80` | Vercel 默认把流量路由到容器的 80，可用 `PORT` 覆盖 |
+| `PORT` | **必须显式设为 `80`** | Vercel 把流量打到容器的 80，而应用默认监听 7410；不设这个变量容器会被判为不可用 |
 | `YOIN_MIGRATE` | `0` | 冷启动与多实例都不适合跑迁移，改成部署时手动跑一次（见上） |
 
 首次部署后，先对生产库跑一次迁移：
 
 ```bash
-DATABASE_URL="postgres://..." ./yoin migrate    # 或 cargo run -- migrate
+DATABASE_URL="postgres://..." ./yoin migrate              # 用镜像
+DATABASE_URL="postgres://..." cargo run --features postgres -- migrate   # 用本地源码
 ```
 
 ### 平台带来的行为差异
 
 这些都是模型决定的，不是 bug：
 
-- **必须外部数据库**：函数文件系统非持久，SQLite 写不进去；Postgres 后端已支持（`--no-default-features --features postgres`）；
+- **必须外部数据库**：函数文件系统非持久，SQLite 写不进去；镜像已同时编译 Postgres 驱动（`--features postgres`），`DATABASE_URL` 填 Postgres 连接串即可；
 - **进程内状态按实例算**：评论限流器与站点配置缓存在进程内存里，多实例、冷启动后各算各的，限流会明显变宽；
 - **后台任务可能被截断**：审核是评论落库后 `tokio::spawn` 异步调用提供商的，实例被回收时（空闲 5 分钟后收到 SIGTERM，30 秒宽限）可能没跑完，评论会停在「待审」——安全降级，人工在后台处理即可；
 - **没有优雅退出**：进程只监听 Ctrl-C（SIGINT），收到 SIGTERM 会直接结束，正在处理的请求可能被中断（客户端拿到 5xx，可重试）；
