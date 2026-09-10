@@ -54,7 +54,7 @@ Migrations: [migration/README.md](migration/README.md). Enums used by entities l
 
 ## Pitfalls
 
-- Local UI build in `build.rs` is **npm**, not pnpm. Docker/UI workspace uses **pnpm**.
+- Local UI build in `build.rs` is **npm**, not pnpm. Docker/UI workspace uses **pnpm**; the version is pinned by `packageManager` in [ui/package.json](ui/package.json) (corepack otherwise resolves one on its own). `pnpm install` fails with `ERR_PNPM_IGNORED_BUILDS` unless [ui/pnpm-workspace.yaml](ui/pnpm-workspace.yaml) — which holds `allowBuilds` — sits next to the manifest, so the Dockerfile must `COPY` it before installing.
 - `TESTING.md` layout/commands are stale (`cargo test --test integration`, empty `tests/unit/`, tarpaulin). Prefer CI commands above.
 - [README.md](README.md) is a stub. Product status: [CHANGELOG.md](CHANGELOG.md) (`0.0.1` draft; OAuth/moderation/admin tabs not fully E2E).
 - RBAC bootstrap: [src/docs/bootstrap_rbac.md](src/docs/bootstrap_rbac.md).

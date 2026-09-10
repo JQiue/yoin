@@ -1,6 +1,7 @@
 {
   "name": "yoin",
   "version": "0.0.1",
+  "packageManager": "pnpm@12.3.4",
   "type": "module",
   "files": [
     "dist/client",

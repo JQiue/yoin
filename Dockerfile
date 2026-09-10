@@ -1,6 +1,6 @@
 FROM node:24.14.0-slim AS ui-builder
 WORKDIR /app/ui
-COPY ui/package.json ui/pnpm-lock.yaml ./
+COPY ui/package.json ui/pnpm-lock.yaml ui/pnpm-workspace.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile
 COPY ui ./
 RUN pnpm run build

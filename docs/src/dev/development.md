@@ -37,7 +37,7 @@
 | `npm run biome` | `biome check --write` |
 | `npx tsc --noEmit` | 类型检查 |
 
-> 本地构建用 **npm**（`build.rs` 也是），Docker 与 `ui/pnpm-lock.yaml` 用 **pnpm**。
+> 本地构建用 **npm**（`build.rs` 也是），Docker 与 `ui/pnpm-lock.yaml` 用 **pnpm**：版本由 [ui/package.json](https://github.com/JQiue/yoin/blob/dev/ui/package.json) 的 `packageManager` 固定（否则 corepack 自己挑一个），依赖脚本白名单在 `ui/pnpm-workspace.yaml` 的 `allowBuilds` 里——**这个文件必须和 package.json 一起进镜像**，少了它 `pnpm install` 会以 `ERR_PNPM_IGNORED_BUILDS` 失败（`strictDepBuilds` 默认为真）。
 
 ## 前端产物是怎么进二进制的
 
