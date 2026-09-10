@@ -4,7 +4,7 @@ use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
 use tracing::{info, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
-use yoin::{app::app, config::Config, db::migrate};
+use yoin::{app::app, config::Config, db};
 
 #[cfg(debug_assertions)]
 mod ui_dev;
@@ -13,7 +13,26 @@ mod ui_dev;
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   init_tracing();
   let config = Config::from_env()?;
-  let conn: &'static DatabaseConnection = Box::leak(Box::new(migrate(&config.database_url).await?));
+
+  match std::env::args().nth(1).as_deref() {
+    None | Some("serve") => {}
+    Some("migrate") => {
+      db::migrate(&config.database_url).await?;
+      info!("migrations applied");
+      return Ok(());
+    }
+    Some(other) => {
+      return Err(format!("unknown command `{other}`: expected `serve` or `migrate`").into());
+    }
+  }
+
+  let connection = if config.migrate_on_start() {
+    db::migrate(&config.database_url).await?
+  } else {
+    info!("YOIN_MIGRATE is off: skipping startup migrations, run `yoin migrate` to apply them");
+    db::connect(&config.database_url).await?
+  };
+  let conn: &'static DatabaseConnection = Box::leak(Box::new(connection));
   let addr = format!("{}:{}", config.host, config.port);
   let app = app(conn, config.jwt_key)
     .await?

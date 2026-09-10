@@ -29,6 +29,9 @@ pub struct Config {
   pub port: u16,
   #[serde(default = "default_jwt_key")]
   pub jwt_key: String,
+  /// `YOIN_MIGRATE`：设 0/false/off/no 时启动不执行迁移（envy 会把字段名大写后与环境变量匹配）
+  #[serde(default)]
+  pub yoin_migrate: Option<String>,
 }
 
 impl Config {
@@ -43,5 +46,16 @@ impl Config {
     }
 
     Ok(config)
+  }
+
+  /// 启动时是否执行迁移，默认执行。
+  ///
+  /// 容器 / 无服务器平台（例如 Vercel）建议设 `YOIN_MIGRATE=0`，改在部署时单独跑
+  /// `yoin migrate`：那里进程随时可能被回收，每次冷启动都跑迁移既慢又可能互相竞争。
+  pub fn migrate_on_start(&self) -> bool {
+    !matches!(
+      self.yoin_migrate.as_deref().map(str::trim),
+      Some("0" | "false" | "off" | "no")
+    )
   }
 }
