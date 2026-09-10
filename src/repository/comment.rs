@@ -10,6 +10,7 @@ use crate::entity::{comments, prelude::Comments};
 pub struct CommentCreateData {
   pub site_id: i64,
   pub user_id: Option<i64>,
+  pub guest_id: Option<String>,
   pub thread_id: Option<i64>,
   pub parent_id: Option<i64>,
   pub nickname: String,
@@ -21,8 +22,17 @@ pub struct CommentCreateData {
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
+  pub is_anonymous: bool,
+  pub is_private: bool,
   pub status: CommentStatus,
   pub datetime: DateTime,
+}
+
+#[derive(Clone, Debug)]
+pub struct CommentListVisibility {
+  pub include_all_private: bool,
+  pub viewer_user_id: Option<i64>,
+  pub viewer_guest_id: Option<String>,
 }
 
 pub struct CommentRepository {
@@ -44,6 +54,8 @@ impl CommentRepository {
       location: Set(data.location),
       avatar: Set(data.avatar),
       is_sticky: Set(data.is_sticky),
+      is_anonymous: Set(data.is_anonymous),
+      is_private: Set(data.is_private),
       status: Set(data.status),
       created_at: Set(data.datetime),
       updated_at: Set(data.datetime),
@@ -53,12 +65,17 @@ impl CommentRepository {
     if let Some(user_id) = data.user_id {
       active_comment.user_id = Set(Some(user_id));
     }
+    if let Some(guest_id) = data.guest_id {
+      active_comment.guest_id = Set(Some(guest_id));
+    }
 
     active_comment.insert(self.conn).await
   }
 
   pub async fn find_all_paged(
     &self,
+    site_id: i64,
+    page_path: Option<&str>,
     page_size: u64,
     page_offset: u64,
     sort: &str,
@@ -67,13 +84,13 @@ impl CommentRepository {
     let (sort_col, sort_ord) = match sort {
       "created_asc" => (comments::Column::CreatedAt, Order::Asc),
       "created_desc" => (comments::Column::CreatedAt, Order::Desc),
-      "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
-      "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
-      "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
-      "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
       _ => (comments::Column::CreatedAt, Order::Desc),
     };
-    let mut paginator = Comments::find();
+    let mut paginator = Comments::find().filter(comments::Column::SiteId.eq(site_id));
+
+    if let Some(page_path) = page_path.filter(|path| !path.is_empty() && *path != "/") {
+      paginator = paginator.filter(comments::Column::PagePath.eq(page_path));
+    }
 
     if let Some(status) = status {
       paginator = paginator.filter(comments::Column::Status.eq(status));
@@ -93,6 +110,43 @@ impl CommentRepository {
     Comments::find_by_id(id).one(self.conn).await
   }
 
+  pub async fn set_sticky(
+    &self,
+    comment: comments::Model,
+    is_sticky: bool,
+  ) -> Result<comments::Model, DbErr> {
+    let mut active: comments::ActiveModel = comment.into();
+    active.is_sticky = Set(is_sticky);
+    active.updated_at = Set(utc_now().naive_utc());
+    active.update(self.conn).await
+  }
+
+  fn apply_visibility(
+    query: Select<Comments>,
+    visibility: &CommentListVisibility,
+  ) -> Select<Comments> {
+    if visibility.include_all_private {
+      return query;
+    }
+
+    let mut visible = Condition::any().add(comments::Column::IsPrivate.eq(false));
+    if let Some(user_id) = visibility.viewer_user_id {
+      visible = visible.add(
+        Condition::all()
+          .add(comments::Column::IsPrivate.eq(true))
+          .add(comments::Column::UserId.eq(user_id)),
+      );
+    }
+    if let Some(guest_id) = &visibility.viewer_guest_id {
+      visible = visible.add(
+        Condition::all()
+          .add(comments::Column::IsPrivate.eq(true))
+          .add(comments::Column::GuestId.eq(guest_id)),
+      );
+    }
+    query.filter(visible)
+  }
+
   pub async fn find_roots_paged(
     &self,
     site_id: i64,
@@ -100,23 +154,24 @@ impl CommentRepository {
     page_size: u64,
     page_offset: u64,
     sort: &str,
+    visibility: &CommentListVisibility,
   ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
     let (sort_col, sort_ord) = match sort {
       "created_asc" => (comments::Column::CreatedAt, Order::Asc),
       "created_desc" => (comments::Column::CreatedAt, Order::Desc),
-      "up_vote_asc" => (comments::Column::UpVote, Order::Asc),
-      "up_vote_desc" => (comments::Column::UpVote, Order::Desc),
-      "down_vote_asc" => (comments::Column::DownVote, Order::Asc),
-      "down_vote_desc" => (comments::Column::DownVote, Order::Desc),
       _ => (comments::Column::CreatedAt, Order::Desc),
     };
-    let paginator = Comments::find()
-      .filter(comments::Column::SiteId.eq(site_id))
-      .filter(comments::Column::PagePath.eq(page_path))
-      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
-      .filter(comments::Column::ParentId.is_null())
-      .order_by(sort_col, sort_ord)
-      .paginate(self.conn, page_size);
+    let paginator = Self::apply_visibility(
+      Comments::find()
+        .filter(comments::Column::SiteId.eq(site_id))
+        .filter(comments::Column::PagePath.eq(page_path))
+        .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
+        .filter(comments::Column::ParentId.is_null()),
+      visibility,
+    )
+    .order_by_desc(comments::Column::IsSticky)
+    .order_by(sort_col, sort_ord)
+    .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
     let total_pages = (total as f64 / page_size as f64).ceil() as u64;
     let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
@@ -128,15 +183,19 @@ impl CommentRepository {
     &self,
     thread_ids: Vec<i64>,
     per_thread_limit: usize,
+    visibility: &CommentListVisibility,
   ) -> Result<Vec<comments::Model>, DbErr> {
-    let all = Comments::find()
-      .filter(comments::Column::ThreadId.is_in(thread_ids))
-      .filter(comments::Column::ParentId.is_not_null())
-      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
-      .order_by(comments::Column::ThreadId, Order::Asc)
-      .order_by(comments::Column::CreatedAt, Order::Asc)
-      .all(self.conn)
-      .await?;
+    let all = Self::apply_visibility(
+      Comments::find()
+        .filter(comments::Column::ThreadId.is_in(thread_ids))
+        .filter(comments::Column::ParentId.is_not_null())
+        .filter(comments::Column::Status.is_in([CommentStatus::Approved])),
+      visibility,
+    )
+    .order_by(comments::Column::ThreadId, Order::Asc)
+    .order_by(comments::Column::CreatedAt, Order::Asc)
+    .all(self.conn)
+    .await?;
 
     let mut counts = std::collections::HashMap::<i64, usize>::new();
     let mut preview = Vec::new();
@@ -164,14 +223,18 @@ impl CommentRepository {
     page_path: &str,
     page_size: u64,
     page_offset: u64,
+    visibility: &CommentListVisibility,
   ) -> Result<(Vec<comments::Model>, u64, u64), DbErr> {
-    let paginator = Comments::find()
-      .filter(comments::Column::SiteId.eq(site_id))
-      .filter(comments::Column::ThreadId.eq(thread_id))
-      .filter(comments::Column::PagePath.eq(page_path))
-      .filter(comments::Column::Status.is_in([CommentStatus::Approved]))
-      .order_by(comments::Column::CreatedAt, Order::Asc)
-      .paginate(self.conn, page_size);
+    let paginator = Self::apply_visibility(
+      Comments::find()
+        .filter(comments::Column::SiteId.eq(site_id))
+        .filter(comments::Column::ThreadId.eq(thread_id))
+        .filter(comments::Column::PagePath.eq(page_path))
+        .filter(comments::Column::Status.is_in([CommentStatus::Approved])),
+      visibility,
+    )
+    .order_by(comments::Column::CreatedAt, Order::Asc)
+    .paginate(self.conn, page_size);
     let total = paginator.num_items().await?;
     let total_pages = (total as f64 / page_size as f64).ceil() as u64;
     let page_idx = if page_offset > 0 { page_offset - 1 } else { 0 };
@@ -238,25 +301,5 @@ impl CommentRepository {
       })
       .exec(self.conn)
       .await
-  }
-
-  pub async fn update_up_vote(&self, id: i64, up_vote: i32) -> Result<comments::Model, DbErr> {
-    Comments::update(comments::ActiveModel {
-      id: Set(id),
-      up_vote: Set(up_vote),
-      ..Default::default()
-    })
-    .exec(self.conn)
-    .await
-  }
-
-  pub async fn update_down_vote(&self, id: i64, down_vote: i32) -> Result<comments::Model, DbErr> {
-    Comments::update(comments::ActiveModel {
-      id: Set(id),
-      down_vote: Set(down_vote),
-      ..Default::default()
-    })
-    .exec(self.conn)
-    .await
   }
 }

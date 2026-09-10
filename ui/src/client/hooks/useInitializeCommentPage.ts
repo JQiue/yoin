@@ -57,6 +57,10 @@ const useCommentPagePath = () => {
 
 const useInitializeComments = (siteId?: number) => {
   const fetchComments = useCommentStore((state) => state.fetchComments);
+  const fetchPageReactions = useCommentStore(
+    (state) => state.fetchPageReactions,
+  );
+  const fetchSiteConfig = useCommentStore((state) => state.fetchSiteConfig);
   const pathname = useCommentPagePath();
 
   useEffect(() => {
@@ -64,8 +68,10 @@ const useInitializeComments = (siteId?: number) => {
       return;
     }
 
+    fetchSiteConfig();
     fetchComments(1, false);
-  }, [fetchComments, pathname, siteId]);
+    fetchPageReactions();
+  }, [fetchComments, fetchPageReactions, fetchSiteConfig, pathname, siteId]);
 };
 
 export const useInitializeCommentPage = () => {

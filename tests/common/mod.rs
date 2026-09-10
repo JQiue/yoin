@@ -10,14 +10,16 @@ use http_body_util::BodyExt;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-
-use yoin::{app::app, db::migrate};
+use yoin::{
+  app::app, db::migrate, rbac::bootstrap::bootstrap_rbac, repository::Repository,
+  service::AppService,
+};
 
 pub const TEST_JWT_KEY: &str = "test_jwt_key_123456789012345678901234567890";
 
 #[derive(Deserialize)]
 pub struct ApiResponse<T> {
-  pub code: i32,
+  pub code: String,
   pub msg: String,
   pub data: Option<T>,
 }
@@ -28,6 +30,7 @@ pub struct UserWithToken {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct SiteView {
   pub id: i64,
   pub name: String,
@@ -38,6 +41,15 @@ pub struct SiteView {
 pub async fn test_app() -> axum::Router {
   let conn = Box::leak(Box::new(migrate("sqlite::memory:").await.unwrap()));
   app(conn, TEST_JWT_KEY.to_string()).await.unwrap()
+}
+
+pub async fn test_service() -> AppService {
+  let conn = Box::leak(Box::new(migrate("sqlite::memory:").await.unwrap()));
+  let service = AppService {
+    repo: Repository::new(conn),
+  };
+  bootstrap_rbac(&service.repo).await.unwrap();
+  service
 }
 
 pub fn build_request(method: &str, uri: &str, body: Body) -> Request<Body> {
@@ -105,6 +117,15 @@ pub async fn patch_json_with_bearer(
 
 pub async fn get_with_bearer(app: &axum::Router, uri: &str, token: &str) -> Response {
   let mut req = build_request("GET", uri, Body::empty());
+  req.headers_mut().insert(
+    header::AUTHORIZATION,
+    format!("Bearer {}", token).parse().unwrap(),
+  );
+  request(app, req).await
+}
+
+pub async fn delete_with_bearer(app: &axum::Router, uri: &str, token: &str) -> Response {
+  let mut req = build_request("DELETE", uri, Body::empty());
   req.headers_mut().insert(
     header::AUTHORIZATION,
     format!("Bearer {}", token).parse().unwrap(),

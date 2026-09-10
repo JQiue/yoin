@@ -11,22 +11,36 @@ fn default_comment_limit_seconds() -> i64 {
   60
 }
 
+fn default_allow_private() -> bool {
+  true
+}
+
+fn default_allowed_reactions() -> Vec<String> {
+  crate::constants::reaction::default_allowed_types()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromJsonQueryResult)]
 pub struct SiteConfig {
   #[serde(default)]
   pub allow_anonymous: bool,
+  #[serde(default = "default_allow_private")]
+  pub allow_private: bool,
   #[serde(default = "default_max_comment_length")]
   pub max_comment_length: usize,
   #[serde(default = "default_comment_limit_seconds")]
   pub comment_limit_seconds: i64,
+  #[serde(default = "default_allowed_reactions")]
+  pub allowed_reactions: Vec<String>,
 }
 
 impl Default for SiteConfig {
   fn default() -> Self {
     Self {
       allow_anonymous: Default::default(),
+      allow_private: true,
       max_comment_length: 1024,
       comment_limit_seconds: 60,
+      allowed_reactions: default_allowed_reactions(),
     }
   }
 }

@@ -12,10 +12,10 @@ const baseClass =
 
 const variantClassMap = {
   primary:
-    "text-(--yo-primary-contrast) bg-(--yo-primary) hover:bg-(--yo-primary-hover) disabled:bg-zinc-300 disabled:text-zinc-500",
+    "text-(--yo-primary-contrast) bg-(--yo-primary) hover:bg-(--yo-primary-hover) disabled:bg-(--yo-surface-strong) disabled:text-(--yo-text-muted)",
   secondary:
-    "bg-(--yo-surface-soft) bg-(--yo-surface-soft) hover:bg-(--yo-surface-strong) disabled:bg-zinc-100 disabled:text-zinc-400",
-  ghost: "text-(--yo-text-muted) bg-transparent hover:text-zinc-900",
+    "bg-(--yo-surface-soft) hover:bg-(--yo-surface-strong) disabled:bg-(--yo-surface-soft) disabled:text-(--yo-text-soft)",
+  ghost: "text-(--yo-text-muted) bg-transparent hover:text-(--yo-text)",
 };
 
 const sizeClassMap = {

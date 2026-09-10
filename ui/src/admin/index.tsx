@@ -2,6 +2,7 @@ import { render } from "preact";
 import App from "@/admin/App";
 import type { Option } from "@/admin/types";
 import { setRuntimeConfig } from "@/config/runtime";
+import { watchHtmlLang } from "@/shared/i18n";
 import "@/styles/base.css";
 import "@/styles/admin.css";
 
@@ -11,7 +12,9 @@ export default class YoinAdmin {
   constructor(options: Option) {
     this.container = document.getElementById(options.containerId);
     setRuntimeConfig(options);
+    watchHtmlLang();
     if (this.container) {
+      this.container.setAttribute("data-yoin", "");
       render(<App />, this.container);
     } else {
       console.error(`Container #${options.containerId} not found.`);

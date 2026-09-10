@@ -14,6 +14,7 @@ pub struct OauthProviderCreateData {
   pub enabled: bool,
   pub client_id: String,
   pub client_secret: String,
+  pub redirect_uri: String,
   pub datetime: DateTime,
 }
 
@@ -25,6 +26,7 @@ pub struct OauthProviderUpdateData {
   pub enabled: Option<bool>,
   pub client_id: Option<String>,
   pub client_secret: Option<String>,
+  pub redirect_uri: Option<String>,
   pub datetime: DateTime,
 }
 
@@ -46,7 +48,8 @@ impl OauthProviderRepository {
     site_id: Option<i64>,
     provider_code: &str,
   ) -> Result<Option<oauth_providers::Model>, DbErr> {
-    let mut query = OauthProviders::find().filter(oauth_providers::Column::ProviderCode.eq(provider_code));
+    let mut query =
+      OauthProviders::find().filter(oauth_providers::Column::ProviderCode.eq(provider_code));
 
     query = match site_id {
       Some(site_id) => query.filter(oauth_providers::Column::SiteId.eq(site_id)),
@@ -73,6 +76,14 @@ impl OauthProviderRepository {
     query.one(self.conn).await
   }
 
+  pub async fn find_enabled_public(&self) -> Result<Vec<oauth_providers::Model>, DbErr> {
+    OauthProviders::find()
+      .filter(oauth_providers::Column::Enabled.eq(true))
+      .filter(oauth_providers::Column::SiteId.is_null())
+      .all(self.conn)
+      .await
+  }
+
   pub async fn create(
     &self,
     data: OauthProviderCreateData,
@@ -82,6 +93,7 @@ impl OauthProviderRepository {
       provider_code: Set(data.provider_code),
       enabled: Set(data.enabled),
       client_id: Set(data.client_id),
+      redirect_uri: Set(data.redirect_uri),
       client_secret: Set(data.client_secret),
       created_at: Set(data.datetime),
       updated_at: Set(data.datetime),
@@ -115,6 +127,9 @@ impl OauthProviderRepository {
     }
     if let Some(client_secret) = data.client_secret {
       provider.client_secret = Set(client_secret);
+      if let Some(redirect_uri) = data.redirect_uri {
+        provider.redirect_uri = Set(redirect_uri);
+      }
     }
 
     provider.update(self.conn).await

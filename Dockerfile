@@ -18,7 +18,7 @@ COPY src ./src
 COPY build.rs ./
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM chef AS rust-builder 
+FROM chef AS rust-builder
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 COPY Cargo.toml Cargo.lock ./

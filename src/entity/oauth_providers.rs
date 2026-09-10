@@ -12,6 +12,7 @@ pub struct Model {
   pub provider_code: String,
   pub client_id: String,
   pub client_secret: String,
+  pub redirect_uri: String,
   pub created_at: DateTime,
   pub updated_at: DateTime,
 }

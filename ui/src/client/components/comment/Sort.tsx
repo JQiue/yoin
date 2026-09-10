@@ -1,14 +1,16 @@
 import { useCommentStore } from "@/client/store";
 import { Button } from "@/shared/components/Button";
+import { useI18n } from "@/shared/i18n";
 
 export default () => {
   const sort = useCommentStore((state) => state.sort);
   const changeSort = useCommentStore((state) => state.changeSort);
   const isLoading = useCommentStore((state) => state.isLoading);
+  const { t } = useI18n();
 
   const tabs = [
-    { label: "最新", value: "created_desc" },
-    { label: "最旧", value: "created_asc" },
+    { label: t("client.sortNewest"), value: "created_desc" },
+    { label: t("client.sortOldest"), value: "created_asc" },
   ];
 
   return (
@@ -23,7 +25,7 @@ export default () => {
             type="button"
             variant={isActive ? "secondary" : "ghost"}
             onClick={() => !isActive && changeSort(tab.value)}
-            className={`relative font-bold ${isActive ? "bg-zinc-100" : "hover:bg-zinc-100 hover:text-zinc-500"} ${isLoading ? "opacity-30" : ""}`}
+            className={`relative font-bold ${isActive ? "bg-(--yo-surface-soft)" : "hover:bg-(--yo-surface-soft) hover:text-(--yo-text-muted)"} ${isLoading ? "opacity-30" : ""}`}
           >
             {tab.label}
           </Button>

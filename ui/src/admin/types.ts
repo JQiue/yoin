@@ -1,4 +1,5 @@
 import type { RuntimeOptions } from "@/config/types";
+import type { MessageKey } from "@/shared/i18n";
 
 export type Option = RuntimeOptions;
 
@@ -15,57 +16,78 @@ export type CommentTab = "all" | "pending" | "spam" | "deleted";
 
 export type AdminTabItem = {
   key: AdminTab;
-  label: string;
-  description: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
 };
 
 export type CommentTabItem = {
   key: CommentTab;
-  label: string;
+  labelKey: MessageKey;
 };
 
 export type SiteFormState = {
   name: string;
   url: string;
   allowAnonymous: boolean;
+  allowPrivate: boolean;
   maxCommentLength: string;
   commentLimitSeconds: string;
+  allowedReactions: string[];
+};
+
+export type OAuthProviderFormState = {
+  providerCode: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  enabled: boolean;
+};
+
+export type ModerationProviderFormState = {
+  siteId: string;
+  providerKind: "llm" | "akismet";
+  enabled: boolean;
+  model: string;
+  apiBase: string;
+  apiKey: string;
+  rule: string;
+  blogUrl: string;
 };
 
 export const ADMIN_TABS: AdminTabItem[] = [
   {
     key: "sites",
-    label: "站点管理",
-    description: "查看站点配置与评论基础参数。",
+    labelKey: "admin.tab.sites",
+    descriptionKey: "admin.tab.sitesDesc",
   },
   {
     key: "comments",
-    label: "评论管理",
-    description: "处理待审核评论与风险内容。",
+    labelKey: "admin.tab.comments",
+    descriptionKey: "admin.tab.commentsDesc",
   },
   {
     key: "users",
-    label: "用户管理",
-    description: "为后续用户列表、角色绑定预留位置。",
+    labelKey: "admin.tab.users",
+    descriptionKey: "admin.tab.usersDesc",
   },
   {
     key: "permissions",
-    label: "权限管理",
-    description: "管理角色、权限与站点级授权范围。",
+    labelKey: "admin.tab.permissions",
+    descriptionKey: "admin.tab.permissionsDesc",
   },
   {
     key: "oauthProviders",
-    label: "OAuth 提供者",
-    description: "管理社交登录与 OAuth 配置。",
+    labelKey: "admin.tab.oauth",
+    descriptionKey: "admin.tab.oauthDesc",
   },
   {
     key: "moderationProviders",
-    label: "审核提供者",
-    description: "管理 LLM、Akismet 等审核来源。",
+    labelKey: "admin.tab.moderation",
+    descriptionKey: "admin.tab.moderationDesc",
   },
   {
     key: "externalProviders",
-    label: "外部身份提供者",
-    description: "为宿主系统登录态和外部 SSO 预留。",
+    labelKey: "admin.tab.external",
+    descriptionKey: "admin.tab.externalDesc",
   },
 ];

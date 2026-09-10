@@ -69,4 +69,12 @@ impl RolePermissionRepository {
     .insert(self.conn)
     .await
   }
+
+  pub async fn delete_by_role_id(&self, role_id: i64) -> Result<u64, DbErr> {
+    let result = RolePermissions::delete_many()
+      .filter(role_permissions::Column::RoleId.eq(role_id))
+      .exec(self.conn)
+      .await?;
+    Ok(result.rows_affected)
+  }
 }

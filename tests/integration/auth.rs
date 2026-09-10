@@ -11,7 +11,7 @@ async fn register_first_user_can_access_sites_as_admin() {
   let app = test_app().await;
   let resp = register_user(&app, "admin@example.com", "secret123").await;
 
-  assert_eq!(resp.code, 0);
+  assert_eq!(resp.code, "ok");
   assert_eq!(resp.msg, "success");
   let data = resp.data.expect("register data");
   let resp = get_with_bearer(&app, "/api/sites", &data.token).await;
@@ -23,7 +23,7 @@ async fn login_returns_token_for_existing_user() {
   let app = test_app().await;
   let _ = register_user(&app, "user@example.com", "secret123").await;
   let body = login_user(&app, "user@example.com", "secret123").await;
-  assert_eq!(body.code, 0);
+  assert_eq!(body.code, "ok");
   assert!(body.data.expect("login data").token.len() > 10);
 }
 
@@ -40,7 +40,7 @@ async fn login_with_wrong_password_returns_unauthorized() {
   let app = test_app().await;
   let _ = register_user(&app, "user2@example.com", "secret123").await;
   let body = login_user(&app, "user2@example.com", "wrong-password").await;
-  assert_ne!(body.code, 0);
+  assert_eq!(body.code, "invalid_credentials");
   assert!(body.data.is_none());
 }
 
@@ -59,5 +59,5 @@ async fn login_error_response_uses_unauthorized_status() {
   .await;
   assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
   let body: ApiResponse<Value> = read_json(resp).await;
-  assert_ne!(body.code, 0);
+  assert_eq!(body.code, "invalid_credentials");
 }

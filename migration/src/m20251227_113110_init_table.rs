@@ -70,8 +70,8 @@ enum Comments {
   Device,
   Location,
   IsSticky,
-  UpVote,
-  DownVote,
+  IsAnonymous,
+  IsPrivate,
   CreatedAt,
   UpdatedAt,
   DeletedAt,
@@ -81,11 +81,14 @@ enum Comments {
 enum Reactions {
   Table,
   Id,
+  SiteId,
+  TargetType,
+  CommentId,
+  PagePath,
   ActorType,
   ActorId,
-  TargetType,
-  TargetId,
   Type,
+  TargetKey,
   CreatedAt,
 }
 
@@ -297,8 +300,8 @@ impl MigrationTrait for Migration {
           .col(string(Comments::Device))
           .col(string(Comments::Location))
           .col(boolean(Comments::IsSticky).default(false))
-          .col(integer(Comments::UpVote).default(0))
-          .col(integer(Comments::DownVote).default(0))
+          .col(boolean(Comments::IsAnonymous).default(false))
+          .col(boolean(Comments::IsPrivate).default(false))
           .col(date_time(Comments::CreatedAt))
           .col(date_time(Comments::UpdatedAt))
           .col(date_time(Comments::DeletedAt).null())
@@ -327,12 +330,40 @@ impl MigrationTrait for Migration {
           .table(Reactions::Table)
           .if_not_exists()
           .col(big_pk_auto(Reactions::Id))
+          .col(big_integer(Reactions::SiteId))
+          .col(string(Reactions::TargetType))
+          .col(big_integer(Reactions::CommentId).null())
+          .col(string(Reactions::PagePath))
           .col(string(Reactions::ActorType))
           .col(string(Reactions::ActorId))
-          .col(string(Reactions::TargetType))
-          .col(string(Reactions::TargetId))
           .col(string(Reactions::Type))
+          .col(string(Reactions::TargetKey))
           .col(date_time(Reactions::CreatedAt))
+          .index(
+            Index::create()
+              .name("idx-reactions-actor-target-unique")
+              .table(Reactions::Table)
+              .col(Reactions::ActorType)
+              .col(Reactions::ActorId)
+              .col(Reactions::TargetKey)
+              .unique(),
+          )
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-reactions-site_id")
+              .from(Reactions::Table, Reactions::SiteId)
+              .to(Sites::Table, Sites::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
+          .foreign_key(
+            ForeignKey::create()
+              .name("fk-reactions-comment_id")
+              .from(Reactions::Table, Reactions::CommentId)
+              .to(Comments::Table, Comments::Id)
+              .on_delete(ForeignKeyAction::Cascade)
+              .on_update(ForeignKeyAction::Cascade),
+          )
           .to_owned(),
       )
       .await?;

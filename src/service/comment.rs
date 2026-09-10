@@ -3,15 +3,74 @@ use migration::enums::CommentStatus;
 
 use super::AppService;
 use crate::{
-  entity::moderation_providers::ModerationProviderConfig,
+  entity::{comments, moderation_providers::ModerationProviderConfig},
   error::{AppError, ToAppError},
   handler::comment::{CommentView, CreateCommentPayload, ListQueryString, PageResponse},
   helper::generate_avatar,
   moderation::{self, LLMModerator, ModerationInput, types::CommentModerator},
-  repository::CommentCreateData,
+  rbac::permissions::codes::SITE_MANAGE,
+  repository::{CommentCreateData, CommentListVisibility},
 };
 
 impl AppService {
+  async fn can_manage_site(&self, user_id: Option<i64>, site_id: i64) -> Result<bool, AppError> {
+    match user_id {
+      Some(id) => self.has_site_permission(id, SITE_MANAGE, site_id).await,
+      None => Ok(false),
+    }
+  }
+
+  fn can_delete_comment(comment: &comments::Model, user_id: Option<i64>) -> bool {
+    matches!(
+      (comment.user_id, user_id),
+      (Some(author_id), Some(viewer_id)) if author_id == viewer_id
+    )
+  }
+
+  fn is_comment_author(
+    comment: &comments::Model,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
+  ) -> bool {
+    if let (Some(author_id), Some(viewer_id)) = (comment.user_id, user_id)
+      && author_id == viewer_id
+    {
+      return true;
+    }
+    matches!(
+      (comment.guest_id.as_deref(), guest_id),
+      (Some(author_guest), Some(viewer_guest)) if author_guest == viewer_guest
+    )
+  }
+
+  pub(crate) async fn can_see_private_comment(
+    &self,
+    comment: &comments::Model,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
+  ) -> Result<bool, AppError> {
+    if !comment.is_private {
+      return Ok(true);
+    }
+    if Self::is_comment_author(comment, user_id, guest_id) {
+      return Ok(true);
+    }
+    self.can_manage_site(user_id, comment.site_id).await
+  }
+
+  async fn comment_list_visibility(
+    &self,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
+    site_id: i64,
+  ) -> Result<CommentListVisibility, AppError> {
+    Ok(CommentListVisibility {
+      include_all_private: self.can_manage_site(user_id, site_id).await?,
+      viewer_user_id: user_id,
+      viewer_guest_id: guest_id.filter(|id| !id.is_empty()).map(str::to_string),
+    })
+  }
+
   /// Create a new comment or reply.
   ///
   /// If `payload.parent_id` is provided, the method validates the parent belongs to
@@ -20,6 +79,7 @@ impl AppService {
   pub async fn create_comment(
     &self,
     user_id: Option<i64>,
+    guest_id: Option<&str>,
     payload: CreateCommentPayload,
   ) -> Result<CommentView, AppError> {
     let thread_id = if let Some(parent_id) = payload.parent_id {
@@ -41,6 +101,13 @@ impl AppService {
         return Err(AppError::bad_request(
           "Parent comment is not available for reply".to_string(),
         ));
+      }
+
+      if !self
+        .can_see_private_comment(&parent, user_id, guest_id)
+        .await?
+      {
+        return Err(AppError::comment_not_found("Comment not found".to_string()));
       }
 
       Some(parent.thread_id.unwrap_or(parent.id))
@@ -78,6 +145,11 @@ impl AppService {
       .create(CommentCreateData {
         site_id: payload.site_id,
         user_id,
+        guest_id: if user_id.is_none() {
+          guest_id.filter(|id| !id.is_empty()).map(str::to_string)
+        } else {
+          None
+        },
         thread_id,
         parent_id: payload.parent_id,
         nickname,
@@ -90,6 +162,8 @@ impl AppService {
         status: initial_status,
         location,
         is_sticky: false,
+        is_anonymous: payload.is_anonymous,
+        is_private: payload.is_private,
         datetime: utc_now().naive_utc(),
       })
       .await
@@ -152,7 +226,15 @@ impl AppService {
       });
     }
 
-    Ok(CommentView::from_model(comment))
+    let reveal_identity = self.can_manage_site(user_id, comment.site_id).await?;
+    let can_delete = Self::can_delete_comment(&comment, user_id);
+    let can_pin = reveal_identity && comment.parent_id.is_none();
+    Ok(CommentView::from_model(
+      comment,
+      reveal_identity,
+      can_delete,
+      can_pin,
+    ))
   }
 
   /// List root comments for a site/page with pagination.
@@ -161,8 +243,14 @@ impl AppService {
   /// per thread (and sets `has_more` accordingly).
   pub async fn list_comments(
     &self,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
+    let visibility = self
+      .comment_list_visibility(user_id, guest_id, qs.site_id)
+      .await?;
+    let reveal_identity = visibility.include_all_private;
     let (roots, total, total_pages) = self
       .repo
       .comment()
@@ -172,6 +260,7 @@ impl AppService {
         qs.page_size,
         qs.page_offset,
         &qs.sort,
+        &visibility,
       )
       .await
       .with_op("query comments")?;
@@ -180,17 +269,22 @@ impl AppService {
     let preview_replies = self
       .repo
       .comment()
-      .find_preview_replies_by_thread_ids(root_ids, reply_limit)
+      .find_preview_replies_by_thread_ids(root_ids, reply_limit, &visibility)
       .await
       .with_op("find all replies by thread ids")?;
-    let items = roots
+    let mut items: Vec<CommentView> = roots
       .into_iter()
       .map(|root| {
-        let mut view = CommentView::from_model(root);
+        let can_delete = Self::can_delete_comment(&root, user_id);
+        let can_pin = reveal_identity;
+        let mut view = CommentView::from_model(root, reveal_identity, can_delete, can_pin);
         let mut thread_replies: Vec<CommentView> = preview_replies
           .iter()
           .filter(|r| r.thread_id == Some(view.id))
-          .map(|r| CommentView::from_model(r.clone()))
+          .map(|r| {
+            let can_delete = Self::can_delete_comment(r, user_id);
+            CommentView::from_model(r.clone(), reveal_identity, can_delete, false)
+          })
           .collect();
 
         if thread_replies.len() > reply_limit {
@@ -208,6 +302,13 @@ impl AppService {
         view
       })
       .collect();
+    let actor_id = match user_id {
+      Some(id) => Some(id.to_string()),
+      None => guest_id.map(str::to_string),
+    };
+    self
+      .attach_comment_reactions(&mut items, actor_id.as_deref())
+      .await?;
 
     Ok(PageResponse {
       items,
@@ -221,16 +322,42 @@ impl AppService {
   /// List replies under a specific thread (comment id) with pagination.
   pub async fn list_replies(
     &self,
+    user_id: Option<i64>,
+    guest_id: Option<&str>,
     id: i64,
     qs: ListQueryString,
   ) -> Result<PageResponse<CommentView>, AppError> {
+    let visibility = self
+      .comment_list_visibility(user_id, guest_id, qs.site_id)
+      .await?;
+    let reveal_identity = visibility.include_all_private;
     let (replies, total, total_pages) = self
       .repo
       .comment()
-      .find_thread_replies_paged(id, qs.site_id, &qs.page_path, qs.page_size, qs.page_offset)
+      .find_thread_replies_paged(
+        id,
+        qs.site_id,
+        &qs.page_path,
+        qs.page_size,
+        qs.page_offset,
+        &visibility,
+      )
       .await
       .with_op("query replies")?;
-    let items: Vec<CommentView> = replies.into_iter().map(CommentView::from_model).collect();
+    let mut items: Vec<CommentView> = replies
+      .into_iter()
+      .map(|comment| {
+        let can_delete = Self::can_delete_comment(&comment, user_id);
+        CommentView::from_model(comment, reveal_identity, can_delete, false)
+      })
+      .collect();
+    let actor_id = match user_id {
+      Some(id) => Some(id.to_string()),
+      None => guest_id.map(str::to_string),
+    };
+    self
+      .attach_comment_reactions(&mut items, actor_id.as_deref())
+      .await?;
     Ok(PageResponse {
       items,
       page_size: qs.page_size,
@@ -279,7 +406,12 @@ impl AppService {
     Ok(())
   }
 
-  pub async fn update_vote(&self, id: i64, r#type: String) -> Result<(), AppError> {
+  pub async fn set_comment_sticky(
+    &self,
+    user_id: i64,
+    id: i64,
+    is_sticky: bool,
+  ) -> Result<CommentView, AppError> {
     let comment = self
       .repo
       .comment()
@@ -288,27 +420,25 @@ impl AppService {
       .with_op("find comment by id")?
       .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
 
-    match r#type.as_str() {
-      "up" => {
-        self
-          .repo
-          .comment()
-          .update_up_vote(id, comment.up_vote + 1)
-          .await
-          .with_op("update up_vote by id")?;
-      }
-      "down" => {
-        self
-          .repo
-          .comment()
-          .update_down_vote(id, comment.down_vote + 1)
-          .await
-          .with_op("update down_vote by id")?;
-      }
-      _ => {
-        return Err(AppError::bad_request("Invalid vote type".to_string()));
-      }
+    if comment.parent_id.is_some() {
+      return Err(AppError::bad_request(
+        "only root comments can be pinned".to_string(),
+      ));
     }
-    Ok(())
+
+    if !self.can_manage_site(Some(user_id), comment.site_id).await? {
+      return Err(AppError::forbidden(
+        "you cannot pin comments on this site".to_string(),
+      ));
+    }
+
+    let comment = self
+      .repo
+      .comment()
+      .set_sticky(comment, is_sticky)
+      .await
+      .with_op("set comment sticky")?;
+    let can_delete = Self::can_delete_comment(&comment, Some(user_id));
+    Ok(CommentView::from_model(comment, true, can_delete, true))
   }
 }

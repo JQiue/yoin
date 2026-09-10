@@ -9,6 +9,7 @@ pub struct Model {
   #[sea_orm(primary_key)]
   pub id: i64,
   pub user_id: Option<i64>,
+  pub guest_id: Option<String>,
   pub site_id: i64,
   pub thread_id: Option<i64>,
   pub parent_id: Option<i64>,
@@ -22,8 +23,8 @@ pub struct Model {
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
-  pub up_vote: i32,
-  pub down_vote: i32,
+  pub is_anonymous: bool,
+  pub is_private: bool,
   pub created_at: DateTime,
   pub updated_at: DateTime,
   pub deleted_at: Option<DateTime>,

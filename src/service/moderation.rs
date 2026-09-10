@@ -1,4 +1,5 @@
 use helpers::time::utc_now;
+use migration::enums::CommentStatus;
 
 use super::AppService;
 use crate::{
@@ -9,6 +10,7 @@ use crate::{
       CreateModerationProviderPayload, ModerationProviderView, UpdateModerationProviderPayload,
     },
   },
+  rbac::permissions::codes::COMMENT_MODERATE,
   repository::{ModerationProviderCreateData, ModerationProviderUpdateData},
 };
 
@@ -34,6 +36,14 @@ impl AppService {
     &self,
     payload: CreateModerationProviderPayload,
   ) -> Result<ModerationProviderView, AppError> {
+    self
+      .repo
+      .site()
+      .find_by_id(payload.site_id)
+      .await
+      .with_op("find site for moderation provider")?
+      .ok_or_else(|| AppError::site_not_found("site not found".to_string()))?;
+
     let provider = self
       .repo
       .moderation_provider()
@@ -55,6 +65,16 @@ impl AppService {
     id: i64,
     payload: UpdateModerationProviderPayload,
   ) -> Result<ModerationProviderView, AppError> {
+    self
+      .repo
+      .moderation_provider()
+      .find_by_id(id)
+      .await
+      .with_op("find moderation provider")?
+      .ok_or_else(|| {
+        AppError::moderation_provider_not_found("moderation provider not found".to_string())
+      })?;
+
     let provider = self
       .repo
       .moderation_provider()
@@ -79,18 +99,52 @@ impl AppService {
         .await
         .with_op("find pending comments")?
         .into_iter()
-        .map(CommentView::from_model)
+        .map(|comment| CommentView::from_model(comment, true, false, false))
         .collect::<Vec<CommentView>>(),
     )
   }
 
-  /// Approve a pending comment (TODO).
-  pub async fn approve_comment(&self, _id: i64) -> Result<(), AppError> {
-    todo!()
+  /// Approve a pending comment.
+  pub async fn approve_comment(&self, user_id: i64, id: i64) -> Result<(), AppError> {
+    self
+      .set_pending_comment_status(user_id, id, CommentStatus::Approved)
+      .await
   }
 
-  /// Reject a pending comment (TODO).
-  pub async fn reject_comment(&self, _id: i64) -> Result<(), AppError> {
-    todo!()
+  /// Reject a pending comment.
+  pub async fn reject_comment(&self, user_id: i64, id: i64) -> Result<(), AppError> {
+    self
+      .set_pending_comment_status(user_id, id, CommentStatus::Spam)
+      .await
+  }
+
+  async fn set_pending_comment_status(
+    &self,
+    user_id: i64,
+    id: i64,
+    status: CommentStatus,
+  ) -> Result<(), AppError> {
+    let comment = self
+      .repo
+      .comment()
+      .find_by_id(id)
+      .await
+      .with_op("find comment by id")?
+      .ok_or(AppError::comment_not_found("Comment not found".to_string()))?;
+    self
+      .require_site_permission(user_id, COMMENT_MODERATE, comment.site_id)
+      .await?;
+    if comment.status != CommentStatus::Pending {
+      return Err(AppError::bad_request(
+        "only pending comments can be approved or rejected".to_string(),
+      ));
+    }
+    self
+      .repo
+      .comment()
+      .update_status(id, status)
+      .await
+      .with_op("update comment status")?;
+    Ok(())
   }
 }

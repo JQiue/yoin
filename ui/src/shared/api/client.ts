@@ -1,6 +1,12 @@
 import { getRuntimeConfig } from "@/config/runtime";
-import type { Method, RequestConfig, ResData } from "@/shared/api/types";
-import { storage } from "@/shared/helper";
+import {
+  type Method,
+  type RequestConfig,
+  type ResData,
+  SUCCESS_CODE,
+} from "@/shared/api/types";
+import { GUEST_ID_HEADER, getGuestId, storage } from "@/shared/helper";
+import { t } from "@/shared/i18n";
 
 function getApiBase() {
   const configuredBase = getRuntimeConfig().api_base?.trim() || "";
@@ -35,21 +41,32 @@ async function baseRequest<T>(
 
   const response = await fetch(fullUrl.toString(), {
     method,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${storage.get("yoin:token") || ""}`,
+      [GUEST_ID_HEADER]: getGuestId(),
       ...headers,
     },
     body: data ? JSON.stringify(data) : undefined,
     ...rest,
   });
-  // console.log(response);
+  const serverGuestId = response.headers.get(GUEST_ID_HEADER);
+  if (serverGuestId) {
+    storage.set("yoin:guest_id", serverGuestId);
+  }
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.msg || `网络错误: ${response.status}`);
+    throw new Error(
+      errorBody.msg || t("api.networkError", { status: response.status }),
+    );
   }
 
-  return response.json();
+  const body = (await response.json()) as ResData<T>;
+  if (body.code !== SUCCESS_CODE) {
+    throw new Error(body.msg || t("api.businessError", { code: body.code }));
+  }
+  return body;
 }
 
 export const http = {

@@ -2,10 +2,12 @@ import type { CommentTab, CommentTabItem } from "@/admin/types";
 import type { CommentForAdmin, Paged, Site } from "@/shared/api/types";
 import { Button } from "@/shared/components/Button";
 import { formatLocalDateTime } from "@/shared/helper";
+import type { MessageKey } from "@/shared/i18n";
+import { useI18n } from "@/shared/i18n";
 
 type CommentStatusOption = {
   value: CommentForAdmin["status"];
-  label: string;
+  labelKey: MessageKey;
 };
 
 interface Props {
@@ -58,23 +60,26 @@ export const CommentsPanel = ({
   onPrevPage,
   onNextPage,
 }: Props) => {
+  const { t } = useI18n();
   return (
     <section className={panelClass}>
       <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">评论管理</h2>
+          <h2 className="text-xl font-semibold">{t("admin.comments.title")}</h2>
           <p className="mt-1 text-sm text-(--yo-text-muted)">
-            现在先统一接到后台评论列表接口，按站点、页面和状态做筛选。
+            {t("admin.comments.desc")}
           </p>
         </div>
         <Button size="sm" variant="secondary" onClick={onRefresh}>
-          刷新列表
+          {t("admin.comments.refresh")}
         </Button>
       </div>
 
       <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
         <label className="block">
-          <span className="text-xs text-(--yo-text-soft)">站点</span>
+          <span className="text-xs text-(--yo-text-soft)">
+            {t("common.site")}
+          </span>
           <select
             value={selectedCommentSiteId ?? ""}
             onChange={(event) =>
@@ -91,7 +96,9 @@ export const CommentsPanel = ({
         </label>
 
         <label className="block">
-          <span className="text-xs text-(--yo-text-soft)">页面路径</span>
+          <span className="text-xs text-(--yo-text-soft)">
+            {t("admin.comments.pagePath")}
+          </span>
           <input
             type="text"
             value={commentPagePath}
@@ -120,33 +127,31 @@ export const CommentsPanel = ({
                   : ""
               }`}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </Button>
           );
         })}
       </div>
 
       <div className="mb-4 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) px-4 py-3 text-sm text-(--yo-text-muted)">
-        当前视图：
-        <span className="font-medium text-(--yo-text)">
-          {activeCommentTabLabel}
-        </span>
-        。状态接口接上后，我们再按真实状态显示对应动作，而不是所有面板都摆同一组按钮。
+        {t("admin.comments.currentView", { label: activeCommentTabLabel })}
       </div>
 
       {isLoadingComments ? (
-        <p className="text-sm text-(--yo-text-muted)">正在加载评论列表...</p>
+        <p className="text-sm text-(--yo-text-muted)">
+          {t("admin.comments.loading")}
+        </p>
       ) : commentsError ? (
         <div className="rounded-lg bg-(--yo-danger-bg) px-4 py-3 text-sm text-(--yo-danger)">
           {commentsError}
         </div>
       ) : selectedCommentSiteId == null ? (
         <div className="rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
-          请先创建站点，再查看评论管理。
+          {t("admin.comments.needSite")}
         </div>
       ) : comments.length === 0 ? (
         <div className="rounded-lg border border-dashed border-(--yo-surface-strong) px-4 py-8 text-center text-sm text-(--yo-text-muted)">
-          当前筛选条件下没有评论，或者后端过滤逻辑还在继续完善。
+          {t("admin.comments.empty")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -164,7 +169,7 @@ export const CommentsPanel = ({
                     </span>
                     {comment.parent_id != null && (
                       <span className="rounded-full bg-(--yo-surface) px-2 py-0.5 text-[11px] text-(--yo-text-muted)">
-                        回复 #{comment.parent_id}
+                        {t("admin.comments.reply", { id: comment.parent_id })}
                       </span>
                     )}
                     {comment.thread_id != null && (
@@ -174,13 +179,35 @@ export const CommentsPanel = ({
                     )}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--yo-text-muted)">
-                    <span>创建：{formatLocalDateTime(comment.created_at)}</span>
-                    <span>更新：{formatLocalDateTime(comment.updated_at)}</span>
-                    {comment.website && <span>主页：{comment.website}</span>}
-                    {comment.device && <span>设备：{comment.device}</span>}
-                    {comment.location && <span>地区：{comment.location}</span>}
-                    <span>赞同：{comment.up_vote}</span>
-                    <span>反对：{comment.down_vote}</span>
+                    <span>
+                      {t("admin.comments.created", {
+                        time: formatLocalDateTime(comment.created_at),
+                      })}
+                    </span>
+                    <span>
+                      {t("admin.comments.updated", {
+                        time: formatLocalDateTime(comment.updated_at),
+                      })}
+                    </span>
+                    {comment.website && (
+                      <span>
+                        {t("admin.comments.website", {
+                          value: comment.website,
+                        })}
+                      </span>
+                    )}
+                    {comment.device && (
+                      <span>
+                        {t("admin.comments.device", { value: comment.device })}
+                      </span>
+                    )}
+                    {comment.location && (
+                      <span>
+                        {t("admin.comments.location", {
+                          value: comment.location,
+                        })}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-wrap justify-end gap-1">
@@ -204,8 +231,8 @@ export const CommentsPanel = ({
                       >
                         {updatingCommentId === comment.id &&
                         option.value === comment.status
-                          ? "更新中..."
-                          : option.label}
+                          ? t("admin.comments.updating")
+                          : t(option.labelKey)}
                       </Button>
                     );
                   })}
@@ -221,8 +248,11 @@ export const CommentsPanel = ({
           {commentsPage && commentsPage.total_pages > 0 && (
             <div className="flex flex-col gap-3 rounded-lg border border-(--yo-surface-strong) bg-(--yo-surface-soft) px-4 py-3 text-sm text-(--yo-text-muted) sm:flex-row sm:items-center sm:justify-between">
               <p>
-                共 {commentsPage.total} 条，当前第 {commentsPage.page_offset} 页
-                / 共 {commentsPage.total_pages} 页
+                {t("admin.comments.pager", {
+                  total: commentsPage.total,
+                  page: commentsPage.page_offset,
+                  pages: commentsPage.total_pages,
+                })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -231,7 +261,7 @@ export const CommentsPanel = ({
                   disabled={commentPageOffset <= 1}
                   onClick={onPrevPage}
                 >
-                  上一页
+                  {t("common.previous")}
                 </Button>
                 <Button
                   size="sm"
@@ -239,7 +269,7 @@ export const CommentsPanel = ({
                   disabled={commentPageOffset >= commentsPage.total_pages}
                   onClick={onNextPage}
                 >
-                  下一页
+                  {t("common.next")}
                 </Button>
               </div>
             </div>

@@ -1,12 +1,16 @@
+//! Moderation subsystem.
+//!
+//! Provides different moderation providers (LLM based, noop, etc.) and related
+//! types. The module re‑exports the primary `LLMModerator`, `NoopModerator`
+//! and associated data structures for convenient use throughout the
+//! application.
+
 pub mod llm;
 pub mod noop;
 pub mod types;
 
-pub mod provider_kind {
-  pub const LLM: &str = "llm";
-  pub const AKISMET: &str = "akismet";
-}
-
 pub use llm::LLMModerator;
 pub use noop::NoopModerator;
 pub use types::{ModerationDecision, ModerationInput, ModerationResult};
+
+pub use crate::constants::moderation::provider_kind;

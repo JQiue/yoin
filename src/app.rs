@@ -19,7 +19,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use crate::{
   entity::sites::SiteConfig,
   error::{AppError, ToAppError},
-  extractor::{OptionnalAuth, RemoteIp, RequireAuth},
+  extractor::{OptionnalAuth, RemoteIp, RequireAuth, ensure_guest_id},
   handler::{admin, auth, comment, health, js, moderation, reaction, site, subscription, user},
   helper::RateLimiter,
   rbac::{bootstrap::bootstrap_rbac, permissions::roles::SUPER_ADMIN},
@@ -124,11 +124,16 @@ fn create_router(state: Arc<AppState>) -> Router {
     .route("/auth/register", post(auth::register))
     .route("/auth/login", post(auth::login))
     .route("/auth/external/exchange", post(auth::external_exchange))
+    .route(
+      "/auth/oauth/providers",
+      get(auth::list_public_oauth_providers),
+    )
     .route("/auth/oauth/{provider}/start", get(auth::oauth_start))
     .route("/auth/oauth/{provider}/callback", get(auth::oauth_callback))
+    .route("/sites/{id}/config", get(site::public_config))
     .route("/comments", post(comment::create).get(comment::list))
     .route("/comments/{id}/replies", get(comment::list_replies))
-    .route("/comments/{id}/vote/{type}", patch(comment::vote))
+    .route("/reactions", post(reaction::upsert).get(reaction::list))
     .route_layer(from_extractor_with_state::<OptionnalAuth, Arc<AppState>>(
       state.clone(),
     ));
@@ -136,18 +141,24 @@ fn create_router(state: Arc<AppState>) -> Router {
   let private_routes = Router::new()
     .route("/users/me", get(user::profile).patch(user::update_profile))
     .route("/comments/{id}", delete(comment::delete))
+    .route("/comments/{id}/sticky", patch(comment::set_sticky))
     .route(
       "/comment-subscriptions",
       get(subscription::list).post(subscription::create),
     )
     .route("/comment-subscriptions/{id}", delete(subscription::delete))
-    .route("/reactions", post(reaction::create))
-    .route("/reactions/{id}", delete(reaction::delete))
     .route(
       "/sites",
       post(site::create).get(site::list).patch(site::update),
     )
-    .route("/admin/oauth/providers", post(auth::create_oauth_provider))
+    .route(
+      "/admin/oauth/providers",
+      get(auth::list_oauth_providers).post(auth::create_oauth_provider),
+    )
+    .route(
+      "/admin/oauth/providers/{id}",
+      patch(auth::update_oauth_provider),
+    )
     .route(
       "/admin/moderation/providers",
       get(moderation::list_providers).post(moderation::create_provider),
@@ -157,11 +168,20 @@ fn create_router(state: Arc<AppState>) -> Router {
       patch(moderation::update_provider),
     )
     .route("/admin/me/capabilities", get(admin::me_capabilities))
+    .route("/admin/users", get(admin::list_users))
     .route("/admin/rbac/roles", get(admin::list_roles))
+    .route(
+      "/admin/rbac/roles/{id}/permissions",
+      patch(admin::replace_role_permissions),
+    )
     .route("/admin/rbac/permissions", get(admin::list_permissions))
     .route(
       "/admin/rbac/user-role-bindings",
-      get(admin::list_user_role_bindings),
+      get(admin::list_user_role_bindings).post(admin::create_user_role_binding),
+    )
+    .route(
+      "/admin/rbac/user-role-bindings/{id}",
+      delete(admin::delete_user_role_binding),
     )
     .route("/admin/comments", get(admin::list_comments))
     .route("/admin/comments/{id}", patch(admin::update_comment_status))
@@ -172,7 +192,8 @@ fn create_router(state: Arc<AppState>) -> Router {
   let api_routes = Router::new()
     .merge(public_routes)
     .merge(private_routes)
-    .route_layer(from_extractor::<RemoteIp>());
+    .route_layer(from_extractor::<RemoteIp>())
+    .layer(middleware::from_fn(ensure_guest_id));
 
   Router::new()
     .route("/static/client.js", get(js::handle_client_js))

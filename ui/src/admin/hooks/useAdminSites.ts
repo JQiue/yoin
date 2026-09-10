@@ -5,14 +5,21 @@ import {
   fetchAdminSites,
   updateAdminSite,
 } from "@/shared/api";
-import type { Site, SiteConfig } from "@/shared/api/types";
+import {
+  GLOBAL_ALLOWED_REACTIONS,
+  type Site,
+  type SiteConfig,
+} from "@/shared/api/types";
+import { t } from "@/shared/i18n";
 
 const emptyCreateSiteForm: SiteFormState = {
   name: "",
   url: "",
   allowAnonymous: true,
+  allowPrivate: true,
   maxCommentLength: "5000",
   commentLimitSeconds: "30",
+  allowedReactions: [...GLOBAL_ALLOWED_REACTIONS],
 };
 
 function createSiteFormState(site: Site): SiteFormState {
@@ -20,8 +27,37 @@ function createSiteFormState(site: Site): SiteFormState {
     name: site.name,
     url: site.url,
     allowAnonymous: site.config.allow_anonymous,
+    allowPrivate: site.config.allow_private,
     maxCommentLength: String(site.config.max_comment_length),
     commentLimitSeconds: String(site.config.comment_limit_seconds),
+    allowedReactions:
+      site.config.allowed_reactions.length > 0
+        ? site.config.allowed_reactions
+        : [...GLOBAL_ALLOWED_REACTIONS],
+  };
+}
+
+function toSiteConfig(form: SiteFormState): SiteConfig | string {
+  const maxCommentLength = Number(form.maxCommentLength);
+  const commentLimitSeconds = Number(form.commentLimitSeconds);
+  if (!form.name.trim()) {
+    return t("admin.sites.nameRequired");
+  }
+  if (!form.url.trim()) {
+    return t("admin.sites.urlRequired");
+  }
+  if (!Number.isFinite(maxCommentLength) || maxCommentLength <= 0) {
+    return t("admin.sites.maxLengthInvalid");
+  }
+  if (!Number.isFinite(commentLimitSeconds) || commentLimitSeconds < 0) {
+    return t("admin.sites.rateLimitInvalid");
+  }
+  return {
+    allow_anonymous: form.allowAnonymous,
+    allow_private: form.allowPrivate,
+    max_comment_length: maxCommentLength,
+    comment_limit_seconds: commentLimitSeconds,
+    allowed_reactions: form.allowedReactions,
   };
 }
 
@@ -40,7 +76,6 @@ export const useAdminSites = (activeTab: string) => {
   const [isSubmittingCreateSite, setIsSubmittingCreateSite] = useState(false);
 
   useEffect(() => {
-    if (activeTab !== "sites") return;
     let alive = true;
     setIsLoadingSites(true);
     setSitesError("");
@@ -51,7 +86,9 @@ export const useAdminSites = (activeTab: string) => {
       })
       .catch((error) => {
         if (!alive) return;
-        setSitesError(error instanceof Error ? error.message : "加载站点失败");
+        setSitesError(
+          error instanceof Error ? error.message : t("admin.sites.loadFailed"),
+        );
       })
       .finally(() => {
         if (!alive) return;
@@ -60,7 +97,7 @@ export const useAdminSites = (activeTab: string) => {
     return () => {
       alive = false;
     };
-  }, [activeTab]);
+  }, []);
 
   useEffect(() => {
     if (activeTab !== "sites") {
@@ -84,34 +121,14 @@ export const useAdminSites = (activeTab: string) => {
 
   const saveSite = async () => {
     if (editingSiteId == null || siteForm == null) return;
-    const maxCommentLength = Number(siteForm.maxCommentLength);
-    const commentLimitSeconds = Number(siteForm.commentLimitSeconds);
-
-    if (!siteForm.name.trim()) {
-      setSiteFormError("站点名称不能为空");
-      return;
-    }
-    if (!siteForm.url.trim()) {
-      setSiteFormError("站点地址不能为空");
-      return;
-    }
-    if (!Number.isFinite(maxCommentLength) || maxCommentLength <= 0) {
-      setSiteFormError("最大长度必须是大于 0 的数字");
-      return;
-    }
-    if (!Number.isFinite(commentLimitSeconds) || commentLimitSeconds < 0) {
-      setSiteFormError("限流秒数必须是大于等于 0 的数字");
+    const config = toSiteConfig(siteForm);
+    if (typeof config === "string") {
+      setSiteFormError(config);
       return;
     }
 
     setIsSavingSite(true);
     setSiteFormError("");
-
-    const config: SiteConfig = {
-      allow_anonymous: siteForm.allowAnonymous,
-      max_comment_length: maxCommentLength,
-      comment_limit_seconds: commentLimitSeconds,
-    };
 
     try {
       const res = await updateAdminSite({
@@ -126,30 +143,18 @@ export const useAdminSites = (activeTab: string) => {
       setEditingSiteId(null);
       setSiteForm(null);
     } catch (error) {
-      setSiteFormError(error instanceof Error ? error.message : "保存站点失败");
+      setSiteFormError(
+        error instanceof Error ? error.message : t("admin.sites.saveFailed"),
+      );
     } finally {
       setIsSavingSite(false);
     }
   };
 
   const createSite = async () => {
-    const maxCommentLength = Number(createSiteForm.maxCommentLength);
-    const commentLimitSeconds = Number(createSiteForm.commentLimitSeconds);
-
-    if (!createSiteForm.name.trim()) {
-      setCreateSiteError("站点名称不能为空");
-      return;
-    }
-    if (!createSiteForm.url.trim()) {
-      setCreateSiteError("站点地址不能为空");
-      return;
-    }
-    if (!Number.isFinite(maxCommentLength) || maxCommentLength <= 0) {
-      setCreateSiteError("最大长度必须是大于 0 的数字");
-      return;
-    }
-    if (!Number.isFinite(commentLimitSeconds) || commentLimitSeconds < 0) {
-      setCreateSiteError("限流秒数必须是大于等于 0 的数字");
+    const config = toSiteConfig(createSiteForm);
+    if (typeof config === "string") {
+      setCreateSiteError(config);
       return;
     }
 
@@ -160,18 +165,14 @@ export const useAdminSites = (activeTab: string) => {
       const res = await createAdminSite({
         name: createSiteForm.name.trim(),
         url: createSiteForm.url.trim(),
-        config: {
-          allow_anonymous: createSiteForm.allowAnonymous,
-          max_comment_length: maxCommentLength,
-          comment_limit_seconds: commentLimitSeconds,
-        },
+        config,
       });
       setSites((current) => [res.data, ...current]);
       setIsCreatingSite(false);
       setCreateSiteForm(emptyCreateSiteForm);
     } catch (error) {
       setCreateSiteError(
-        error instanceof Error ? error.message : "创建站点失败",
+        error instanceof Error ? error.message : t("admin.sites.createFailed"),
       );
     } finally {
       setIsSubmittingCreateSite(false);

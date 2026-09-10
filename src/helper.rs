@@ -47,7 +47,7 @@ pub enum OAuthProvider {
   QQ,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct OauthProfile {
   pub id: String,
   pub nickname: String,
@@ -74,7 +74,11 @@ impl<'a> OauthService<'a> {
     let provider = match provider {
       "github" => OAuthProvider::Github,
       "qq" => OAuthProvider::QQ,
-      _ => return Err(AppError::bad_request("invalid oauth provider".to_string())),
+      _ => {
+        return Err(AppError::invalid_oauth_provider(
+          "invalid oauth provider".to_string(),
+        ));
+      }
     };
     Ok(Self {
       provider,
@@ -118,7 +122,7 @@ impl<'a> OauthService<'a> {
     Ok(u.to_string())
   }
 
-  pub fn exchange_code(&self) -> String {
+  pub fn exchange_code(&self) -> Result<String, AppError> {
     #[derive(Debug, Deserialize)]
     struct AccessToken {
       access_token: String,
@@ -134,63 +138,113 @@ impl<'a> OauthService<'a> {
         .query("grant_type", "authorization_code")
         .query("fmt", "json"),
     };
-    let body = client
-      .send("")
-      .unwrap()
+    let mut response = client.send("").map_err(|error| AppError::Internal {
+      msg: "Failed to exchange oauth code".to_string(),
+      source: Some(Box::new(error)),
+    })?;
+    let body = response
       .body_mut()
       .read_to_string()
-      .unwrap();
-    let token: AccessToken = serde_json::from_str(&body).unwrap();
-    token.access_token
+      .map_err(|error| AppError::Internal {
+        msg: "Failed to read oauth token response".to_string(),
+        source: Some(Box::new(error)),
+      })?;
+    let token: AccessToken = serde_json::from_str(&body).map_err(|error| AppError::Internal {
+      msg: "Failed to parse oauth token response".to_string(),
+      source: Some(Box::new(error)),
+    })?;
+    Ok(token.access_token)
   }
 
   pub fn fetch_profile(&self, access_token: String) -> Result<OauthProfile, AppError> {
     #[derive(Debug, Deserialize)]
     struct GithubUser {
-      id: String,
+      id: i64,
       login: String,
       avatar_url: String,
-      email: String,
+      email: Option<String>,
     }
 
     match self.provider {
       OAuthProvider::Github => {
-        let body = ureq::get(self.userinfo_endpoint())
+        let mut response = ureq::get(self.userinfo_endpoint())
           .header("Authorization", format!("bearer {}", access_token))
           .call()
-          .unwrap()
+          .map_err(|error| AppError::Internal {
+            msg: "Failed to fetch github profile".to_string(),
+            source: Some(Box::new(error)),
+          })?;
+        let body = response
           .body_mut()
           .read_to_string()
-          .unwrap();
-        let profile = serde_json::from_str::<GithubUser>(&body).unwrap();
+          .map_err(|error| AppError::Internal {
+            msg: "Failed to read github profile".to_string(),
+            source: Some(Box::new(error)),
+          })?;
+        let profile: GithubUser =
+          serde_json::from_str(&body).map_err(|error| AppError::Internal {
+            msg: "Failed to parse github profile".to_string(),
+            source: Some(Box::new(error)),
+          })?;
         Ok(OauthProfile {
-          id: profile.id,
+          id: profile.id.to_string(),
           nickname: profile.login,
           avatar: profile.avatar_url,
-          email: Some(profile.email),
+          email: profile
+            .email
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
         })
       }
       OAuthProvider::QQ => {
-        let client =
-          ureq::get("https://graph.qq.com/oauth2.0/me").query("access_token", &access_token);
-        let body = client.call().unwrap().body_mut().read_to_string().unwrap();
+        let mut response = ureq::get("https://graph.qq.com/oauth2.0/me")
+          .query("access_token", &access_token)
+          .call()
+          .map_err(|error| AppError::Internal {
+            msg: "Failed to fetch qq openid".to_string(),
+            source: Some(Box::new(error)),
+          })?;
+        let body = response
+          .body_mut()
+          .read_to_string()
+          .map_err(|error| AppError::Internal {
+            msg: "Failed to read qq openid".to_string(),
+            source: Some(Box::new(error)),
+          })?;
         #[derive(Debug, Deserialize)]
         struct QQOpenID {
           client_id: String,
           openid: String,
         }
-        let openid: QQOpenID = serde_json::from_str(&body).unwrap();
-        let client = ureq::get(self.userinfo_endpoint())
+        let openid: QQOpenID = serde_json::from_str(&body).map_err(|error| AppError::Internal {
+          msg: "Failed to parse qq openid".to_string(),
+          source: Some(Box::new(error)),
+        })?;
+        let mut response = ureq::get(self.userinfo_endpoint())
           .query("access_token", &access_token)
           .query("oauth_consumer_key", &openid.client_id)
-          .query("openid", &openid.openid);
-        let body = client.call().unwrap().body_mut().read_to_string().unwrap();
+          .query("openid", &openid.openid)
+          .call()
+          .map_err(|error| AppError::Internal {
+            msg: "Failed to fetch qq profile".to_string(),
+            source: Some(Box::new(error)),
+          })?;
+        let body = response
+          .body_mut()
+          .read_to_string()
+          .map_err(|error| AppError::Internal {
+            msg: "Failed to read qq profile".to_string(),
+            source: Some(Box::new(error)),
+          })?;
         #[derive(Debug, Deserialize)]
         struct QQUser {
           nickname: String,
           figureurl: String,
         }
-        let profile = serde_json::from_str::<QQUser>(&body).unwrap();
+        let profile: QQUser = serde_json::from_str(&body).map_err(|error| AppError::Internal {
+          msg: "Failed to parse qq profile".to_string(),
+          source: Some(Box::new(error)),
+        })?;
         Ok(OauthProfile {
           id: openid.openid,
           nickname: profile.nickname,

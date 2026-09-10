@@ -1,6 +1,5 @@
-use crate::error::AppError;
-
 use super::types::{CommentModerator, ModerationDecision, ModerationInput, ModerationResult};
+use crate::error::AppError;
 
 pub struct NoopModerator;
 

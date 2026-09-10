@@ -5,12 +5,12 @@ use axum::{
 };
 use thiserror::Error;
 
-use crate::response::ApiResponse;
+use crate::{constants::error_codes::ErrorCode, response::ApiResponse};
 
 #[derive(Debug, Error)]
 pub enum AppError {
   #[error("{msg}")]
-  Client { kind: ClientErrorKind, msg: String },
+  Client { code: ErrorCode, msg: String },
   #[error("Internal error: {msg}")]
   Internal {
     msg: String,
@@ -18,118 +18,73 @@ pub enum AppError {
   },
 }
 
-#[derive(Debug)]
-pub enum ClientErrorKind {
-  BadRequest(i32),
-  Unauthorized(i32),
-  Forbidden(i32),
-  NotFound(i32),
-  Conflict(i32),
-  UnsupportedMediaType(i32),
-  RateLimited(i32),
-}
-
-impl ClientErrorKind {
-  pub const COMMON_MODULE: i32 = 0;
-  pub const AUTH_MODULE: i32 = 100_000;
-  pub const USER_MODULE: i32 = 200_000;
-  pub const SITE_MODULE: i32 = 300_000;
-  pub const COMMENT_MODULE: i32 = 400_000;
-  pub const MODERATION_MODULE: i32 = 500_000;
-
-  pub fn bad_request() -> Self {
-    Self::BadRequest(Self::COMMON_MODULE + 400)
-  }
-
-  pub fn unsupported_media_type() -> Self {
-    Self::UnsupportedMediaType(Self::COMMON_MODULE + 415)
-  }
-
-  pub fn invalid_credentials() -> Self {
-    Self::Unauthorized(Self::AUTH_MODULE + 401)
-  }
-
-  pub fn user_not_found() -> Self {
-    Self::NotFound(Self::USER_MODULE + 404)
-  }
-
-  pub fn site_not_found() -> Self {
-    Self::NotFound(Self::SITE_MODULE + 404)
-  }
-
-  pub fn comment_not_found() -> Self {
-    Self::NotFound(Self::COMMENT_MODULE + 404)
-  }
-
-  pub fn user_already_exists() -> Self {
-    Self::Conflict(Self::USER_MODULE + 409)
-  }
-
-  pub fn moderation_provider_not_found() -> Self {
-    Self::NotFound(Self::SITE_MODULE + 404)
-  }
-}
-
 impl AppError {
   pub fn bad_request(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::bad_request(),
+      code: ErrorCode::BadRequest,
       msg,
     }
   }
 
   pub fn forbidden(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::Forbidden(ClientErrorKind::AUTH_MODULE + 403),
+      code: ErrorCode::Forbidden,
       msg,
     }
   }
 
   pub fn invalid_credentials(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::invalid_credentials(),
+      code: ErrorCode::InvalidCredentials,
       msg,
     }
   }
 
   pub fn unsupported_media_type(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::unsupported_media_type(),
+      code: ErrorCode::UnsupportedMediaType,
       msg,
     }
   }
 
   pub fn user_not_found(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::user_not_found(),
+      code: ErrorCode::UserNotFound,
       msg,
     }
   }
 
   pub fn user_already_exists(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::user_already_exists(),
+      code: ErrorCode::UserAlreadyExists,
       msg,
     }
   }
 
   pub fn site_not_found(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::site_not_found(),
+      code: ErrorCode::SiteNotFound,
       msg,
     }
   }
 
   pub fn comment_not_found(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::comment_not_found(),
+      code: ErrorCode::CommentNotFound,
       msg,
     }
   }
 
   pub fn moderation_provider_not_found(msg: String) -> Self {
     Self::Client {
-      kind: ClientErrorKind::moderation_provider_not_found(),
+      code: ErrorCode::ModerationProviderNotFound,
+      msg,
+    }
+  }
+
+  pub fn invalid_oauth_provider(msg: String) -> Self {
+    Self::Client {
+      code: ErrorCode::InvalidOauthProvider,
       msg,
     }
   }
@@ -137,34 +92,18 @@ impl AppError {
 
 impl IntoResponse for AppError {
   fn into_response(self) -> Response {
-    let (status_code, business_code, msg) = match self {
-      AppError::Client { kind, msg } => {
-        let (status_code, biz_code) = match kind {
-          ClientErrorKind::BadRequest(code) => (StatusCode::BAD_REQUEST, code),
-          ClientErrorKind::Unauthorized(code) => (StatusCode::UNAUTHORIZED, code),
-          ClientErrorKind::Forbidden(code) => (StatusCode::FORBIDDEN, code),
-          ClientErrorKind::NotFound(code) => (StatusCode::NOT_FOUND, code),
-          ClientErrorKind::Conflict(code) => (StatusCode::CONFLICT, code),
-          ClientErrorKind::RateLimited(code) => (StatusCode::TOO_MANY_REQUESTS, code),
-          ClientErrorKind::UnsupportedMediaType(code) => (StatusCode::UNSUPPORTED_MEDIA_TYPE, code),
-        };
-        (status_code, biz_code, msg)
-      }
+    let (status, code, msg) = match self {
+      AppError::Client { code, msg } => (code.http_status(), code, msg),
       AppError::Internal { .. } => {
         tracing::error!("Detailed Error: {:?}", self);
         (
           StatusCode::INTERNAL_SERVER_ERROR,
-          500_000,
+          ErrorCode::InternalError,
           "An internal server error occurred".to_string(),
         )
       }
     };
-    let resp = ApiResponse::<()> {
-      code: business_code,
-      msg: msg.to_string(),
-      data: None,
-    };
-    (status_code, Json(resp)).into_response()
+    (status, Json(ApiResponse::<()>::error(code, msg))).into_response()
   }
 }
 

@@ -5,9 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
   app::{AppState, UserKey},
+  constants::comment::{ANONYMOUS_AVATAR, ANONYMOUS_NICKNAME},
   entity::comments,
   error::AppError,
-  extractor::{AppJson, OptionnalAuth, RemoteIp, RequireAuth},
+  extractor::{AppJson, GuestId, OptionnalAuth, RemoteIp, RequireAuth},
+  handler::reaction::ReactionSummaryView,
   response::ApiResponse,
 };
 
@@ -20,6 +22,10 @@ pub struct CreateCommentPayload {
   pub page_path: String,
   pub email: String,
   pub parent_id: Option<i64>,
+  #[serde(default)]
+  pub is_anonymous: bool,
+  #[serde(default)]
+  pub is_private: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -30,13 +36,16 @@ pub struct CommentView {
   pub nickname: String,
   pub website: String,
   pub content: String,
-  pub up_vote: i32,
-  pub down_vote: i32,
   pub device: String,
   pub location: String,
   pub is_sticky: bool,
+  pub is_anonymous: bool,
+  pub is_private: bool,
   pub avatar: String,
   pub created_at: String,
+  pub can_delete: bool,
+  pub can_pin: bool,
+  pub reactions: ReactionSummaryView,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub replies: Option<Vec<CommentView>>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -44,24 +53,42 @@ pub struct CommentView {
 }
 
 impl CommentView {
-  pub fn from_model(model: comments::Model) -> Self {
+  pub fn from_model(
+    model: comments::Model,
+    reveal_identity: bool,
+    can_delete: bool,
+    can_pin: bool,
+  ) -> Self {
     let parser = pulldown_cmark::Parser::new(&model.content);
     let mut html_output = String::new();
     pulldown_cmark::html::push_html(&mut html_output, parser);
+    let is_anonymous = model.is_anonymous;
+    let (nickname, website, avatar) = if is_anonymous && !reveal_identity {
+      (
+        ANONYMOUS_NICKNAME.to_string(),
+        String::new(),
+        ANONYMOUS_AVATAR.to_string(),
+      )
+    } else {
+      (model.nickname, model.website, model.avatar)
+    };
     Self {
       id: model.id,
       thread_id: model.thread_id,
       parent_id: model.parent_id,
-      nickname: model.nickname,
-      website: model.website,
+      nickname,
+      website,
       content: html_output,
-      avatar: model.avatar,
-      up_vote: model.up_vote,
-      down_vote: model.down_vote,
+      avatar,
       device: model.device,
       location: model.location,
       is_sticky: model.is_sticky,
+      is_anonymous,
+      is_private: model.is_private,
       created_at: model.created_at.and_utc().to_rfc3339(),
+      can_delete,
+      can_pin,
+      reactions: ReactionSummaryView::default(),
       replies: None,
       has_more: None,
     }
@@ -71,15 +98,21 @@ impl CommentView {
 pub async fn create(
   State(state): State<Arc<AppState>>,
   optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   remote_ip: RemoteIp,
   AppJson(payload): AppJson<CreateCommentPayload>,
 ) -> Result<ApiResponse<CommentView>, AppError> {
   let site_config = state.get_site_config(payload.site_id).await?;
 
   if !state.is_admin(optional_auth.user_id.unwrap_or(-1)).await {
-    if optional_auth.user_id.is_none() && !site_config.allow_anonymous {
+    if payload.is_anonymous && !site_config.allow_anonymous {
       return Err(AppError::forbidden(
-        "anonymous access not allowed".to_string(),
+        "anonymous comments are not allowed".to_string(),
+      ));
+    }
+    if payload.is_private && !site_config.allow_private {
+      return Err(AppError::forbidden(
+        "private comments are not allowed".to_string(),
       ));
     }
 
@@ -106,7 +139,7 @@ pub async fn create(
   Ok(ApiResponse::success(
     state
       .service
-      .create_comment(optional_auth.user_id, payload)
+      .create_comment(optional_auth.user_id, Some(&guest_id.value), payload)
       .await?,
   ))
 }
@@ -132,19 +165,31 @@ pub struct PageResponse<T> {
 // FIXME: Cursor pagination
 pub async fn list(
   State(state): State<Arc<AppState>>,
+  optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   Query(qs): Query<ListQueryString>,
 ) -> Result<ApiResponse<PageResponse<CommentView>>, AppError> {
-  Ok(ApiResponse::success(state.service.list_comments(qs).await?))
+  Ok(ApiResponse::success(
+    state
+      .service
+      .list_comments(optional_auth.user_id, Some(&guest_id.value), qs)
+      .await?,
+  ))
 }
 
 // FIXME: Cursor pagination
 pub async fn list_replies(
   State(state): State<Arc<AppState>>,
+  optional_auth: OptionnalAuth,
+  guest_id: GuestId,
   Path(id): Path<i64>,
   Query(qs): Query<ListQueryString>,
 ) -> Result<ApiResponse<PageResponse<CommentView>>, AppError> {
   Ok(ApiResponse::success(
-    state.service.list_replies(id, qs).await?,
+    state
+      .service
+      .list_replies(optional_auth.user_id, Some(&guest_id.value), id, qs)
+      .await?,
   ))
 }
 
@@ -160,11 +205,21 @@ pub async fn delete(
   Ok(ApiResponse::success(()))
 }
 
-pub async fn vote(
+#[derive(Debug, Deserialize)]
+pub struct SetStickyPayload {
+  pub is_sticky: bool,
+}
+
+pub async fn set_sticky(
   State(state): State<Arc<AppState>>,
-  Path((id, r#type)): Path<(i64, String)>,
-) -> Result<ApiResponse<()>, AppError> {
+  require_auth: RequireAuth,
+  Path(id): Path<i64>,
+  AppJson(payload): AppJson<SetStickyPayload>,
+) -> Result<ApiResponse<CommentView>, AppError> {
   Ok(ApiResponse::success(
-    state.service.update_vote(id, r#type).await?,
+    state
+      .service
+      .set_comment_sticky(require_auth.user_id, id, payload.is_sticky)
+      .await?,
   ))
 }

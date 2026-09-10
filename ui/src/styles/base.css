@@ -1,33 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  /* 整体背景色 */
+  color-scheme: light;
   --yo-bg: #f5f5f4;
-  /* 卡片、弹窗、输入区这种“承载内容的表面” */
   --yo-surface: #fafaf9;
-  /* 更轻的表面色，常用于输入框、次级按钮 */
   --yo-surface-soft: #f0eeeb;
-  /* hover、focus 后更实一点的背景 */
   --yo-surface-strong: #e7e5e4;
-
-  /* 主文本颜色 */
   --yo-text: #18181b;
-  /* 次级文本颜色 */
   --yo-text-muted: #71717a;
-  /* placeholder、弱提示文字 */
   --yo-text-soft: #a1a1aa;
-
-  /* 主操作颜色 */
   --yo-primary: #18181b;
-  /* 主操作 hover 颜色 */
   --yo-primary-hover: #27272a;
-  /* 主操作上的文字颜色 */
   --yo-primary-contrast: #fafaf9;
-
-  /* 错误文字颜色 */
   --yo-danger: #dc2626;
-  /* 错误提示背景色 */
   --yo-danger-bg: #fef2f2;
-
+  --yo-overlay: rgb(24 24 27 / 0.4);
   --yo-transition: 0.4s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --yo-bg: #18181b;
+    --yo-surface: #27272a;
+    --yo-surface-soft: #3f3f46;
+    --yo-surface-strong: #52525b;
+    --yo-text: #fafafa;
+    --yo-text-muted: #a1a1aa;
+    --yo-text-soft: #71717a;
+    --yo-primary: #fafafa;
+    --yo-primary-hover: #e4e4e7;
+    --yo-primary-contrast: #18181b;
+    --yo-danger: #f87171;
+    --yo-danger-bg: #450a0a;
+    --yo-overlay: rgb(0 0 0 / 0.55);
+  }
 }

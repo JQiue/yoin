@@ -1,8 +1,10 @@
 import type { TargetedEvent, TargetedSubmitEvent } from "preact";
 import { useState } from "preact/hooks";
 import { type LoginInput, useAuthForm } from "@/client/hooks/useAuthForm";
+import type { PublicOauthProvider } from "@/shared/api/auth";
 import { Button } from "@/shared/components/Button";
 import Icon from "@/shared/components/Icon";
+import { type MessageKey, useI18n } from "@/shared/i18n";
 
 interface Props {
   onSuccess: () => void;
@@ -13,21 +15,26 @@ export default (props: Props) => {
     isLoginView,
     toggleView,
     handleSubmit,
+    handleOauth,
+    oauthProviders,
     submitStatus,
     submitting,
     setSubmitStatus,
   } = useAuthForm(props.onSuccess);
+  const { t } = useI18n();
 
   return (
     <div>
       <h2 class="mb-6 text-2xl font-bold text-center">
-        {isLoginView ? "欢迎回来" : "创建新账号"}
+        {isLoginView ? t("auth.welcomeBack") : t("auth.createAccount")}
       </h2>
       {isLoginView ? (
         <LoginForm
           submitStatus={submitStatus}
           submitting={submitting}
+          oauthProviders={oauthProviders}
           onSubmit={handleSubmit}
+          onOauth={handleOauth}
         />
       ) : (
         <RegisterForm
@@ -38,9 +45,9 @@ export default (props: Props) => {
         />
       )}
       <div className="mt-6 text-center text-sm ">
-        {isLoginView ? "还没有账号？" : "已有账号？"}
+        {isLoginView ? t("auth.noAccount") : t("auth.hasAccount")}
         <Button variant="ghost" onClick={toggleView}>
-          {isLoginView ? "立即注册" : "返回登录"}
+          {isLoginView ? t("auth.registerNow") : t("auth.backToLogin")}
         </Button>
       </div>
     </div>
@@ -50,10 +57,25 @@ export default (props: Props) => {
 interface LoginFormProps {
   submitting: boolean;
   submitStatus: { type: string; msg: string };
+  oauthProviders: PublicOauthProvider[];
   onSubmit: (e: TargetedSubmitEvent<HTMLFormElement>, data: LoginInput) => void;
+  onOauth: (provider: string) => void;
 }
 
-const LoginForm = ({ submitting, submitStatus, onSubmit }: LoginFormProps) => {
+function oauthProviderLabel(provider: string, t: (key: MessageKey) => string) {
+  if (provider === "github") return t("auth.provider.github");
+  if (provider === "qq") return t("auth.provider.qq");
+  return provider;
+}
+
+const LoginForm = ({
+  submitting,
+  submitStatus,
+  oauthProviders,
+  onSubmit,
+  onOauth,
+}: LoginFormProps) => {
+  const { t } = useI18n();
   const [credentials, setCredentials] = useState<LoginInput>({
     email: "",
     password: "",
@@ -69,31 +91,27 @@ const LoginForm = ({ submitting, submitStatus, onSubmit }: LoginFormProps) => {
   return (
     <form onSubmit={(e) => onSubmit(e, credentials)} className="space-y-4">
       <input
-        className="w-full p-2 rounded-md bg-zinc-100 focus:bg-zinc-200 text-sm outline-none transition-all placeholder:text-zinc-400"
+        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-(--yo-surface-soft) focus:bg-(--yo-surface-strong) placeholder:text-(--yo-text-soft) text-(--yo-text)"
         name="email"
         type="email"
         required
-        placeholder="邮箱"
+        placeholder={t("auth.email")}
         autocomplete="username"
         onChange={handleInputChange}
       />
       <input
-        className="w-full p-2 rounded-md bg-zinc-100 focus:bg-zinc-200 text-sm outline-none transition-all placeholder:text-zinc-400"
+        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-(--yo-surface-soft) focus:bg-(--yo-surface-strong) placeholder:text-(--yo-text-soft) text-(--yo-text)"
         name="password"
         type="password"
         required
-        placeholder="密码"
+        placeholder={t("auth.password")}
         autocomplete="current-password"
         onChange={handleInputChange}
       />
       <div className="flex items-center gap-2">
         {submitStatus.msg && (
           <span
-            className={`text-xs font-bold flex items-center gap-1.5 px-2 py-1 rounded-md ${
-              submitStatus.type === "success"
-                ? "text-zinc-600 bg-zinc-100"
-                : "text-red-600 bg-red-50"
-            }`}
+            className={`text-xs font-bold flex items-center gap-1.5 px-2 py-1 rounded-md ${authStatusClass(submitStatus.type)}`}
           >
             {submitStatus.type === "error" && <Icon name="alert" />}
             {submitStatus.msg}
@@ -101,11 +119,39 @@ const LoginForm = ({ submitting, submitStatus, onSubmit }: LoginFormProps) => {
         )}
       </div>
       <Button variant="primary" fullWidth type="submit" disabled={submitting}>
-        {submitting ? "登录中" : "登录"}
+        {submitting ? t("auth.signingIn") : t("auth.signIn")}
       </Button>
+      {oauthProviders.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <p className="text-center text-xs text-(--yo-text-muted)">
+            {t("auth.orContinueWith")}
+          </p>
+          {oauthProviders.map((provider) => {
+            const label = oauthProviderLabel(provider.provider_code, t);
+            return (
+              <Button
+                key={provider.provider_code}
+                variant="secondary"
+                fullWidth
+                type="button"
+                disabled={submitting}
+                onClick={() => onOauth(provider.provider_code)}
+              >
+                {t("auth.continueWith", { provider: label })}
+              </Button>
+            );
+          })}
+        </div>
+      )}
     </form>
   );
 };
+
+function authStatusClass(type: string) {
+  return type === "success"
+    ? "text-(--yo-text-muted) bg-(--yo-surface-soft)"
+    : "text-(--yo-danger) bg-(--yo-danger-bg)";
+}
 
 interface NewUserInput {
   email: string;
@@ -131,6 +177,7 @@ const RegisterForm = ({
   setSubmitStatus,
   onSubmit,
 }: RegisterFormProps) => {
+  const { t } = useI18n();
   const [newUser, setNewUser] = useState<NewUserInput>({
     email: "",
     password: "",
@@ -149,7 +196,7 @@ const RegisterForm = ({
   const internalSubmit = (e: TargetedSubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (newUser.password !== newUser.password_confirmation) {
-      setSubmitStatus({ type: "error", msg: "两次密码不一致" });
+      setSubmitStatus({ type: "error", msg: t("auth.passwordMismatch") });
       return;
     }
     onSubmit(e, newUser);
@@ -158,53 +205,49 @@ const RegisterForm = ({
   return (
     <form onSubmit={(e) => internalSubmit(e)} className="space-y-4">
       <input
-        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-zinc-100 focus:bg-zinc-200 placeholder:text-zinc-400"
+        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-(--yo-surface-soft) focus:bg-(--yo-surface-strong) placeholder:text-(--yo-text-soft) text-(--yo-text)"
         name="email"
         type="email"
         required
-        placeholder="邮箱"
+        placeholder={t("auth.email")}
         onChange={handleInputChange}
       />
       <input
-        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-zinc-100 focus:bg-zinc-200 placeholder:text-zinc-400"
+        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-(--yo-surface-soft) focus:bg-(--yo-surface-strong) placeholder:text-(--yo-text-soft) text-(--yo-text)"
         name="password"
         type="password"
         required
-        placeholder="密码"
+        placeholder={t("auth.password")}
         onChange={handleInputChange}
       />
       <input
-        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-zinc-100 focus:bg-zinc-200 placeholder:text-zinc-400"
+        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-(--yo-surface-soft) focus:bg-(--yo-surface-strong) placeholder:text-(--yo-text-soft) text-(--yo-text)"
         name="password_confirmation"
         type="password"
         required
-        placeholder="确认密码"
+        placeholder={t("auth.confirmPassword")}
         onChange={handleInputChange}
       />
       <input
-        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-zinc-100 focus:bg-zinc-200 placeholder:text-zinc-400"
+        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-(--yo-surface-soft) focus:bg-(--yo-surface-strong) placeholder:text-(--yo-text-soft) text-(--yo-text)"
         name="nickname"
         type="text"
         required
-        placeholder="昵称"
+        placeholder={t("auth.nickname")}
         onChange={handleInputChange}
       />
       <input
-        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-zinc-100 focus:bg-zinc-200 placeholder:text-zinc-400"
+        className="w-full px-3 py-2 rounded-md text-sm outline-none transition-all bg-(--yo-surface-soft) focus:bg-(--yo-surface-strong) placeholder:text-(--yo-text-soft) text-(--yo-text)"
         name="website"
         type="url"
         required
-        placeholder="网址：https://www.example.com"
+        placeholder={t("auth.website")}
         onChange={handleInputChange}
       />
       <div className="flex items-center gap-2">
         {submitStatus.msg && (
           <span
-            className={`text-xs font-bold flex items-center gap-1.5 px-2 py-1 rounded-md ${
-              submitStatus.type === "success"
-                ? "text-zinc-600 bg-zinc-100"
-                : "text-red-600 bg-red-50"
-            }`}
+            className={`text-xs font-bold flex items-center gap-1.5 px-2 py-1 rounded-md ${authStatusClass(submitStatus.type)}`}
           >
             {submitStatus.type === "error" && <Icon name="alert" />}
             {submitStatus.msg}
@@ -212,7 +255,7 @@ const RegisterForm = ({
         )}
       </div>
       <Button variant="primary" fullWidth type="submit" disabled={submitting}>
-        {submitting ? "注册中" : "注册"}
+        {submitting ? t("auth.registering") : t("auth.register")}
       </Button>
     </form>
   );
