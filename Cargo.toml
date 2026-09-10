@@ -34,7 +34,7 @@ migration.workspace = true
 dotenvy.workspace = true
 envy.workspace = true
 serde = { workspace = true, features = ["derive"] }
-tokio = { workspace = true, features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["macros", "rt", "signal"] }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = [
   "env-filter",

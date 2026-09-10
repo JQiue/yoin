@@ -44,6 +44,8 @@ Integration tests: [tests/integration_test.rs](tests/integration_test.rs) + [tes
 
 `cargo build` / `cargo test` compile-time `include_str!` the UI bundles ([src/handler/js.rs](src/handler/js.rs)). [build.rs](build.rs) runs `npm run build` in `ui/` unless `YOIN_SKIP_UI_BUILD=1`. Skip only if `ui/dist/client/client.js` and `ui/dist/admin/admin.js` already exist.
 
+Debug `cargo run` also starts the frontend dev servers and stops them on Ctrl-C ([src/ui_dev.rs](src/ui_dev.rs)): widget playground on `http://localhost:3000/client` and admin playground on `http://localhost:3001/admin`, both proxying `/api` to `127.0.0.1:7410`. `YOIN_UI_DEV=admin` (or `client,admin`) selects a subset, `YOIN_UI_DEV=0` starts the API alone. A port already in use is reused, never killed. Release builds and containers spawn nothing.
+
 CI: [.github/workflows/check.yml](.github/workflows/check.yml) (`fmt` nightly, clippy + tests on stable). Rustfmt: [rustfmt.toml](rustfmt.toml) (`tab_spaces = 2`, edition 2024).
 
 Migrations: [migration/README.md](migration/README.md). Enums used by entities live in `migration::enums`.
