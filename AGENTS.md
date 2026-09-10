@@ -61,6 +61,7 @@ Migrations: [migration/README.md](migration/README.md). Enums used by entities l
 - Rate limiter and site-config cache are in-process mutexes ([src/app.rs](src/app.rs), [src/helper.rs](src/helper.rs)); do not treat them as distributed.
 - `main` leaks a `'static` `DatabaseConnection`; repositories take `&'static DatabaseConnection`.
 - CORS is permissive. `RemoteIp` trusts `X-Forwarded-For` only from loopback/private peers.
+- The runtime image is `scratch` and carries only the binary plus the Debian CA bundle `COPY`d in [Dockerfile](Dockerfile). Drop that line and LLM moderation silently fails (TLS to the provider cannot verify), because `async-openai`/reqwest use `rustls-native-roots` and read `/etc/ssl/certs`. sqlx (Postgres) and ureq (OAuth) bundle their own roots.
 
 ## Frontend
 

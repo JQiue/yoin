@@ -148,7 +148,7 @@ vercel logs <你的项目>.vercel.app --since 10m
 | 404，或构建日志说没有 `functions`/`static` 目录 | 服务默认是私有的，没被 rewrite 暴露；或项目的 Framework Preset 不是 Services | 确认 `vercel.json` 里有那条 `rewrites`；Project Settings → Framework Preset 选 Services |
 | 500 / 容器起不来 | 端口没对上 | 镜像默认听 80；如果你另外在项目里设了 `PORT`，两者必须一致 |
 | 502 / 超时 | 连不上数据库 | 看 `vercel logs`；确认 `DATABASE_URL` 是 Neon 注入的那条、第 4 步的迁移已经跑过 |
-| 评论一直停在「待审」 | 迁移没跑 / 站点没配审核提供商 / LLM 审核在容器里连不出去 | 见下面「已知缺陷」 |
+| 评论一直停在「待审」 | 迁移没跑 / 站点没配审核提供商 / 镜像里少了 CA 证书 | 见下面「镜像里的 CA 证书」 |
 | 重启后所有人要重新登录 | `JWT_KEY` 没固定 | 固定一个 ≥32 字符的串 |
 | 限流比预期松 | 进程内状态按实例算 | 见下 |
 
@@ -163,17 +163,17 @@ vercel logs <你的项目>.vercel.app --since 10m
 - **限额**：单次调用最长 300s（Hobby 上限也是 300s，Pro 可到 800s）、内存 Hobby 2GB / Pro 4GB、请求与响应体各 4.5MB、同一实例内并发共享 1024 个文件描述符；镜像本身的上限是单层压缩 500MB、整镜像 15GB（存储 $0.10/GB）——对本项目都远远够用；
 - 默认只跑单区域 `iad1`，换区域要另外配。
 
-### 已知缺陷：容器里的 LLM 审核连不出去
+### 镜像里的 CA 证书
 
-`scratch` 镜像里没有系统根证书。而 LLM 客户端（`async-openai` → reqwest）编译时启用的是 `rustls-native-roots`：它只从系统证书目录（`/etc/ssl/certs`、`SSL_CERT_FILE`）读根证书，读不到就是一个空的根证书集，于是容器里所有到 LLM 服务的 HTTPS 调用都会校验失败，评论停在「待审」。
-
-Postgres 连接（sqlx）和 GitHub/QQ 登录（ureq）用的是编译进二进制的根证书，不受影响。
-
-修法（改完要重新构建镜像验证一次）：在 builder 阶段装一份证书再拷进运行镜像，例如在 `rust-builder` 阶段把 `ca-certificates` 加进 `apt-get install`，然后
+LLM 客户端（`async-openai` → reqwest）编译时启用的是 `rustls-native-roots`：它只从系统证书目录读根证书，Linux 上优先探 `/etc/ssl/certs/ca-certificates.crt`。`scratch` 镜像本身空无一物，所以 `Dockerfile` 让 builder 阶段（Debian）装上 `ca-certificates`，再把那个 bundle 拷进运行镜像：
 
 ```dockerfile
-COPY --from=rust-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=rust-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 ```
+
+Postgres 连接（sqlx）和 GitHub/QQ 登录（ureq）用的是编译进二进制的根证书，不依赖它。
+
+> 动 `Dockerfile` 或换基础镜像后，本地 `docker build` 一次确认这行 COPY 还能找到文件——CI 只跑 cargo、不构建镜像。少了它不会报错，只会让容器里的 LLM 审核静默失败（评论一律停在「待审」）。
 
 ### 为什么不走原生 Rust runtime
 
