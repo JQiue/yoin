@@ -116,7 +116,7 @@ export default ({
         />
       ))}
       {pickerReactions.length > 0 ? (
-        <div className="hidden flex-wrap gap-1 group-hover:flex">
+        <div className="hidden flex-wrap gap-1 group-hover:flex!">
           {pickerReactions.map((reaction) => (
             <ReactionButton
               key={reaction}

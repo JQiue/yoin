@@ -41,7 +41,10 @@ async function baseRequest<T>(
 
   const response = await fetch(fullUrl.toString(), {
     method,
-    credentials: "include",
+    // 必须是 same-origin：带凭据的跨源请求要求服务端回显具体 origin（不能用 `*`），
+    // 而 Yoin 的认证走 Bearer 头、游客身份走 x-yoin-guest-id 头 + localStorage，
+    // 同源时仍会带上 yoin_guest_id cookie，跨源时也能直接使用宽松 CORS。
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${storage.get("yoin:token") || ""}`,

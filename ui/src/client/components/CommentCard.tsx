@@ -173,7 +173,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
               showPickerOnHover
             />
             <IconButton
-              className="invisible group-hover:visible"
+              className="invisible group-hover:visible!"
               icon={Reply}
               label={isReply ? t("client.cancelReply") : t("client.reply")}
               pressed={isReply}
@@ -181,7 +181,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
             />
             {comment.can_pin ? (
               <IconButton
-                className="invisible group-hover:visible"
+                className="invisible group-hover:visible!"
                 icon={Pin}
                 label={comment.is_sticky ? t("client.unpin") : t("client.pin")}
                 pressed={comment.is_sticky}
@@ -190,7 +190,7 @@ export default ({ comment, onDeleteComment, onReplyCreated }: Props) => {
             ) : null}
             {comment.can_delete ? (
               <IconButton
-                className="invisible group-hover:visible"
+                className="invisible group-hover:visible!"
                 icon={Trash}
                 label={t("client.deleteComment")}
                 onClick={handleClickDelete}
