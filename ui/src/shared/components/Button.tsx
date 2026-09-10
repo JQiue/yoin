@@ -1,4 +1,4 @@
-﻿import type { ButtonHTMLAttributes } from "preact";
+import type { ButtonHTMLAttributes } from "preact";
 
 interface ButtonProps extends ButtonHTMLAttributes {
   variant?: "primary" | "secondary" | "ghost";

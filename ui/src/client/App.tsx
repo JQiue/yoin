@@ -1,8 +1,8 @@
-import CommentForm from "@/client/components/comment/CommentForm";
-import CommentList from "@/client/components/comment/CommentList";
-import CommentListFooter from "@/client/components/comment/CommentListFooter";
-import ReactionBar from "@/client/components/comment/ReactionBar";
-import Sort from "@/client/components/comment/Sort";
+import CommentForm from "@/client/components/CommentForm";
+import CommentList from "@/client/components/CommentList";
+import CommentListFooter from "@/client/components/CommentListFooter";
+import ReactionBar from "@/client/components/ReactionBar";
+import Sort from "@/client/components/Sort";
 import { useInfiniteCommentScroll } from "@/client/hooks/useInfiniteCommentScroll";
 import { useInitializeCommentPage } from "@/client/hooks/useInitializeCommentPage";
 import { useCommentStore } from "@/client/store";

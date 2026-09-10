@@ -7,9 +7,9 @@ import {
   VenetianMask,
 } from "lucide-preact";
 import { useState } from "preact/hooks";
-import CommentForm from "@/client/components/comment/CommentForm";
-import CommentList from "@/client/components/comment/CommentList";
-import ReactionBar from "@/client/components/comment/ReactionBar";
+import CommentForm from "@/client/components/CommentForm";
+import CommentList from "@/client/components/CommentList";
+import ReactionBar from "@/client/components/ReactionBar";
 import { useCommentReplies } from "@/client/hooks/useCommentReplies";
 import { useCommentStore } from "@/client/store";
 import { getRuntimeConfig } from "@/config/runtime";

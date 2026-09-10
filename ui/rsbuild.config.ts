@@ -14,9 +14,6 @@ export default defineConfig({
     chunkSplit: {
       strategy: "all-in-one",
     },
-    // bundleAnalyze: {
-    //   generateStatsFile: true,
-    // },
   },
   html: {
     template: "./src/template/index.html",

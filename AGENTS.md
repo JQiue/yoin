@@ -1,4 +1,4 @@
-# Yoin Agent Guidelines
+# Agent.md
 
 Embeddable comment system: Axum + SeaORM backend, Preact widget + admin UI compiled into the binary.
 
@@ -60,4 +60,16 @@ Migrations: [migration/README.md](migration/README.md). Enums used by entities l
 
 ## Frontend
 
-See [ui/AGENTS.md](ui/AGENTS.md). Do not use React APIs or invent a `pnpm dev` script.
+[ui/](ui/) is a self-contained npm package (Preact + Rsbuild + Tailwind v4), not a folder of the Rust crate. Do not use React APIs or invent a `pnpm dev` script.
+
+Commands, run in `ui/`:
+
+- `npm run client:dev` — widget playground (`http://localhost:3000/client`; proxies `/api` to `127.0.0.1:7410`)
+- `npm run admin:dev` — admin playground
+- `npm run build` — production bundles for `client` and `admin`
+- `npm run biome` — `biome check --write`
+- `npx tsc --noEmit` — typecheck
+
+Local UI builds in [build.rs](build.rs) use **npm**; Docker and `ui/pnpm-lock.yaml` use **pnpm**.
+
+Docs: [Rsbuild](https://rsbuild.rs/llms.txt), [Rspack](https://rspack.rs/llms.txt).

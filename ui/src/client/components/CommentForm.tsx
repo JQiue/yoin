@@ -1,9 +1,9 @@
 import type { TargetedEvent } from "preact";
 import { useEffect } from "preact/hooks";
-import Login from "@/client/components/auth/Login";
-import CommentComposer from "@/client/components/comment/CommentComposer";
-import CommentIdentityBar from "@/client/components/comment/CommentIdentityBar";
-import CommentSubmitStatus from "@/client/components/comment/CommentSubmitStatus";
+import CommentComposer from "@/client/components/CommentComposer";
+import CommentIdentityBar from "@/client/components/CommentIdentityBar";
+import CommentSubmitStatus from "@/client/components/CommentSubmitStatus";
+import Login from "@/client/components/Login";
 import { useAutoResizeTextarea } from "@/client/hooks/useAutoResizeTextarea";
 import { useCommentForm } from "@/client/hooks/useCommentForm";
 import { useCommentLoginModal } from "@/client/hooks/useCommentLoginModal";

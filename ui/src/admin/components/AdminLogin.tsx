@@ -1,4 +1,4 @@
-import Login from "@/client/components/auth/Login";
+import Login from "@/client/components/Login";
 
 interface Props {
   error?: string;

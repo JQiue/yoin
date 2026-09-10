@@ -9,7 +9,6 @@ export const zh: Record<keyof typeof en, string> = {
   "common.enable": "启用",
   "common.disable": "停用",
   "common.none": "无",
-  "common.loading": "加载中...",
   "common.site": "站点",
   "common.user": "用户",
   "common.role": "角色",

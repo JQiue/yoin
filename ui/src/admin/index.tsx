@@ -4,7 +4,6 @@ import type { Option } from "@/admin/types";
 import { setRuntimeConfig } from "@/config/runtime";
 import { watchHtmlLang } from "@/shared/i18n";
 import "@/styles/base.css";
-import "@/styles/admin.css";
 
 export default class YoinAdmin {
   private container: HTMLElement | null = null;
