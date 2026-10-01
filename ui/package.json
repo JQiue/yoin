@@ -28,8 +28,8 @@
   },
   "dependencies": {
     "lucide-preact": "^1.41.0",
-    "preact": "^10.29.0",
-    "zustand": "^5.0.12"
+    "preact": "^10.29.8",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",
@@ -37,7 +37,7 @@
     "@rsbuild/plugin-preact": "^1.7.2",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^26.4.1",
-    "postcss-prefix-selector": "^2.1.1",
+    "postcss-prefix-selector": "^2.2.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2"
   }
